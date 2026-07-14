@@ -1,0 +1,22 @@
+import { Module } from '@nestjs/common';
+import { DashboardController } from './dashboard.controller';
+import { ProjectsController } from './projects.controller';
+import { TagsController } from './tags.controller';
+import { TasksController } from './tasks.controller';
+import { ProjectsModule } from '../projects/projects.module';
+import { RemindersModule } from '../reminders/reminders.module';
+import { TagsModule } from '../tags/tags.module';
+import { TasksModule } from '../tasks/tasks.module';
+import { UsersModule } from '../users/users.module';
+
+@Module({
+  imports: [UsersModule, TasksModule, ProjectsModule, TagsModule, RemindersModule],
+  controllers: [
+    DashboardController,
+    TasksController,
+    ProjectsController,
+    TagsController,
+  ],
+})
+export class ApiModule {}
+

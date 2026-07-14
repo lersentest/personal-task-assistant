@@ -1,0 +1,17 @@
+{
+  "name": "Personal Task Assistant",
+  "short_name": "Tasks",
+  "description": "Личный помощник для задач и проектов",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#f7f7f4",
+  "theme_color": "#18181b",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
+

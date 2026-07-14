@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.next/
+web/.next/
+.env
+.env.*
+!.env.example
+coverage/
+src/generated/prisma/
+*.log
+.DS_Store
+.idea/
+.vscode/
