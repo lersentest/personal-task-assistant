@@ -72,3 +72,14 @@ export interface ProjectInput {
   status?: ProjectStatus;
 }
 
+export interface Attachment {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  taskId: string | null;
+  projectId: string | null;
+  createdAt: string;
+  task?: { id: string; title: string } | null;
+  project?: { id: string; name: string } | null;
+}

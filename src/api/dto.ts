@@ -56,6 +56,19 @@ export const createProjectSchema = z.object({
 
 export const updateProjectSchema = createProjectSchema.partial();
 
+export const listAttachmentsSchema = z.object({
+  taskId: z.string().uuid().optional(),
+  projectId: z.string().uuid().optional(),
+});
+
+export const createAttachmentSchema = z.object({
+  taskId: z.string().uuid().nullable().optional(),
+  projectId: z.string().uuid().nullable().optional(),
+  fileName: z.string().min(1).max(255),
+  mimeType: z.string().min(1).max(255),
+  dataBase64: z.string().min(1),
+});
+
 export function parseDto<T>(schema: z.ZodType<T>, value: unknown): T {
   const result = schema.safeParse(value);
   if (!result.success) {
@@ -72,4 +85,3 @@ export function optionalDate(value: string | null | undefined): Date | null | un
   if (value === null) return null;
   return new Date(value);
 }
-

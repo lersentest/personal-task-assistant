@@ -1,5 +1,12 @@
 import { supabase } from './supabase';
-import { DashboardData, Project, ProjectInput, Task, TaskInput } from './types';
+import {
+  Attachment,
+  DashboardData,
+  Project,
+  ProjectInput,
+  Task,
+  TaskInput,
+} from './types';
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
@@ -34,6 +41,16 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+async function download(path: string): Promise<Blob> {
+  const headers = await authHeaders();
+  const response = await fetch(`${apiUrl}${path}`, { headers });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || 'Не удалось скачать файл');
+  }
+  return response.blob();
+}
+
 export const api = {
   me: () => request<{ id: string; email: string | null; timezone: string }>('/api/me'),
   dashboard: () => request<DashboardData>('/api/dashboard'),
@@ -65,6 +82,21 @@ export const api = {
       body: JSON.stringify(input),
     }),
   calendar: () => request<Task[]>('/api/calendar'),
-  search: () => request<{ tasks: Task[]; projects: Project[]; files: unknown[] }>('/api/search'),
+  search: () => request<{ tasks: Task[]; projects: Project[]; files: Attachment[] }>('/api/search'),
+  attachments: (query = '') => request<Attachment[]>(`/api/attachments${query}`),
+  createAttachment: (input: {
+    taskId?: string | null;
+    projectId?: string | null;
+    fileName: string;
+    mimeType: string;
+    dataBase64: string;
+  }) =>
+    request<Attachment>('/api/attachments', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  downloadAttachment: (id: string) =>
+    download(`/api/attachments/${id}/download`),
+  deleteAttachment: (id: string) =>
+    request<{ ok: true }>(`/api/attachments/${id}`, { method: 'DELETE' }),
 };
-

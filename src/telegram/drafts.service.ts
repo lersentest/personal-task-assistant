@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import {
   OperationDraft,
+  BulkTaskUpdateDraft,
   ProjectDraft,
   TaskDraft,
   TaskUpdateDraft,
@@ -59,6 +60,23 @@ export class DraftsService {
       id: randomUUID(),
       ownerTelegramId,
       kind: 'TASK_UPDATE',
+      status: 'PENDING',
+      payload,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + DRAFT_TTL_MS),
+    };
+    this.drafts.set(draft.id, draft);
+    return draft;
+  }
+
+  createBulkTaskUpdate(
+    ownerTelegramId: string,
+    payload: BulkTaskUpdateDraft['payload'],
+  ): BulkTaskUpdateDraft {
+    const draft: BulkTaskUpdateDraft = {
+      id: randomUUID(),
+      ownerTelegramId,
+      kind: 'BULK_TASK_UPDATE',
       status: 'PENDING',
       payload,
       createdAt: new Date(),

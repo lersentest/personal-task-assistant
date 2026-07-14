@@ -14,6 +14,7 @@ const AiCommandSchema = z.object({
     'CREATE_TASK',
     'CREATE_PROJECT',
     'UPDATE_TASK',
+    'BULK_UPDATE_TASKS',
     'UNKNOWN',
   ]),
   updateFields: z.array(
@@ -29,6 +30,29 @@ const AiCommandSchema = z.object({
     ]),
   ),
   targetQuery: z.string().nullable(),
+  bulkFilter: z
+    .object({
+      projectName: z.string().nullable(),
+      search: z.string().nullable(),
+      tag: z.string().nullable(),
+      status: z
+        .enum(['NEW', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'])
+        .nullable(),
+      priority: z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT']).nullable(),
+      view: z
+        .enum([
+          'TODAY',
+          'OVERDUE',
+          'UPCOMING',
+          'ALL',
+          'COMPLETED',
+          'CANCELLED',
+          'TRASH',
+        ])
+        .nullable(),
+      unassigned: z.boolean().nullable(),
+    })
+    .nullable(),
   title: z.string().nullable(),
   description: z.string().nullable(),
   projectName: z.string().nullable(),
@@ -91,6 +115,7 @@ export class AiCommandService {
               'Ты преобразуешь команды личного Telegram-бота задач в структурированные данные.',
               forcedAction,
               selectedTask,
+              'Bulk task commands are supported. If the user asks to change all/multiple tasks, return BULK_UPDATE_TASKS, set bulkFilter, and set updateFields plus the ordinary update values. Always require an explicit plural/all/multiple-task intent for BULK_UPDATE_TASKS.',
               `Текущее локальное время: ${now.toISO()} (${context.timezone}).`,
               `Существующие проекты: ${context.projectNames.join(', ') || 'нет'}.`,
               'Поддерживаются создание задачи, создание проекта и изменение одной задачи.',
@@ -167,6 +192,14 @@ export class AiCommandService {
       tags: [...new Set(command.tags.map((tag) => tag.trim()).filter(Boolean))]
         .slice(0, 10)
         .map((tag) => tag.slice(0, 80)),
+      bulkFilter: command.bulkFilter
+        ? {
+            ...command.bulkFilter,
+            projectName: command.bulkFilter.projectName?.trim() || null,
+            search: command.bulkFilter.search?.trim() || null,
+            tag: command.bulkFilter.tag?.trim() || null,
+          }
+        : null,
     };
   }
 

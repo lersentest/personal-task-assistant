@@ -7,7 +7,7 @@ import { DateTime } from 'luxon';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreateTaskInput } from './types/create-task.input';
-import { ListTasksOptions } from './types/task-view';
+import { BulkTaskFilter, ListTasksOptions } from './types/task-view';
 import { UpdateTaskInput } from './types/update-task.input';
 
 const taskInclude = {
@@ -265,6 +265,51 @@ export class TasksService {
       orderBy: { updatedAt: 'desc' },
       take: 8,
     });
+  }
+
+  async findBulkCandidates(
+    ownerId: string,
+    timezone: string,
+    filter: BulkTaskFilter,
+  ): Promise<TaskDetails[]> {
+    const projectId = filter.projectId ?? undefined;
+    const tagId = undefined;
+    return this.list(ownerId, {
+      view: filter.view ?? 'ALL',
+      timezone,
+      limit: 100,
+      ...(projectId ? { projectId } : {}),
+      ...(filter.search ? { search: filter.search } : {}),
+      ...(tagId ? { tagId } : {}),
+      ...(filter.status ? { status: filter.status } : {}),
+      ...(filter.priority ? { priority: filter.priority } : {}),
+      ...(filter.unassigned ? { unassigned: true } : {}),
+      sort: 'updatedAt',
+    }).then((tasks) =>
+      filter.tag
+        ? tasks.filter((task) =>
+            task.tags.some(
+              ({ tag }) =>
+                tag.name.toLocaleLowerCase('ru-RU') ===
+                filter.tag?.toLocaleLowerCase('ru-RU'),
+            ),
+          )
+        : tasks,
+    );
+  }
+
+  async bulkUpdate(
+    ownerId: string,
+    taskIds: string[],
+    changes: UpdateTaskInput,
+  ): Promise<TaskDetails[]> {
+    const uniqueTaskIds = [...new Set(taskIds)];
+    if (uniqueTaskIds.length === 0) return [];
+    const updated: TaskDetails[] = [];
+    for (const taskId of uniqueTaskIds) {
+      updated.push(await this.update(ownerId, taskId, changes));
+    }
+    return updated;
   }
 
   async softDelete(ownerId: string, taskId: string): Promise<void> {

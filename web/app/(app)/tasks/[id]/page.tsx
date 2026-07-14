@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { AttachmentPanel } from '@/components/attachment-panel';
 import { Page } from '@/components/page';
 import { TaskForm } from '@/components/task-form';
 import { api } from '@/lib/api';
@@ -40,7 +41,9 @@ export default function TaskDetailsPage() {
           </div>
         </div>
       ) : null}
+      <div className="mt-6">
+        <AttachmentPanel taskId={id} />
+      </div>
     </Page>
   );
 }
-

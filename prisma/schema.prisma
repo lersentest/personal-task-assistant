@@ -73,6 +73,8 @@ model User {
   createdTasks    Task[]    @relation("TaskCreator")
   assignedTasks   Task[]    @relation("TaskAssignee")
   tags            Tag[]
+  attachments     Attachment[] @relation("AttachmentOwner")
+  uploadedFiles   Attachment[] @relation("AttachmentUploader")
   dailySummaries  DailySummaryDelivery[]
 
   @@map("users")
@@ -93,6 +95,7 @@ model Project {
   owner     User   @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Restrict)
   createdBy User   @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: Restrict)
   tasks     Task[]
+  attachments Attachment[]
 
   @@unique([ownerId, name])
   @@index([ownerId, status, deletedAt])
@@ -126,6 +129,7 @@ model Task {
   project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
   tags      TaskTag[]
   reminders Reminder[]
+  attachments Attachment[]
 
   @@index([ownerId, status, deletedAt])
   @@index([ownerId, dueAt])
@@ -187,4 +191,28 @@ model DailySummaryDelivery {
 
   @@unique([userId, localDate])
   @@map("daily_summary_deliveries")
+}
+
+model Attachment {
+  id           String   @id @default(uuid()) @db.Uuid
+  ownerId      String   @map("owner_id") @db.Uuid
+  uploadedById String   @map("uploaded_by_id") @db.Uuid
+  taskId       String?  @map("task_id") @db.Uuid
+  projectId    String?  @map("project_id") @db.Uuid
+  fileName     String   @map("file_name") @db.VarChar(255)
+  mimeType     String   @map("mime_type") @db.VarChar(255)
+  sizeBytes    Int      @map("size_bytes")
+  data         Bytes
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  owner      User     @relation("AttachmentOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  uploadedBy User     @relation("AttachmentUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  task       Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  project    Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, createdAt])
+  @@index([taskId])
+  @@index([projectId])
+  @@map("attachments")
 }

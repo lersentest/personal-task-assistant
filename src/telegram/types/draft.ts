@@ -1,6 +1,6 @@
 import { UpdateTaskInput } from '../../tasks/types/update-task.input';
 
-export type DraftKind = 'PROJECT' | 'TASK' | 'TASK_UPDATE';
+export type DraftKind = 'PROJECT' | 'TASK' | 'TASK_UPDATE' | 'BULK_TASK_UPDATE';
 export type DraftStatus = 'PENDING' | 'PROCESSING';
 
 interface BaseDraft {
@@ -45,4 +45,18 @@ export interface TaskUpdateDraft extends BaseDraft {
   };
 }
 
-export type OperationDraft = ProjectDraft | TaskDraft | TaskUpdateDraft;
+export interface BulkTaskUpdateDraft extends BaseDraft {
+  kind: 'BULK_TASK_UPDATE';
+  payload: {
+    taskIds: string[];
+    taskTitles: string[];
+    projectName?: string | null;
+    changes: Omit<UpdateTaskInput, 'projectId'>;
+  };
+}
+
+export type OperationDraft =
+  | ProjectDraft
+  | TaskDraft
+  | TaskUpdateDraft
+  | BulkTaskUpdateDraft;

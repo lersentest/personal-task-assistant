@@ -19,3 +19,14 @@ export interface ListTasksOptions {
   unassigned?: boolean;
   sort?: 'dueAt' | 'priority' | 'createdAt' | 'updatedAt';
 }
+
+export interface BulkTaskFilter {
+  projectId?: string | null;
+  projectName?: string | null;
+  search?: string | null;
+  tag?: string | null;
+  status?: 'NEW' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | null;
+  priority?: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT' | null;
+  view?: TaskView | null;
+  unassigned?: boolean | null;
+}

@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
+import { AttachmentPanel } from '@/components/attachment-panel';
 import { Page } from '@/components/page';
 import { ProjectForm } from '@/components/project-form';
 import { TaskCard } from '@/components/task-card';
@@ -30,10 +31,12 @@ export default function ProjectDetailsPage() {
       <div className="mb-6">
         <TaskForm projectId={id} />
       </div>
+      <div className="mb-6">
+        <AttachmentPanel projectId={id} />
+      </div>
       <div className="grid gap-3">
         {tasks.data?.map((task) => <TaskCard key={task.id} task={task} />)}
       </div>
     </Page>
   );
 }
-

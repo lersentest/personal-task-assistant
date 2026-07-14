@@ -283,6 +283,10 @@ export class TelegramService
           await ctx.editMessageText(`Проект «${result.name}» создан.`);
         } else if (result.kind === 'TASK_UPDATE') {
           await ctx.editMessageText(`Задача «${result.title}» изменена.`);
+        } else if (result.kind === 'BULK_TASK_UPDATE') {
+          await ctx.editMessageText(
+            `Групповое действие выполнено. Изменено задач: ${result.count}.`,
+          );
         } else {
           await ctx.editMessageText(
             `Задача «${result.title}» создана.\nПроект: ${result.projectName ?? 'Без проекта'}`,
@@ -571,6 +575,11 @@ export class TelegramService
       return;
     }
 
+    if (command.action === 'BULK_UPDATE_TASKS') {
+      await this.showBulkUpdateDraft(ctx, user.id, user.timezone, command);
+      return;
+    }
+
     throw new BadRequestException(
       'Не удалось понять действие. Опишите одну задачу или проект одним сообщением.',
     );
@@ -655,6 +664,119 @@ export class TelegramService
       ['Изменение задачи', '', `Задача: ${task.title}`, ...preview].join('\n'),
       { reply_markup: confirmationKeyboard(draft.id) },
     );
+  }
+
+  private async showBulkUpdateDraft(
+    ctx: Context,
+    ownerId: string,
+    timezone: string,
+    command: AiCommand,
+  ): Promise<void> {
+    const filter = command.bulkFilter ?? {
+      projectName: command.projectName,
+      search: command.targetQuery,
+      tag: null,
+      status: null,
+      priority: null,
+      view: null,
+      unassigned: null,
+    };
+    let projectId: string | null | undefined;
+    if (filter.projectName) {
+      const project = await this.projects.findActiveByName(ownerId, filter.projectName);
+      if (!project) {
+        throw new NotFoundException(`РџСЂРѕРµРєС‚ В«${filter.projectName}В» РЅРµ РЅР°Р№РґРµРЅ.`);
+      }
+      projectId = project.id;
+    }
+
+    const tasks = await this.tasks.findBulkCandidates(ownerId, timezone, {
+      projectId,
+      projectName: filter.projectName,
+      search: filter.search ?? command.targetQuery,
+      tag: filter.tag,
+      status: filter.status,
+      priority: filter.priority,
+      view: filter.view ?? null,
+      unassigned: filter.unassigned,
+    });
+    if (tasks.length === 0) {
+      throw new NotFoundException('РџРѕ РјР°СЃСЃРѕРІРѕР№ РєРѕРјР°РЅРґРµ РЅРµ РЅР°Р№РґРµРЅРѕ Р·Р°РґР°С‡.');
+    }
+
+    const { changes, projectName, preview } = this.buildTaskChangesPreview(
+      command,
+    );
+    if (preview.length === 0) {
+      throw new BadRequestException('РќРµ СѓРєР°Р·Р°РЅРѕ, С‡С‚Рѕ РёР·РјРµРЅРёС‚СЊ РІ Р·Р°РґР°С‡Р°С….');
+    }
+
+    const draft = this.drafts.createBulkTaskUpdate(this.telegramId(ctx), {
+      taskIds: tasks.map((task) => task.id),
+      taskTitles: tasks.map((task) => task.title),
+      ...(projectName !== undefined ? { projectName } : {}),
+      changes,
+    });
+    await ctx.reply(
+      [
+        'Групповое изменение задач',
+        '',
+        `Найдено задач: ${tasks.length}`,
+        ...tasks.slice(0, 10).map((task, index) => `${index + 1}. ${task.title}`),
+        ...(tasks.length > 10 ? [`…и ещё ${tasks.length - 10}`] : []),
+        '',
+        'Что изменится:',
+        ...preview,
+      ].join('\n'),
+      { reply_markup: confirmationKeyboard(draft.id) },
+    );
+  }
+
+  private buildTaskChangesPreview(command: AiCommand): {
+    changes: UpdateTaskInput;
+    projectName: string | null | undefined;
+    preview: string[];
+  } {
+    const fields = new Set(command.updateFields);
+    const changes: UpdateTaskInput = {};
+    const preview: string[] = [];
+    let projectName: string | null | undefined;
+
+    if (fields.has('TITLE') && command.title) {
+      changes.title = command.title;
+      preview.push(`Название: ${command.title}`);
+    }
+    if (fields.has('DESCRIPTION')) {
+      changes.description = command.description;
+      preview.push(`Описание: ${command.description ?? 'очистить'}`);
+    }
+    if (fields.has('PROJECT')) {
+      projectName = command.projectName;
+      preview.push(`Проект: ${command.projectName ?? 'Без проекта'}`);
+    }
+    if (fields.has('STATUS') && command.status) {
+      changes.status = command.status;
+      preview.push(`Статус: ${statusLabel(command.status)}`);
+    }
+    if (fields.has('PRIORITY') && command.priority) {
+      changes.priority = command.priority;
+      preview.push(`Приоритет: ${priorityLabel(command.priority)}`);
+    }
+    if (fields.has('DUE_DATE')) {
+      changes.dueAt = command.dueAt ? new Date(command.dueAt) : null;
+      changes.dueDateType = command.dueDateType;
+      preview.push(`Срок: ${command.dueAt ?? 'очистить'}`);
+    }
+    if (fields.has('REMINDER')) {
+      changes.remindAt = command.remindAt ? new Date(command.remindAt) : null;
+      preview.push(`Напоминание: ${command.remindAt ?? 'отключить'}`);
+    }
+    if (fields.has('TAGS')) {
+      changes.tags = command.tags;
+      preview.push(`Теги: ${command.tags.join(', ') || 'очистить'}`);
+    }
+
+    return { changes, projectName, preview };
   }
 
   private async showDraft(

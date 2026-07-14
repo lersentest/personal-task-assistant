@@ -8,7 +8,8 @@ import { DraftsService } from './drafts.service';
 export type ConfirmedOperation =
   | { kind: 'PROJECT'; id: string; name: string }
   | { kind: 'TASK'; id: string; title: string; projectName?: string }
-  | { kind: 'TASK_UPDATE'; id: string; title: string };
+  | { kind: 'TASK_UPDATE'; id: string; title: string }
+  | { kind: 'BULK_TASK_UPDATE'; count: number };
 
 @Injectable()
 export class ConfirmationService {
@@ -64,6 +65,32 @@ export class ConfirmationService {
         });
         this.drafts.complete(draft.id, ownerTelegramId);
         return { kind: 'TASK_UPDATE', id: task.id, title: task.title };
+      }
+
+      if (draft.kind === 'BULK_TASK_UPDATE') {
+        let projectId: string | null | undefined;
+        if (draft.payload.projectName !== undefined) {
+          if (draft.payload.projectName === null) {
+            projectId = null;
+          } else {
+            const project = await this.projects.findActiveByName(
+              user.id,
+              draft.payload.projectName,
+            );
+            if (!project) {
+              throw new NotFoundException(
+                `РџСЂРѕРµРєС‚ В«${draft.payload.projectName}В» РЅРµ РЅР°Р№РґРµРЅ.`,
+              );
+            }
+            projectId = project.id;
+          }
+        }
+        const tasks = await this.tasks.bulkUpdate(user.id, draft.payload.taskIds, {
+          ...draft.payload.changes,
+          ...(projectId !== undefined ? { projectId } : {}),
+        });
+        this.drafts.complete(draft.id, ownerTelegramId);
+        return { kind: 'BULK_TASK_UPDATE', count: tasks.length };
       }
 
       const project = draft.payload.projectName

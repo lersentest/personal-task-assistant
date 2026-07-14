@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { AttachmentsModule } from '../attachments/attachments.module';
+import { AttachmentsController } from './attachments.controller';
 import { DashboardController } from './dashboard.controller';
 import { ProjectsController } from './projects.controller';
 import { TagsController } from './tags.controller';
@@ -10,13 +12,20 @@ import { TasksModule } from '../tasks/tasks.module';
 import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [UsersModule, TasksModule, ProjectsModule, TagsModule, RemindersModule],
+  imports: [
+    UsersModule,
+    TasksModule,
+    ProjectsModule,
+    TagsModule,
+    RemindersModule,
+    AttachmentsModule,
+  ],
   controllers: [
     DashboardController,
     TasksController,
     ProjectsController,
     TagsController,
+    AttachmentsController,
   ],
 })
 export class ApiModule {}
-
