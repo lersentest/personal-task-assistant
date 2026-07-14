@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('vadim@instech.com.ua');
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState<'login' | 'reset'>('login');
@@ -27,6 +29,8 @@ export default function LoginPage() {
         password,
       });
       if (error) throw error;
+      router.replace('/dashboard');
+      router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Не удалось войти');
     } finally {
@@ -80,4 +84,3 @@ export default function LoginPage() {
     </main>
   );
 }
-
