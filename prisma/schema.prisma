@@ -140,6 +140,8 @@ model Task {
   dailyPlanItems DailyPlanItem[]
 
   @@index([ownerId, status, deletedAt])
+  @@index([ownerId, status, deletedAt, dueAt])
+  @@index([ownerId, status, deletedAt, updatedAt])
   @@index([ownerId, dueAt])
   @@index([projectId, status, deletedAt])
   @@map("tasks")

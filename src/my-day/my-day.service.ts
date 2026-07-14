@@ -7,10 +7,6 @@ import { TasksService } from '../tasks/tasks.service';
 const taskInclude = {
   project: true,
   tags: { include: { tag: true } },
-  reminders: {
-    where: { status: 'PENDING' as const },
-    orderBy: { remindAt: 'asc' as const },
-  },
 } as const;
 
 const itemInclude = {
@@ -22,8 +18,6 @@ type DailyPlanItemWithTask = Prisma.DailyPlanItemGetPayload<{
 }>;
 
 const ACTIVE_STATUSES = ['NEW', 'IN_PROGRESS'] as const;
-const DEFAULT_DURATION_MINUTES = 30;
-
 @Injectable()
 export class MyDayService {
   constructor(

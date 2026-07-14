@@ -8,16 +8,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
-  Plus,
-  RotateCcw,
   Search,
   Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { formatDate, priorityLabel, statusLabel } from '@/lib/labels';
-import { DailyPlanItem, Task, TaskPriority } from '@/lib/types';
+import { DailyPlanItem, MyDayData, Task, TaskPriority } from '@/lib/types';
 
 const durationOptions = [15, 30, 45, 60, 90, 120, 180, 240];
 
@@ -47,6 +45,12 @@ function formatTime(value: string | null) {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function hourSlot(value: string | null) {
+  if (!value) return '';
+  const date = new Date(value);
+  return `${String(date.getHours()).padStart(2, '0')}:00`;
 }
 
 function dateTimeFor(date: string, time: string) {
@@ -211,60 +215,292 @@ export default function MyDayPage() {
   const queryClient = useQueryClient();
   const [date, setDate] = useState(todayLocalDate());
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [priority, setPriority] = useState<TaskPriority | ''>('');
   const [mobileTab, setMobileTab] = useState<'plan' | 'schedule' | 'add'>('plan');
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => setDebouncedSearch(search), 350);
+    return () => window.clearTimeout(handle);
+  }, [search]);
 
   const day = useQuery({
     queryKey: ['my-day', date],
     queryFn: () => api.myDay(date),
+    staleTime: 15_000,
+    refetchOnWindowFocus: false,
   });
   const suggestionsQuery = useMemo(() => {
     const params = new URLSearchParams({ date, limit: '40' });
-    if (search.trim()) params.set('search', search.trim());
+    if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
     if (priority) params.set('priority', priority);
     return `?${params.toString()}`;
-  }, [date, priority, search]);
+  }, [date, priority, debouncedSearch]);
   const suggestions = useQuery({
     queryKey: ['my-day-suggestions', suggestionsQuery],
     queryFn: () => api.myDaySuggestions(suggestionsQuery),
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
   });
 
-  function invalidate() {
-    queryClient.invalidateQueries({ queryKey: ['my-day'] });
-    queryClient.invalidateQueries({ queryKey: ['my-day-suggestions'] });
-    queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+  const dayQueryKey = useMemo(() => ['my-day', date] as const, [date]);
+  const suggestionsQueryKey = useMemo(
+    () => ['my-day-suggestions', suggestionsQuery] as const,
+    [suggestionsQuery],
+  );
+
+  function invalidateMyDay(options: { suggestions?: boolean } = {}) {
+    queryClient.invalidateQueries({ queryKey: dayQueryKey });
+    if (options.suggestions) {
+      queryClient.invalidateQueries({ queryKey: suggestionsQueryKey });
+    }
+  }
+
+  function updateCachedDay(updater: (data: MyDayData) => MyDayData) {
+    queryClient.setQueryData<MyDayData>(dayQueryKey, (current) =>
+      current ? updater(current) : current,
+    );
+  }
+
+  function replaceCachedItem(updated: DailyPlanItem) {
+    updateCachedDay((current) => {
+      const replace = (item: DailyPlanItem) => (item.id === updated.id ? updated : item);
+      return {
+        ...current,
+        planItems: current.planItems.map(replace),
+        scheduledItems: updated.scheduledStartAt
+          ? [
+              ...current.scheduledItems.filter((item) => item.id !== updated.id),
+              updated,
+            ].sort(
+              (a, b) =>
+                new Date(a.scheduledStartAt ?? 0).getTime() -
+                new Date(b.scheduledStartAt ?? 0).getTime(),
+            )
+          : current.scheduledItems.filter((item) => item.id !== updated.id),
+        completedItems:
+          updated.completedInPlanAt || updated.task.status === 'COMPLETED'
+            ? [
+                ...current.completedItems.filter((item) => item.id !== updated.id),
+                updated,
+              ]
+            : current.completedItems.filter((item) => item.id !== updated.id),
+        mandatory: {
+          ...current.mandatory,
+          plannedToday: current.mandatory.plannedToday.map(replace),
+          scheduled: updated.scheduledStartAt
+            ? [
+                ...current.mandatory.scheduled.filter((item) => item.id !== updated.id),
+                updated,
+              ]
+            : current.mandatory.scheduled.filter((item) => item.id !== updated.id),
+        },
+      };
+    });
+  }
+
+  function removeCachedItem(id: string) {
+    updateCachedDay((current) => ({
+      ...current,
+      planItems: current.planItems.filter((item) => item.id !== id),
+      scheduledItems: current.scheduledItems.filter((item) => item.id !== id),
+      completedItems: current.completedItems.filter((item) => item.id !== id),
+      mandatory: {
+        ...current.mandatory,
+        plannedToday: current.mandatory.plannedToday.filter((item) => item.id !== id),
+        scheduled: current.mandatory.scheduled.filter((item) => item.id !== id),
+      },
+    }));
   }
 
   const addItem = useMutation({
     mutationFn: api.addMyDayItem,
-    onSuccess: invalidate,
+    onSuccess: (item) => {
+      updateCachedDay((current) => ({
+        ...current,
+        planItems: current.planItems.some((candidate) => candidate.id === item.id)
+          ? current.planItems
+          : [...current.planItems, item],
+        scheduledItems: item.scheduledStartAt
+          ? [...current.scheduledItems, item]
+          : current.scheduledItems,
+        mandatory: {
+          ...current.mandatory,
+          overdue: current.mandatory.overdue.filter((task) => task.id !== item.taskId),
+          dueToday: current.mandatory.dueToday.filter((task) => task.id !== item.taskId),
+          plannedToday: item.scheduledStartAt
+            ? current.mandatory.plannedToday
+            : [...current.mandatory.plannedToday, item],
+          scheduled: item.scheduledStartAt
+            ? [...current.mandatory.scheduled, item]
+            : current.mandatory.scheduled,
+        },
+      }));
+      queryClient.setQueryData<Task[]>(suggestionsQueryKey, (current) =>
+        current?.filter((task) => task.id !== item.taskId) ?? current,
+      );
+      invalidateMyDay({ suggestions: true });
+    },
   });
   const updateItem = useMutation({
     mutationFn: ({ id, input }: { id: string; input: Parameters<typeof api.updateMyDayItem>[1] }) =>
       api.updateMyDayItem(id, input),
-    onSuccess: invalidate,
+    onSuccess: (item) => {
+      replaceCachedItem(item);
+      invalidateMyDay();
+    },
   });
   const scheduleItem = useMutation({
     mutationFn: ({ id, input }: { id: string; input: Parameters<typeof api.scheduleMyDayItem>[1] }) =>
       api.scheduleMyDayItem(id, input),
-    onSuccess: invalidate,
+    onMutate: async ({ id, input }) => {
+      await queryClient.cancelQueries({ queryKey: dayQueryKey });
+      const previous = queryClient.getQueryData<MyDayData>(dayQueryKey);
+      updateCachedDay((current) => ({
+        ...current,
+        planItems: current.planItems.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                scheduledStartAt: input.scheduledStartAt,
+                scheduledEndAt: input.scheduledEndAt,
+                scheduleType: 'FIXED',
+                task: {
+                  ...item.task,
+                  estimatedDurationMinutes:
+                    input.estimatedDurationMinutes ?? item.task.estimatedDurationMinutes,
+                },
+              }
+            : item,
+        ),
+        scheduledItems: [
+          ...current.scheduledItems.filter((item) => item.id !== id),
+          ...current.planItems
+            .filter((item) => item.id === id)
+            .map((item) => ({
+              ...item,
+              scheduledStartAt: input.scheduledStartAt,
+              scheduledEndAt: input.scheduledEndAt,
+              scheduleType: 'FIXED' as const,
+              task: {
+                ...item.task,
+                estimatedDurationMinutes:
+                  input.estimatedDurationMinutes ?? item.task.estimatedDurationMinutes,
+              },
+            })),
+        ].sort(
+          (a, b) =>
+            new Date(a.scheduledStartAt ?? 0).getTime() -
+            new Date(b.scheduledStartAt ?? 0).getTime(),
+        ),
+      }));
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) queryClient.setQueryData(dayQueryKey, context.previous);
+    },
+    onSuccess: (item) => {
+      replaceCachedItem(item);
+      invalidateMyDay();
+    },
   });
   const unscheduleItem = useMutation({
     mutationFn: api.unscheduleMyDayItem,
-    onSuccess: invalidate,
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: dayQueryKey });
+      const previous = queryClient.getQueryData<MyDayData>(dayQueryKey);
+      updateCachedDay((current) => ({
+        ...current,
+        planItems: current.planItems.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                scheduledStartAt: null,
+                scheduledEndAt: null,
+                scheduleType: 'FLEXIBLE',
+              }
+            : item,
+        ),
+        scheduledItems: current.scheduledItems.filter((item) => item.id !== id),
+        mandatory: {
+          ...current.mandatory,
+          scheduled: current.mandatory.scheduled.filter((item) => item.id !== id),
+        },
+      }));
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) queryClient.setQueryData(dayQueryKey, context.previous);
+    },
+    onSuccess: (item) => {
+      replaceCachedItem(item);
+      invalidateMyDay();
+    },
   });
   const removeItem = useMutation({
     mutationFn: api.removeMyDayItem,
-    onSuccess: invalidate,
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: dayQueryKey });
+      const previous = queryClient.getQueryData<MyDayData>(dayQueryKey);
+      removeCachedItem(id);
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) queryClient.setQueryData(dayQueryKey, context.previous);
+    },
+    onSuccess: () => invalidateMyDay({ suggestions: true }),
   });
   const completeItem = useMutation({
     mutationFn: api.completeMyDayItem,
-    onSuccess: invalidate,
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: dayQueryKey });
+      const previous = queryClient.getQueryData<MyDayData>(dayQueryKey);
+      const completedAt = new Date().toISOString();
+      updateCachedDay((current) => ({
+        ...current,
+        planItems: current.planItems.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                completedInPlanAt: completedAt,
+                task: {
+                  ...item.task,
+                  status: 'COMPLETED',
+                  completedAt,
+                },
+              }
+            : item,
+        ),
+        scheduledItems: current.scheduledItems.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                completedInPlanAt: completedAt,
+                task: {
+                  ...item.task,
+                  status: 'COMPLETED',
+                  completedAt,
+                },
+              }
+            : item,
+        ),
+      }));
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) queryClient.setQueryData(dayQueryKey, context.previous);
+    },
+    onSuccess: (item) => {
+      replaceCachedItem(item);
+      invalidateMyDay();
+    },
   });
   const completeDay = useMutation({
     mutationFn: api.completeMyDay,
-    onSuccess: invalidate,
+    onSuccess: (data) => {
+      queryClient.setQueryData(dayQueryKey, data);
+      invalidateMyDay({ suggestions: true });
+    },
   });
 
   const planItems = day.data?.planItems ?? [];
@@ -277,7 +513,6 @@ export default function MyDayPage() {
     const slots: string[] = [];
     for (let hour = 7; hour < 20; hour += 1) {
       slots.push(`${String(hour).padStart(2, '0')}:00`);
-      slots.push(`${String(hour).padStart(2, '0')}:30`);
     }
     return slots;
   }, []);
@@ -465,9 +700,7 @@ export default function MyDayPage() {
 
             <div className="grid gap-2">
               {timelineSlots.map((time) => {
-                const slotItems = scheduledItems.filter(
-                  (item) => formatTime(item.scheduledStartAt) === time,
-                );
+                const slotItems = scheduledItems.filter((item) => hourSlot(item.scheduledStartAt) === time);
                 return (
                   <div
                     key={time}
