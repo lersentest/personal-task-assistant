@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import {
   Attachment,
+  ConfirmedVoiceOperation,
   DashboardData,
   DailyPlanItem,
   MyDayData,
@@ -8,6 +9,7 @@ import {
   ProjectInput,
   Task,
   TaskInput,
+  VoiceInterpretation,
 } from './types';
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -24,6 +26,13 @@ async function authHeaders() {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
   };
+}
+
+async function bearerHeader() {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error('Сессия истекла');
+  return { Authorization: `Bearer ${token}` };
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -51,6 +60,20 @@ async function download(path: string): Promise<Blob> {
     throw new Error(text || 'Не удалось скачать файл');
   }
   return response.blob();
+}
+
+async function formRequest<T>(path: string, formData: FormData): Promise<T> {
+  const headers = await bearerHeader();
+  const response = await fetch(`${apiUrl}${path}`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || 'Не удалось выполнить запрос');
+  }
+  return response.json() as Promise<T>;
 }
 
 export const api = {
@@ -157,5 +180,25 @@ export const api = {
     request<MyDayData>('/api/my-day/complete', {
       method: 'POST',
       body: JSON.stringify(input),
+    }),
+  transcribeVoice: (input: { audio: Blob; mimeType: string; durationMs: number }) => {
+    const formData = new FormData();
+    formData.append('audio', input.audio, 'web-voice');
+    formData.append('mimeType', input.mimeType);
+    formData.append('durationMs', String(input.durationMs));
+    return formRequest<{ transcript: string; durationMs: number }>('/api/voice/transcribe', formData);
+  },
+  interpretVoice: (transcript: string) =>
+    request<VoiceInterpretation>('/api/voice/interpret', {
+      method: 'POST',
+      body: JSON.stringify({ transcript }),
+    }),
+  confirmVoiceDraft: (draftId: string) =>
+    request<ConfirmedVoiceOperation>(`/api/voice/drafts/${draftId}/confirm`, {
+      method: 'POST',
+    }),
+  cancelVoiceDraft: (draftId: string) =>
+    request<{ ok: true }>(`/api/voice/drafts/${draftId}/cancel`, {
+      method: 'POST',
     }),
 };

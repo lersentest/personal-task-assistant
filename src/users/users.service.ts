@@ -39,6 +39,12 @@ export class UsersService {
     });
   }
 
+  findById(id: string) {
+    return this.prisma.user.findUnique({
+      where: { id },
+    });
+  }
+
   async linkAuthUserToTelegramOwner(authUserId: string, telegramId: string) {
     const existing = await this.findByAuthUserId(authUserId);
     if (existing) return existing;

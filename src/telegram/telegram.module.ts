@@ -29,5 +29,6 @@ import { TextCommandParserService } from './text-command-parser.service';
     DraftsService,
     ConfirmationService,
   ],
+  exports: [DraftsService, ConfirmationService, TextCommandParserService],
 })
 export class TelegramModule {}

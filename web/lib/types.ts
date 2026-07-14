@@ -133,3 +133,25 @@ export interface MyDayData {
   conflicts: Array<{ firstItemId: string; secondItemId: string }>;
   unresolvedPreviousDays: DailyPlanItem[];
 }
+
+export interface VoiceDraft {
+  kind: 'PROJECT' | 'TASK' | 'TASK_UPDATE' | 'BULK_TASK_UPDATE';
+  draftId: string;
+  title: string;
+  fields: Array<{ label: string; value: string }>;
+  affectedTasks?: string[];
+}
+
+export interface VoiceInterpretation {
+  transcript: string;
+  draft: VoiceDraft;
+}
+
+export interface ConfirmedVoiceOperation {
+  kind: 'PROJECT' | 'TASK' | 'TASK_UPDATE' | 'BULK_TASK_UPDATE';
+  id?: string;
+  name?: string;
+  title?: string;
+  projectName?: string;
+  count?: number;
+}

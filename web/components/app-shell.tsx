@@ -20,6 +20,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { VoiceCommandButton } from './voice-command-button';
 
 const nav = [
   { href: '/my-day', label: 'Мой день', icon: ClipboardList },
@@ -103,6 +104,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className="pb-20 lg:col-start-2 lg:pb-0">
         {children}
       </main>
+      <VoiceCommandButton />
       <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-[var(--line)] bg-[var(--panel)] px-1 py-2 lg:hidden">
         {[
           { href: '/my-day', label: 'Мой день', icon: ClipboardList },
