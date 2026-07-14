@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AiModule } from '../ai/ai.module';
 import { AttachmentsModule } from '../attachments/attachments.module';
 import { AttachmentsController } from './attachments.controller';
 import { DashboardController } from './dashboard.controller';
@@ -17,6 +18,7 @@ import { VoiceModule } from '../voice/voice.module';
 
 @Module({
   imports: [
+    AiModule,
     UsersModule,
     TasksModule,
     ProjectsModule,
