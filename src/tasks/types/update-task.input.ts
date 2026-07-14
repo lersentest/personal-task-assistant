@@ -7,5 +7,6 @@ export interface UpdateTaskInput {
   dueAt?: Date | null;
   dueDateType?: 'ON_DATE' | 'BEFORE_DATE' | 'EXACT_TIME' | null;
   remindAt?: Date | null;
+  estimatedDurationMinutes?: number | null;
   tags?: string[];
 }

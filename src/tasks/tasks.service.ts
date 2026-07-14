@@ -57,6 +57,7 @@ export class TasksService {
           dueAt: input.dueAt ?? null,
           dueDateType: input.dueDateType ?? null,
           remindAt: input.remindAt ?? null,
+          estimatedDurationMinutes: input.estimatedDurationMinutes ?? null,
         },
       });
 
@@ -113,6 +114,9 @@ export class TasksService {
             : {}),
           ...(input.remindAt !== undefined
             ? { remindAt: input.remindAt }
+            : {}),
+          ...(input.estimatedDurationMinutes !== undefined
+            ? { estimatedDurationMinutes: input.estimatedDurationMinutes }
             : {}),
           ...statusTimes,
         },

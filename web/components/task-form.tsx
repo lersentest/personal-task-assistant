@@ -21,6 +21,9 @@ export function TaskForm({
   const [priority, setPriority] = useState(task?.priority ?? 'NORMAL');
   const [status, setStatus] = useState(task?.status ?? 'NEW');
   const [dueAt, setDueAt] = useState(task?.dueAt ? task.dueAt.slice(0, 16) : '');
+  const [estimatedDurationMinutes, setEstimatedDurationMinutes] = useState(
+    task?.estimatedDurationMinutes?.toString() ?? '',
+  );
 
   const projects = useQuery({ queryKey: ['projects'], queryFn: api.projects });
   const mutation = useMutation({
@@ -32,6 +35,9 @@ export function TaskForm({
         priority,
         status,
         dueAt: dueAt ? new Date(dueAt).toISOString() : null,
+        estimatedDurationMinutes: estimatedDurationMinutes
+          ? Number(estimatedDurationMinutes)
+          : null,
       };
       return task ? api.updateTask(task.id, input) : api.createTask(input);
     },
@@ -51,7 +57,7 @@ export function TaskForm({
     >
       <input className="h-11 rounded-lg border border-[var(--line)] bg-transparent px-3 outline-none focus:border-[var(--accent)]" placeholder="Название задачи" value={title} onChange={(event) => setTitle(event.target.value)} required />
       <textarea className="min-h-24 rounded-lg border border-[var(--line)] bg-transparent p-3 outline-none focus:border-[var(--accent)]" placeholder="Описание" value={description} onChange={(event) => setDescription(event.target.value)} />
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-5">
         <select className="h-11 rounded-lg border border-[var(--line)] bg-transparent px-3" value={selectedProjectId} onChange={(event) => setSelectedProjectId(event.target.value)}>
           <option value="">Без проекта</option>
           {projects.data?.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
@@ -69,6 +75,16 @@ export function TaskForm({
           <option value="URGENT">Срочный</option>
         </select>
         <input className="h-11 rounded-lg border border-[var(--line)] bg-transparent px-3" type="datetime-local" value={dueAt} onChange={(event) => setDueAt(event.target.value)} />
+        <input
+          className="h-11 rounded-lg border border-[var(--line)] bg-transparent px-3"
+          type="number"
+          min={5}
+          max={1440}
+          step={5}
+          placeholder="Минуты"
+          value={estimatedDurationMinutes}
+          onChange={(event) => setEstimatedDurationMinutes(event.target.value)}
+        />
       </div>
       {mutation.error ? <p className="text-sm text-red-500">{mutation.error.message}</p> : null}
       <div className="flex flex-wrap gap-2">
@@ -80,4 +96,3 @@ export function TaskForm({
     </form>
   );
 }
-

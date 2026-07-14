@@ -55,6 +55,11 @@ enum ReminderStatus {
   CANCELLED
 }
 
+enum DailyPlanScheduleType {
+  FLEXIBLE
+  FIXED
+}
+
 model User {
   id             String   @id @default(uuid()) @db.Uuid
   telegramId     BigInt   @unique @map("telegram_id")
@@ -76,6 +81,7 @@ model User {
   attachments     Attachment[] @relation("AttachmentOwner")
   uploadedFiles   Attachment[] @relation("AttachmentUploader")
   dailySummaries  DailySummaryDelivery[]
+  dailyPlanItems  DailyPlanItem[]
 
   @@map("users")
 }
@@ -115,6 +121,7 @@ model Task {
   dueAt        DateTime?      @map("due_at") @db.Timestamptz(3)
   dueDateType  DueDateType?   @map("due_date_type")
   remindAt     DateTime?      @map("remind_at") @db.Timestamptz(3)
+  estimatedDurationMinutes Int? @map("estimated_duration_minutes")
   sourceType   TaskSourceType @default(TEXT) @map("source_type")
   originalText String?        @map("original_text") @db.Text
   createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -130,11 +137,35 @@ model Task {
   tags      TaskTag[]
   reminders Reminder[]
   attachments Attachment[]
+  dailyPlanItems DailyPlanItem[]
 
   @@index([ownerId, status, deletedAt])
   @@index([ownerId, dueAt])
   @@index([projectId, status, deletedAt])
   @@map("tasks")
+}
+
+model DailyPlanItem {
+  id                  String                @id @default(uuid()) @db.Uuid
+  userId              String                @map("user_id") @db.Uuid
+  taskId              String                @map("task_id") @db.Uuid
+  date                DateTime              @db.Date
+  order               Int                   @default(0)
+  scheduledStartAt    DateTime?             @map("scheduled_start_at") @db.Timestamptz(3)
+  scheduledEndAt      DateTime?             @map("scheduled_end_at") @db.Timestamptz(3)
+  scheduleType        DailyPlanScheduleType @default(FLEXIBLE) @map("schedule_type")
+  addedAt             DateTime              @default(now()) @map("added_at") @db.Timestamptz(3)
+  removedAt           DateTime?             @map("removed_at") @db.Timestamptz(3)
+  completedInPlanAt   DateTime?             @map("completed_in_plan_at") @db.Timestamptz(3)
+  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date, removedAt])
+  @@index([taskId, date])
+  @@map("daily_plan_items")
 }
 
 model Tag {

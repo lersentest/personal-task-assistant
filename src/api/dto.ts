@@ -29,6 +29,7 @@ export const createTaskSchema = z.object({
   dueAt: z.string().datetime().nullable().optional(),
   dueDateType: dueDateTypeSchema.nullable().optional(),
   remindAt: z.string().datetime().nullable().optional(),
+  estimatedDurationMinutes: z.number().int().min(5).max(1440).nullable().optional(),
   tags: z.array(z.string().min(1).max(80)).max(10).optional(),
 });
 
@@ -67,6 +68,55 @@ export const createAttachmentSchema = z.object({
   fileName: z.string().min(1).max(255),
   mimeType: z.string().min(1).max(255),
   dataBase64: z.string().min(1),
+});
+
+export const myDayDateSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
+export const myDaySuggestionsSchema = myDayDateSchema.extend({
+  search: z.string().max(200).optional(),
+  projectId: z.string().uuid().optional(),
+  priority: taskPrioritySchema.optional(),
+  tagId: z.string().uuid().optional(),
+  unassigned: z.coerce.boolean().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(40),
+});
+
+export const createDailyPlanItemSchema = z.object({
+  taskId: z.string().uuid(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  scheduledStartAt: z.string().datetime().nullable().optional(),
+  scheduledEndAt: z.string().datetime().nullable().optional(),
+  estimatedDurationMinutes: z.number().int().min(5).max(1440).nullable().optional(),
+});
+
+export const updateDailyPlanItemSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  order: z.number().int().min(0).optional(),
+  scheduledStartAt: z.string().datetime().nullable().optional(),
+  scheduledEndAt: z.string().datetime().nullable().optional(),
+  estimatedDurationMinutes: z.number().int().min(5).max(1440).nullable().optional(),
+});
+
+export const scheduleDailyPlanItemSchema = z.object({
+  scheduledStartAt: z.string().datetime(),
+  scheduledEndAt: z.string().datetime(),
+  estimatedDurationMinutes: z.number().int().min(5).max(1440).nullable().optional(),
+});
+
+export const reorderDailyPlanItemsSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  itemIds: z.array(z.string().uuid()).min(1).max(200),
+});
+
+export const completeMyDaySchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  actions: z.array(z.object({
+    itemId: z.string().uuid(),
+    action: z.enum(['TOMORROW', 'BACKLOG', 'KEEP', 'CANCEL']),
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  })).max(200).default([]),
 });
 
 export function parseDto<T>(schema: z.ZodType<T>, value: unknown): T {

@@ -8,6 +8,7 @@ import { validateEnvironment } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
 import { ProjectsModule } from './projects/projects.module';
 import { RemindersModule } from './reminders/reminders.module';
+import { MyDayModule } from './my-day/my-day.module';
 import { TagsModule } from './tags/tags.module';
 import { TasksModule } from './tasks/tasks.module';
 import { TelegramModule } from './telegram/telegram.module';
@@ -27,6 +28,7 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     ProjectsModule,
     TasksModule,
+    MyDayModule,
     TagsModule,
     RemindersModule,
     TelegramModule,

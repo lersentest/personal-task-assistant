@@ -32,6 +32,7 @@ export interface Task {
   dueAt: string | null;
   dueDateType: 'ON_DATE' | 'BEFORE_DATE' | 'EXACT_TIME' | null;
   remindAt: string | null;
+  estimatedDurationMinutes: number | null;
   originalText: string | null;
   createdAt: string;
   updatedAt: string;
@@ -63,6 +64,7 @@ export interface TaskInput {
   priority?: TaskPriority;
   dueAt?: string | null;
   remindAt?: string | null;
+  estimatedDurationMinutes?: number | null;
   tags?: string[];
 }
 
@@ -82,4 +84,52 @@ export interface Attachment {
   createdAt: string;
   task?: { id: string; title: string } | null;
   project?: { id: string; name: string } | null;
+}
+
+export interface DailyPlanItem {
+  id: string;
+  userId: string;
+  taskId: string;
+  date: string;
+  order: number;
+  scheduledStartAt: string | null;
+  scheduledEndAt: string | null;
+  scheduleType: 'FLEXIBLE' | 'FIXED';
+  addedAt: string;
+  removedAt: string | null;
+  completedInPlanAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  task: Task;
+}
+
+export interface MyDayData {
+  date: string;
+  settings: {
+    dayStart: string;
+    dayEnd: string;
+    capacityMinutes: number;
+    calendarStepMinutes: number;
+    timezone: string;
+  };
+  summary: {
+    totalTasks: number;
+    completedTasks: number;
+    remainingTasks: number;
+    estimatedMinutes: number;
+    completedMinutes: number;
+    overloaded: boolean;
+    conflicts: number;
+  };
+  mandatory: {
+    overdue: Task[];
+    dueToday: Task[];
+    plannedToday: DailyPlanItem[];
+    scheduled: DailyPlanItem[];
+  };
+  planItems: DailyPlanItem[];
+  scheduledItems: DailyPlanItem[];
+  completedItems: DailyPlanItem[];
+  conflicts: Array<{ firstItemId: string; secondItemId: string }>;
+  unresolvedPreviousDays: DailyPlanItem[];
 }

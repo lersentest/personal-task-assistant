@@ -11,6 +11,7 @@ export interface CreateTaskInput {
   dueAt?: Date | null;
   dueDateType?: 'ON_DATE' | 'BEFORE_DATE' | 'EXACT_TIME' | null;
   remindAt?: Date | null;
+  estimatedDurationMinutes?: number | null;
   sourceType?: 'TEXT' | 'VOICE' | 'FORWARDED_MESSAGE';
   tags?: string[];
 }

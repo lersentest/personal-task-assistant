@@ -23,6 +23,7 @@ export function TaskCard({
             <span className="inline-flex items-center gap-1"><Clock size={13} />{formatDate(task.dueAt)}</span>
             <span>{statusLabel[task.status]}</span>
             <span>{priorityLabel[task.priority]}</span>
+            {task.estimatedDurationMinutes ? <span>{task.estimatedDurationMinutes} мин</span> : null}
             {task.project ? <span className="inline-flex items-center gap-1"><FolderKanban size={13} />{task.project.name}</span> : <span>Без проекта</span>}
           </div>
         </div>
@@ -40,4 +41,3 @@ export function TaskCard({
     </article>
   );
 }
-

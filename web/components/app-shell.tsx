@@ -3,6 +3,7 @@
 import {
   CalendarDays,
   CheckSquare,
+  ClipboardList,
   FolderKanban,
   Home,
   LogOut,
@@ -21,6 +22,7 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
 const nav = [
+  { href: '/my-day', label: 'Мой день', icon: ClipboardList },
   { href: '/dashboard', label: 'Обзор', icon: Home },
   { href: '/today', label: 'Сегодня', icon: CheckSquare },
   { href: '/calendar', label: 'Календарь', icon: CalendarDays },
@@ -51,7 +53,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[260px_1fr]">
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-[260px] border-r border-[var(--line)] bg-[var(--panel)] px-4 py-5 lg:flex lg:flex-col">
-        <Link href="/dashboard" className="mb-6 text-lg font-semibold">
+        <Link href="/my-day" className="mb-6 text-lg font-semibold">
           Personal Tasks
         </Link>
         <button
@@ -103,7 +105,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </main>
       <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-[var(--line)] bg-[var(--panel)] px-1 py-2 lg:hidden">
         {[
-          { href: '/today', label: 'Сегодня', icon: CheckSquare },
+          { href: '/my-day', label: 'Мой день', icon: ClipboardList },
           { href: '/calendar', label: 'Календарь', icon: CalendarDays },
           { href: '/tasks?create=1', label: 'Создать', icon: Plus },
           { href: '/projects', label: 'Проекты', icon: FolderKanban },
@@ -121,4 +123,3 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-

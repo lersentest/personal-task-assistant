@@ -2,6 +2,8 @@ import { supabase } from './supabase';
 import {
   Attachment,
   DashboardData,
+  DailyPlanItem,
+  MyDayData,
   Project,
   ProjectInput,
   Task,
@@ -99,4 +101,61 @@ export const api = {
     download(`/api/attachments/${id}/download`),
   deleteAttachment: (id: string) =>
     request<{ ok: true }>(`/api/attachments/${id}`, { method: 'DELETE' }),
+  myDay: (date: string) => request<MyDayData>(`/api/my-day?date=${date}`),
+  myDaySuggestions: (query: string) =>
+    request<Task[]>(`/api/my-day/suggestions${query}`),
+  addMyDayItem: (input: {
+    taskId: string;
+    date: string;
+    scheduledStartAt?: string | null;
+    scheduledEndAt?: string | null;
+    estimatedDurationMinutes?: number | null;
+  }) =>
+    request<DailyPlanItem>('/api/my-day/items', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  updateMyDayItem: (id: string, input: {
+    date?: string;
+    order?: number;
+    scheduledStartAt?: string | null;
+    scheduledEndAt?: string | null;
+    estimatedDurationMinutes?: number | null;
+  }) =>
+    request<DailyPlanItem>(`/api/my-day/items/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
+  removeMyDayItem: (id: string) =>
+    request<{ ok: true }>(`/api/my-day/items/${id}`, { method: 'DELETE' }),
+  scheduleMyDayItem: (id: string, input: {
+    scheduledStartAt: string;
+    scheduledEndAt: string;
+    estimatedDurationMinutes?: number | null;
+  }) =>
+    request<DailyPlanItem>(`/api/my-day/items/${id}/schedule`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  unscheduleMyDayItem: (id: string) =>
+    request<DailyPlanItem>(`/api/my-day/items/${id}/unschedule`, { method: 'POST' }),
+  completeMyDayItem: (id: string) =>
+    request<DailyPlanItem>(`/api/my-day/items/${id}/complete`, { method: 'POST' }),
+  reorderMyDayItems: (input: { date: string; itemIds: string[] }) =>
+    request<{ ok: true }>('/api/my-day/items/reorder', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  completeMyDay: (input: {
+    date: string;
+    actions: Array<{
+      itemId: string;
+      action: 'TOMORROW' | 'BACKLOG' | 'KEEP' | 'CANCEL';
+      date?: string;
+    }>;
+  }) =>
+    request<MyDayData>('/api/my-day/complete', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
 };
