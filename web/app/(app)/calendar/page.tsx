@@ -1,7 +1,7 @@
 'use client';
 
 import dayGridPlugin from '@fullcalendar/daygrid';
-import interactionPlugin, { EventDropArg } from '@fullcalendar/interaction';
+import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -35,7 +35,7 @@ export default function CalendarPage() {
             backgroundColor: task.priority === 'URGENT' ? '#dc2626' : task.priority === 'HIGH' ? '#f97316' : '#2563eb',
             borderColor: 'transparent',
           }))}
-          eventDrop={(arg: EventDropArg) => {
+          eventDrop={(arg) => {
             if (!arg.event.start) return;
             move.mutate(
               { id: arg.event.id, dueAt: arg.event.start.toISOString() },
@@ -47,4 +47,3 @@ export default function CalendarPage() {
     </Page>
   );
 }
-
