@@ -118,6 +118,7 @@ function PlanItemCard({
   onUnschedule,
   onSchedule,
   onDuration,
+  compact = false,
 }: {
   item: DailyPlanItem;
   date: string;
@@ -126,6 +127,7 @@ function PlanItemCard({
   onUnschedule: () => void;
   onSchedule: (start: string, duration: number) => void;
   onDuration: (duration: number) => void;
+  compact?: boolean;
 }) {
   const [time, setTime] = useState(formatTime(item.scheduledStartAt) || '09:00');
   const duration = item.task.estimatedDurationMinutes ?? 30;
@@ -135,7 +137,7 @@ function PlanItemCard({
     <article
       draggable
       onDragStart={(event) => event.dataTransfer.setData('text/plain', `item:${item.id}`)}
-      className={`rounded-lg border p-3 shadow-sm ${
+      className={`min-w-0 overflow-hidden rounded-lg border p-3 shadow-sm ${
         done
           ? 'border-emerald-300 bg-emerald-50 text-emerald-950 dark:bg-emerald-950/25 dark:text-emerald-100'
           : item.scheduledStartAt
@@ -173,6 +175,30 @@ function PlanItemCard({
           </button>
         </div>
       </div>
+      {compact ? (
+        <div className="mt-3 grid gap-2">
+          <div className="flex flex-wrap gap-2">
+            {!done ? (
+              <button
+                onClick={onComplete}
+                className="rounded-md border border-[var(--line)] px-3 py-2 text-sm hover:bg-[var(--background)]"
+              >
+                Выполнить
+              </button>
+            ) : null}
+            <button
+              onClick={onRemove}
+              className="rounded-md border border-[var(--line)] px-3 py-2 text-sm hover:bg-[var(--background)]"
+            >
+              Убрать
+            </button>
+          </div>
+          <p className="text-xs text-[var(--muted)]">
+            Чтобы назначить время, перетащи задачу на слот в центральной шкале.
+          </p>
+        </div>
+      ) : (
+        <>
       <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto]">
         <input
           type="time"
@@ -207,6 +233,8 @@ function PlanItemCard({
       <p className="mt-2 text-xs text-[var(--muted)]">
         Drag-and-drop: можно перетащить задачу на слот временной шкалы.
       </p>
+        </>
+      )}
     </article>
   );
 }
@@ -913,6 +941,7 @@ function TaskItemGroup({
             onUnschedule={() => unscheduleItem(item.id)}
             onSchedule={(start, duration) => scheduleExistingItem(item, start, duration)}
             onDuration={(duration) => updateDuration(item, duration)}
+            compact
           />
         ))}
       </div>
