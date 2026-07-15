@@ -11,6 +11,8 @@ import { PrismaService } from '../database/prisma.service';
 import { ExecutorsService } from '../executors/executors.service';
 import { ProjectsService } from '../projects/projects.service';
 
+const DEFAULT_PUBLIC_WEB_URL = 'https://personal-task-assistant-ruby.vercel.app';
+
 const delegatedTaskInclude = {
   executor: true,
   project: true,
@@ -640,7 +642,7 @@ export class DelegatedTasksService {
     const frontend =
       configured ||
       this.config.get<string>('FRONTEND_ORIGINS')?.split(',')[0]?.trim() ||
-      'http://localhost:3001';
+      DEFAULT_PUBLIC_WEB_URL;
     return `${frontend.replace(/\/$/, '')}/public/delegated/${token}`;
   }
 
@@ -650,10 +652,11 @@ export class DelegatedTasksService {
       const parsed = new URL(url);
       const isWebProtocol = parsed.protocol === 'https:' || parsed.protocol === 'http:';
       const isLocalHost = ['localhost', '127.0.0.1', '::1'].includes(parsed.hostname);
-      return isWebProtocol && !isLocalHost ? url : null;
+      if (isWebProtocol && !isLocalHost) return url;
     } catch {
-      return null;
+      // Fall back to the known production web app below.
     }
+    return `${DEFAULT_PUBLIC_WEB_URL}/public/delegated/${token}`;
   }
 
   private async notifyOwner(ownerId: string, message: string): Promise<void> {
