@@ -6,17 +6,23 @@ import {
   CheckSquare,
   ChevronDown,
   Command,
+  FileText,
   FolderKanban,
   Home,
+  Lightbulb,
   LogOut,
   Menu,
+  Mic,
   Moon,
+  Phone,
   Plus,
   Search,
   Settings,
+  Sparkles,
   Sun,
   Trash2,
   User,
+  Users,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -57,13 +63,25 @@ const sections = [
   },
 ];
 
+const createItems = [
+  { label: 'Задача', href: '/tasks?create=1&type=TASK', icon: CheckSquare, hint: 'Обычная рабочая задача' },
+  { label: 'Звонок', href: '/tasks?create=1&type=CALL', icon: Phone, hint: 'Запланировать звонок' },
+  { label: 'Встреча', href: '/tasks?create=1&type=MEETING', icon: Users, hint: 'Встреча или созвон' },
+  { label: 'Идея', href: '/tasks?create=1&type=IDEA', icon: Lightbulb, hint: 'Быстро сохранить мысль' },
+  { label: 'Заметка', href: '/tasks?create=1&type=NOTE', icon: FileText, hint: 'Текстовая заметка' },
+  { label: 'Проект', href: '/projects?create=1', icon: FolderKanban, hint: 'Новый проект' },
+];
+
 const commands = [
   { label: 'Перейти в Мой день', href: '/my-day', hint: 'Планирование дня' },
-  { label: 'Открыть календарь', href: '/calendar', hint: 'Месяц, неделя, день' },
-  { label: 'Создать задачу', href: '/tasks?create=1', hint: 'Новая задача' },
+  { label: 'Открыть обзор', href: '/dashboard', hint: 'Сегодня, риски, проекты, активность' },
+  { label: 'Открыть календарь', href: '/calendar', hint: 'Месяц, неделя, день, список' },
+  { label: 'Создать задачу', href: '/tasks?create=1&type=TASK', hint: 'Новая задача' },
+  { label: 'Создать звонок', href: '/tasks?create=1&type=CALL', hint: 'Тип задачи: звонок' },
+  { label: 'Создать встречу', href: '/tasks?create=1&type=MEETING', hint: 'Тип задачи: встреча' },
   { label: 'Создать проект', href: '/projects?create=1', hint: 'Новый проект' },
   { label: 'Найти задачу', href: '/search', hint: 'Поиск по системе' },
-  { label: 'Открыть проекты', href: '/projects', hint: 'Активные проекты' },
+  { label: 'Открыть файлы', href: '/files', hint: 'Вложения и документы' },
 ];
 
 export function FocusShell({ children }: { children: React.ReactNode }) {
@@ -90,17 +108,21 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
         target?.tagName === 'TEXTAREA' ||
         target?.tagName === 'SELECT' ||
         target?.isContentEditable;
+
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         setPaletteOpen(true);
       }
-      if (!typing && event.key.toLowerCase() === 'n') router.push('/tasks?create=1');
+      if (!typing && event.key.toLowerCase() === 'n') router.push('/tasks?create=1&type=TASK');
       if (!typing && event.key.toLowerCase() === 'p') router.push('/projects?create=1');
       if (!typing && event.key === '/') {
         event.preventDefault();
         router.push('/search');
       }
-      if (event.key === 'Escape') setPaletteOpen(false);
+      if (event.key === 'Escape') {
+        setPaletteOpen(false);
+        setCreateOpen(false);
+      }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
@@ -119,37 +141,54 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
 
   function go(href: string) {
     setPaletteOpen(false);
+    setCreateOpen(false);
     setCommandQuery('');
     router.push(href);
   }
 
   return (
     <div className="min-h-screen bg-[var(--focus-bg)] text-[var(--focus-text)] lg:grid lg:grid-cols-[292px_1fr]">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[292px] border-r border-[var(--focus-border)] bg-[var(--focus-surface)]/95 px-4 py-5 shadow-[var(--focus-shadow)] backdrop-blur lg:flex lg:flex-col">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[292px] border-r border-[var(--focus-border-soft)] bg-[var(--focus-surface)]/96 px-4 py-5 shadow-[var(--focus-shadow)] backdrop-blur lg:flex lg:flex-col">
         <Link href="/my-day" className="mb-7 flex items-center gap-3 px-1">
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--focus-primary)] text-white shadow-sm">
-            <CheckSquare size={18} />
+          <span className="relative flex h-9 w-9 items-center justify-center rounded-2xl bg-[var(--focus-primary)] text-white shadow-sm">
+            <CheckSquare size={19} />
+            <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-[var(--focus-surface)] bg-[var(--focus-success)]" />
           </span>
-          <span className="text-lg font-semibold tracking-tight">Personal Tasks</span>
+          <span>
+            <span className="block text-lg font-semibold tracking-tight">Personal Tasks</span>
+            <span className="block text-xs text-[var(--focus-text-muted)]">Focus workspace</span>
+          </span>
         </Link>
 
         <div className="relative mb-7">
           <button
             onClick={() => setCreateOpen((value) => !value)}
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--focus-primary)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--focus-primary-hover)]"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--focus-primary)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--focus-primary-hover)]"
           >
             <Plus size={18} />
-            Новая задача
+            Создать
             <ChevronDown size={16} className="ml-auto" />
           </button>
           {createOpen ? (
-            <div className="absolute left-0 right-0 top-14 z-40 grid gap-1 rounded-xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-2 text-sm shadow-[var(--focus-shadow)]">
-              <Link href="/tasks?create=1" className="rounded-lg px-3 py-2 hover:bg-[var(--focus-primary-soft)]">
-                Создать задачу
-              </Link>
-              <Link href="/projects?create=1" className="rounded-lg px-3 py-2 hover:bg-[var(--focus-primary-soft)]">
-                Создать проект
-              </Link>
+            <div className="absolute left-0 right-0 top-14 z-40 grid gap-1 rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-2 text-sm shadow-[var(--focus-shadow)]">
+              {createItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.href}
+                    onClick={() => go(item.href)}
+                    className="flex items-center gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-[var(--focus-primary-soft)]"
+                  >
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--focus-surface-secondary)] text-[var(--focus-primary)]">
+                      <Icon size={16} />
+                    </span>
+                    <span>
+                      <span className="block font-medium">{item.label}</span>
+                      <span className="text-xs text-[var(--focus-text-muted)]">{item.hint}</span>
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           ) : null}
         </div>
@@ -157,7 +196,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
         <nav className="grid gap-6">
           {sections.map((section) => (
             <div key={section.title}>
-              <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--focus-text-muted)]">
+              <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--focus-text-muted)]">
                 {section.title}
               </p>
               <div className="grid gap-1">
@@ -169,9 +208,9 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                      className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition ${
                         active
-                          ? 'bg-[var(--focus-primary-soft)] text-[var(--focus-primary)]'
+                          ? 'bg-[var(--focus-primary-soft)] text-[var(--focus-primary)] shadow-sm'
                           : 'text-[var(--focus-text-secondary)] hover:bg-[var(--focus-surface-secondary)] hover:text-[var(--focus-text)]'
                       }`}
                     >
@@ -188,32 +227,32 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
         <div className="mt-auto grid gap-1 border-t border-[var(--focus-border-soft)] pt-4 text-sm text-[var(--focus-text-secondary)]">
           <button
             onClick={cycleAppearance}
-            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-[var(--focus-surface-secondary)]"
+            className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left hover:bg-[var(--focus-surface-secondary)]"
           >
             {appearance === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
             {appearance === 'system' ? 'Системная тема' : appearance === 'dark' ? 'Тёмная тема' : 'Светлая тема'}
           </button>
-          <Link href="/settings" className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-[var(--focus-surface-secondary)]">
+          <Link href="/settings" className="flex items-center gap-3 rounded-2xl px-3 py-2.5 hover:bg-[var(--focus-surface-secondary)]">
             <Settings size={18} /> Настройки
           </Link>
-          <Link href="/profile" className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-[var(--focus-surface-secondary)]">
+          <Link href="/profile" className="flex items-center gap-3 rounded-2xl px-3 py-2.5 hover:bg-[var(--focus-surface-secondary)]">
             <User size={18} /> Профиль
           </Link>
-          <button onClick={logout} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-[var(--focus-surface-secondary)]">
+          <button onClick={logout} className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left hover:bg-[var(--focus-surface-secondary)]">
             <LogOut size={18} /> Выход
           </button>
         </div>
       </aside>
 
       <div className="lg:col-start-2">
-        <header className="sticky top-0 z-20 border-b border-[var(--focus-border-soft)] bg-[var(--focus-bg)]/90 px-4 py-3 backdrop-blur lg:px-8">
+        <header className="sticky top-0 z-20 border-b border-[var(--focus-border-soft)] bg-[var(--focus-bg)]/88 px-4 py-3 backdrop-blur-xl lg:px-8">
           <div className="mx-auto flex max-w-[1600px] items-center gap-3">
             <button className="rounded-xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-2 text-[var(--focus-text-secondary)] lg:hidden">
               <Menu size={20} />
             </button>
             <button
               onClick={() => setPaletteOpen(true)}
-              className="hidden h-11 min-w-0 flex-1 items-center gap-3 rounded-xl border border-[var(--focus-border)] bg-[var(--focus-surface)] px-4 text-sm text-[var(--focus-text-muted)] shadow-sm md:flex md:max-w-[620px]"
+              className="hidden h-11 min-w-0 flex-1 items-center gap-3 rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] px-4 text-sm text-[var(--focus-text-muted)] shadow-sm transition hover:border-[var(--focus-primary)] md:flex md:max-w-[620px]"
             >
               <Search size={18} />
               Поиск по задачам, проектам, тегам...
@@ -223,16 +262,23 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
             </button>
             <div className="ml-auto flex items-center gap-2">
               <VoiceCommandButton variant="inline" />
+              <button
+                onClick={() => setPaletteOpen(true)}
+                className="hidden h-11 items-center gap-2 rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] px-4 text-sm font-semibold shadow-sm transition hover:bg-[var(--focus-surface-secondary)] sm:flex"
+              >
+                <Sparkles size={17} />
+                Команды
+              </button>
               <Link
                 href="/tasks?create=1"
-                className="hidden h-11 items-center gap-2 rounded-xl border border-[var(--focus-border)] bg-[var(--focus-surface)] px-4 text-sm font-semibold shadow-sm transition hover:bg-[var(--focus-surface-secondary)] sm:flex"
+                className="hidden h-11 items-center gap-2 rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] px-4 text-sm font-semibold shadow-sm transition hover:bg-[var(--focus-surface-secondary)] sm:flex"
               >
                 <Plus size={18} />
                 Создать
               </Link>
               <Link
                 href="/profile"
-                className="flex h-11 items-center gap-3 rounded-xl px-2 text-sm hover:bg-[var(--focus-surface-secondary)]"
+                className="flex h-11 items-center gap-3 rounded-2xl px-2 text-sm hover:bg-[var(--focus-surface-secondary)]"
               >
                 <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-[var(--focus-primary-soft)] text-sm font-semibold text-[var(--focus-primary)]">
                   В
@@ -262,8 +308,15 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
           { href: '/dashboard', label: 'Ещё', icon: Menu },
         ].map((item) => {
           const Icon = item.icon;
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
-            <Link key={item.href} href={item.href} className="flex flex-col items-center gap-1 rounded-lg px-1 py-1 text-[11px] text-[var(--focus-text-secondary)]">
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex flex-col items-center gap-1 rounded-xl px-1 py-1 text-[11px] ${
+                active ? 'text-[var(--focus-primary)]' : 'text-[var(--focus-text-secondary)]'
+              }`}
+            >
               <Icon size={18} />
               {item.label}
             </Link>
@@ -279,7 +332,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
           onClick={() => setPaletteOpen(false)}
         >
           <div
-            className="w-full max-w-2xl overflow-hidden rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] shadow-[var(--focus-shadow)]"
+            className="w-full max-w-2xl overflow-hidden rounded-3xl border border-[var(--focus-border)] bg-[var(--focus-surface)] shadow-[var(--focus-shadow)]"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center gap-3 border-b border-[var(--focus-border-soft)] px-4">
@@ -298,7 +351,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
                 <button
                   key={command.href}
                   onClick={() => go(command.href)}
-                  className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-left hover:bg-[var(--focus-primary-soft)]"
+                  className="flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left hover:bg-[var(--focus-primary-soft)]"
                 >
                   <span>
                     <span className="block font-medium">{command.label}</span>
@@ -307,6 +360,15 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
                   <Command size={16} className="text-[var(--focus-text-muted)]" />
                 </button>
               ))}
+              {filteredCommands.length === 0 ? (
+                <p className="px-3 py-8 text-center text-sm text-[var(--focus-text-muted)]">
+                  Ничего не найдено. Попробуй другое слово.
+                </p>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-2 border-t border-[var(--focus-border-soft)] bg-[var(--focus-surface-secondary)] px-4 py-3 text-xs text-[var(--focus-text-muted)]">
+              <Mic size={14} />
+              Голосовую команду можно запустить кнопкой микрофона или Alt+V.
             </div>
           </div>
         </div>

@@ -144,7 +144,7 @@ function PlanItemCard({
     <article
       draggable
       onDragStart={(event) => event.dataTransfer.setData('text/plain', `item:${item.id}`)}
-      className={`min-w-0 overflow-hidden border ${
+      className={`group min-w-0 overflow-hidden border ${
         isFocus
           ? `rounded-xl px-3 py-2.5 shadow-none ${
               done
@@ -217,7 +217,7 @@ function PlanItemCard({
         </div>
       ) : (
         <>
-      <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto]">
+      <div className={isFocus ? 'mt-2 hidden gap-2 rounded-xl border border-[var(--focus-border-soft)] bg-[var(--focus-surface)]/80 p-2 group-hover:grid sm:grid-cols-[1fr_1fr_auto_auto]' : 'mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto]'}>
         <input
           type="time"
           className="h-9 rounded-md border border-[var(--line)] bg-transparent px-2 text-sm"
@@ -248,9 +248,11 @@ function PlanItemCard({
           Без времени
         </button>
       </div>
-      <p className="mt-2 text-xs text-[var(--muted)]">
-        Drag-and-drop: можно перетащить задачу на слот временной шкалы.
-      </p>
+      {!isFocus ? (
+        <p className="mt-2 text-xs text-[var(--muted)]">
+          Drag-and-drop: можно перетащить задачу на слот временной шкалы.
+        </p>
+      ) : null}
         </>
       )}
     </article>
