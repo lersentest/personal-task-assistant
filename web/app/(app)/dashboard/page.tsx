@@ -42,7 +42,7 @@ export default function DashboardPage() {
     <Page title="Доброе утро, Вадим 👋" description="Фокус на сегодняшних задачах, рисках и активных проектах.">
       <section className="mb-6 rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-5 shadow-sm">
         <p className="mb-3 text-sm font-medium text-[var(--focus-text-secondary)]">Быстрое создание</p>
-        <TaskForm />
+        <TaskForm compact />
       </section>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

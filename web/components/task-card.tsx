@@ -1,6 +1,6 @@
 import { CheckCircle2, Clock, FolderKanban } from 'lucide-react';
 import Link from 'next/link';
-import { formatDate, priorityLabel, statusLabel } from '@/lib/labels';
+import { formatDate, priorityLabel, statusLabel, taskKindLabel } from '@/lib/labels';
 import { Task } from '@/lib/types';
 import { useUiMode } from './ui-mode-provider';
 
@@ -50,6 +50,9 @@ export function TaskCard({
                 {priorityLabel[task.priority]}
               </span>
               <span className="rounded-full bg-[var(--focus-surface-secondary)] px-2 py-1">
+                {taskKindLabel[task.kind ?? 'TASK']}
+              </span>
+              <span className="rounded-full bg-[var(--focus-surface-secondary)] px-2 py-1">
                 {statusLabel[task.status]}
               </span>
               {task.estimatedDurationMinutes ? (
@@ -96,6 +99,7 @@ export function TaskCard({
             <span className="inline-flex items-center gap-1"><Clock size={13} />{formatDate(task.dueAt)}</span>
             <span>{statusLabel[task.status]}</span>
             <span>{priorityLabel[task.priority]}</span>
+            <span>{taskKindLabel[task.kind ?? 'TASK']}</span>
             {task.estimatedDurationMinutes ? <span>{task.estimatedDurationMinutes} мин</span> : null}
             {task.project ? <span className="inline-flex items-center gap-1"><FolderKanban size={13} />{task.project.name}</span> : <span>Без проекта</span>}
           </div>

@@ -15,7 +15,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useUiMode } from '@/components/ui-mode-provider';
 import { api } from '@/lib/api';
-import { formatDate, priorityLabel, statusLabel } from '@/lib/labels';
+import { formatDate, priorityLabel, statusLabel, taskKindLabel } from '@/lib/labels';
 import { DailyPlanItem, MyDayData, Task, TaskPriority } from '@/lib/types';
 
 const durationOptions = [15, 30, 45, 60, 90, 120, 180, 240];
@@ -64,6 +64,8 @@ function addMinutes(dateIso: string, minutes: number) {
 
 function taskMeta(task: Task) {
   return [
+    taskKindLabel[task.kind ?? 'TASK'],
+    task.isFlexible ? 'Гибкая' : 'Фиксированная',
     priorityLabel[task.priority],
     statusLabel[task.status],
     task.estimatedDurationMinutes ? formatMinutes(task.estimatedDurationMinutes) : 'без оценки',
@@ -80,28 +82,30 @@ function TaskPill({
   action?: () => void;
   actionLabel?: string;
 }) {
+  const { interfaceMode } = useUiMode();
+  const isFocus = interfaceMode === 'focus';
   return (
     <article
       draggable
       onDragStart={(event) => event.dataTransfer.setData('text/plain', `task:${task.id}`)}
-      className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3 shadow-sm"
+      className={isFocus ? 'rounded-xl border border-[var(--focus-border-soft)] bg-[var(--focus-surface)] px-3 py-2.5 transition hover:border-[var(--focus-primary)] hover:bg-[var(--focus-primary-soft)]' : 'rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3 shadow-sm'}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <Link href={`/tasks/${task.id}`} className="font-medium hover:text-[var(--accent)]">
+          <Link href={`/tasks/${task.id}`} className={isFocus ? 'text-sm font-semibold hover:text-[var(--focus-primary)]' : 'font-medium hover:text-[var(--accent)]'}>
             {task.title}
           </Link>
-          <div className="mt-2 flex flex-wrap gap-2 text-xs text-[var(--muted)]">
+          <div className={isFocus ? 'mt-2 flex flex-wrap gap-1.5 text-[11px] text-[var(--focus-text-muted)]' : 'mt-2 flex flex-wrap gap-2 text-xs text-[var(--muted)]'}>
             <span>{formatDate(task.dueAt)}</span>
             {taskMeta(task).map((item) => (
-              <span key={item}>{item}</span>
+              <span key={item} className={isFocus ? 'rounded-full bg-[var(--focus-surface-secondary)] px-2 py-0.5' : ''}>{item}</span>
             ))}
           </div>
         </div>
         {action ? (
           <button
             onClick={action}
-            className="rounded-md border border-[var(--line)] px-2 py-1 text-xs hover:bg-[var(--background)]"
+            className={isFocus ? 'shrink-0 rounded-lg border border-[var(--focus-border)] bg-[var(--focus-surface)] px-2.5 py-1.5 text-xs font-medium hover:border-[var(--focus-primary)]' : 'rounded-md border border-[var(--line)] px-2 py-1 text-xs hover:bg-[var(--background)]'}
           >
             {actionLabel}
           </button>
@@ -130,6 +134,8 @@ function PlanItemCard({
   onDuration: (duration: number) => void;
   compact?: boolean;
 }) {
+  const { interfaceMode } = useUiMode();
+  const isFocus = interfaceMode === 'focus';
   const [time, setTime] = useState(formatTime(item.scheduledStartAt) || '09:00');
   const duration = item.task.estimatedDurationMinutes ?? 30;
   const done = item.completedInPlanAt || item.task.status === 'COMPLETED';
@@ -138,20 +144,30 @@ function PlanItemCard({
     <article
       draggable
       onDragStart={(event) => event.dataTransfer.setData('text/plain', `item:${item.id}`)}
-      className={`min-w-0 overflow-hidden rounded-lg border p-3 shadow-sm ${
-        done
-          ? 'border-emerald-300 bg-emerald-50 text-emerald-950 dark:bg-emerald-950/25 dark:text-emerald-100'
-          : item.scheduledStartAt
-            ? 'border-blue-300 bg-blue-50 dark:bg-blue-950/25'
-            : 'border-[var(--line)] bg-[var(--panel)]'
+      className={`min-w-0 overflow-hidden border ${
+        isFocus
+          ? `rounded-xl px-3 py-2.5 shadow-none ${
+              done
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-950 dark:bg-emerald-950/25 dark:text-emerald-100'
+                : item.scheduledStartAt
+                  ? 'border-blue-200 bg-blue-50 dark:bg-blue-950/25'
+                  : 'border-[var(--focus-border-soft)] bg-[var(--focus-surface)]'
+            }`
+          : `rounded-lg p-3 shadow-sm ${
+              done
+                ? 'border-emerald-300 bg-emerald-50 text-emerald-950 dark:bg-emerald-950/25 dark:text-emerald-100'
+                : item.scheduledStartAt
+                  ? 'border-blue-300 bg-blue-50 dark:bg-blue-950/25'
+                  : 'border-[var(--line)] bg-[var(--panel)]'
+            }`
       }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <Link href={`/tasks/${item.task.id}`} className="font-medium hover:text-[var(--accent)]">
+          <Link href={`/tasks/${item.task.id}`} className={isFocus ? 'text-sm font-semibold hover:text-[var(--focus-primary)]' : 'font-medium hover:text-[var(--accent)]'}>
             {item.task.title}
           </Link>
-          <div className="mt-2 flex flex-wrap gap-2 text-xs text-[var(--muted)]">
+          <div className={isFocus ? 'mt-1.5 flex flex-wrap gap-1.5 text-[11px] text-[var(--focus-text-muted)]' : 'mt-2 flex flex-wrap gap-2 text-xs text-[var(--muted)]'}>
             {item.scheduledStartAt ? (
               <span className="inline-flex items-center gap-1">
                 <Clock size={13} />
@@ -161,6 +177,7 @@ function PlanItemCard({
               <span>гибкая задача</span>
             )}
             <span>{priorityLabel[item.task.priority]}</span>
+            <span>{taskKindLabel[item.task.kind ?? 'TASK']}</span>
             <span>{formatMinutes(duration)}</span>
             {item.task.project ? <span>{item.task.project.name}</span> : null}
           </div>
@@ -597,8 +614,8 @@ export default function MyDayPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[1800px] p-4 sm:p-6">
-      <header className="mb-5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm">
+    <div className={isFocus ? 'mx-auto max-w-[1500px] overflow-hidden' : 'mx-auto max-w-[1800px] p-4 sm:p-6'}>
+      <header className={isFocus ? 'mb-5 rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-5 shadow-sm' : 'mb-5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm'}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm text-[var(--muted)]">Ежедневное планирование</p>
@@ -640,7 +657,7 @@ export default function MyDayPage() {
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-5">
+        <div className={isFocus ? 'mt-4 grid gap-3 md:grid-cols-5' : 'mt-4 grid gap-3 md:grid-cols-5'}>
           <Stat label="Всего задач" value={day.data?.summary.totalTasks ?? 0} />
           <Stat label="Выполнено" value={day.data?.summary.completedTasks ?? 0} />
           <Stat label="Осталось" value={day.data?.summary.remainingTasks ?? 0} />
@@ -683,7 +700,7 @@ export default function MyDayPage() {
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(260px,360px)_minmax(420px,1fr)_minmax(280px,380px)]">
+      <div className={isFocus ? 'grid gap-4 lg:grid-cols-[minmax(250px,330px)_minmax(520px,1fr)_minmax(250px,330px)]' : 'grid gap-4 lg:grid-cols-[minmax(260px,360px)_minmax(420px,1fr)_minmax(280px,380px)]'}>
         <section className={`${mobileTab === 'plan' ? 'block' : 'hidden'} lg:block`}>
           <Panel title="Обязательно сегодня">
             {day.data?.unresolvedPreviousDays.length ? (
@@ -761,7 +778,7 @@ export default function MyDayPage() {
                         ))
                       ) : (
                         <div className="my-day-free-slot rounded-md border border-dashed border-[var(--line)] p-3 text-xs text-[var(--muted)]">
-                          Свободный слот
+                          {isFocus ? '' : 'Свободный слот'}
                         </div>
                       )}
                     </div>

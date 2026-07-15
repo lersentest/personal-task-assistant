@@ -70,6 +70,7 @@ export interface TaskInput {
   kind?: TaskKind;
   isFlexible?: boolean;
   dueAt?: string | null;
+  dueDateType?: 'ON_DATE' | 'BEFORE_DATE' | 'EXACT_TIME' | null;
   remindAt?: string | null;
   estimatedDurationMinutes?: number | null;
   tags?: string[];
