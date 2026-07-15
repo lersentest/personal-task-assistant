@@ -187,19 +187,17 @@ export default function PublicDelegatedTaskPage() {
                   </div>
                 )) : <p className="text-sm text-[var(--muted)]">Комментариев пока нет.</p>}
               </div>
-              {!isClosed ? (
-                <div className="mt-4 grid gap-2">
-                  <textarea
-                    className="min-h-24 rounded-2xl border border-[var(--line)] bg-transparent p-3"
-                    placeholder="Напишите комментарий владельцу задачи"
-                    value={message}
-                    onChange={(event) => setMessage(event.target.value)}
-                  />
-                  <button className="btn-base btn-primary" disabled={comment.isPending || !message.trim()} onClick={() => comment.mutate(message)}>
-                    <Send size={17} /> Отправить комментарий
-                  </button>
-                </div>
-              ) : null}
+              <div className="mt-4 grid gap-2">
+                <textarea
+                  className="min-h-24 rounded-2xl border border-[var(--line)] bg-transparent p-3"
+                  placeholder="Напишите комментарий владельцу задачи"
+                  value={message}
+                  onChange={(event) => setMessage(event.target.value)}
+                />
+                <button className="btn-base btn-primary" disabled={comment.isPending || !message.trim()} onClick={() => comment.mutate(message)}>
+                  <Send size={17} /> Отправить комментарий
+                </button>
+              </div>
             </section>
 
             <section className="rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
@@ -208,20 +206,18 @@ export default function PublicDelegatedTaskPage() {
                   <h3 className="font-semibold">Файлы</h3>
                   <p className="text-sm text-[var(--muted)]">Можно приложить PDF, изображения и другие файлы до 10 МБ.</p>
                 </div>
-                {!isClosed ? (
-                  <label className="btn-base btn-primary cursor-pointer">
-                    <UploadCloud size={17} /> Загрузить
-                    <input
-                      ref={fileRef}
-                      type="file"
-                      className="hidden"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        if (file) upload.mutate(file);
-                      }}
-                    />
-                  </label>
-                ) : null}
+                <label className="btn-base btn-primary cursor-pointer">
+                  <UploadCloud size={17} /> Загрузить
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    className="hidden"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) upload.mutate(file);
+                    }}
+                  />
+                </label>
               </div>
               {upload.isPending ? <p className="mt-3 text-sm text-[var(--muted)]">Загружаю файл...</p> : null}
               <div className="mt-4 grid gap-2">
