@@ -144,6 +144,15 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
     setMobileMenuOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileMenuOpen]);
+
   async function logout() {
     await supabase.auth.signOut();
     router.replace('/login');
@@ -280,11 +289,13 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
           <div className="mx-auto flex max-w-[1600px] items-center gap-3">
             <button
               type="button"
+              onPointerDown={() => setMobileMenuOpen(true)}
               onClick={() => setMobileMenuOpen(true)}
               aria-label="Открыть меню"
-              className="rounded-xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-2 text-[var(--focus-text-secondary)] lg:hidden"
+              className="flex min-h-11 items-center gap-2 rounded-xl border border-[var(--focus-border)] bg-[var(--focus-surface)] px-3 py-2 text-sm font-semibold text-[var(--focus-text-secondary)] lg:hidden"
             >
               <Menu size={20} />
+              <span className="sr-only sm:not-sr-only">Меню</span>
             </button>
             <button
               onClick={() => setPaletteOpen(true)}
@@ -350,6 +361,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
               <button
                 key={item.href}
                 type="button"
+                onPointerDown={() => setMobileMenuOpen(true)}
                 onClick={() => setMobileMenuOpen(true)}
                 className="flex flex-col items-center gap-1 rounded-xl px-1 py-1 text-[11px] text-[var(--focus-text-secondary)]"
               >
@@ -386,17 +398,21 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
         })}
       </nav>
 
-      {mobileMenuOpen ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-sm lg:hidden"
-          onClick={() => setMobileMenuOpen(false)}
+      <div
+        role="dialog"
+        aria-modal={mobileMenuOpen ? 'true' : undefined}
+        aria-hidden={!mobileMenuOpen}
+        className={`fixed inset-0 z-[10020] bg-slate-950/45 backdrop-blur-sm transition-opacity duration-200 lg:hidden ${
+          mobileMenuOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+        onClick={() => setMobileMenuOpen(false)}
+      >
+        <aside
+          className={`flex h-full w-[min(92vw,380px)] flex-col overflow-y-auto border-r border-[var(--focus-border)] bg-[var(--focus-surface)] p-4 shadow-2xl transition-transform duration-200 ${
+            mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+          onClick={(event) => event.stopPropagation()}
         >
-          <aside
-            className="flex h-full w-[min(92vw,380px)] flex-col overflow-y-auto border-r border-[var(--focus-border)] bg-[var(--focus-surface)] p-4 shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
             <div className="mb-4 flex items-center justify-between gap-3">
               <Link href="/my-day" className="flex min-w-0 items-center gap-3">
                 <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[var(--focus-primary)] text-white shadow-sm">
@@ -503,9 +519,8 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
                 <LogOut size={18} /> Выход
               </button>
             </div>
-          </aside>
-        </div>
-      ) : null}
+        </aside>
+      </div>
 
       {paletteOpen ? (
         <div
