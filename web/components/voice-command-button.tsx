@@ -44,7 +44,7 @@ function isTextInput(target: EventTarget | null) {
   return ['INPUT', 'TEXTAREA', 'SELECT'].includes(element.tagName) || element.isContentEditable;
 }
 
-export function VoiceCommandButton() {
+export function VoiceCommandButton({ variant = 'floating' }: { variant?: 'floating' | 'inline' }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<VoiceState>('idle');
@@ -261,7 +261,11 @@ export function VoiceCommandButton() {
     <>
       <button
         onClick={() => startRecording()}
-        className="fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--foreground)] text-[var(--background)] shadow-lg transition hover:scale-105 lg:bottom-auto lg:top-5"
+        className={
+          variant === 'inline'
+            ? 'flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--panel)] text-[var(--muted)] shadow-sm transition hover:bg-[var(--background)]'
+            : 'fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--foreground)] text-[var(--background)] shadow-lg transition hover:scale-105 lg:bottom-auto lg:top-5'
+        }
         title="Голосовая команда (Alt+V)"
         aria-label="Голосовая команда"
       >

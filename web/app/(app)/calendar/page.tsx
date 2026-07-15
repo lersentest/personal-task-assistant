@@ -8,24 +8,39 @@ import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { SlidersHorizontal } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { Page } from '@/components/page';
 import { useUiMode } from '@/components/ui-mode-provider';
 import { api } from '@/lib/api';
-import { Task } from '@/lib/types';
+import { priorityLabel, taskKindLabel } from '@/lib/labels';
+import { Task, TaskKind, TaskPriority } from '@/lib/types';
 
 export default function CalendarPage() {
   const { interfaceMode } = useUiMode();
   const isFocus = interfaceMode === 'focus';
   const queryClient = useQueryClient();
+  const [priority, setPriority] = useState<TaskPriority | ''>('');
+  const [kind, setKind] = useState<TaskKind | ''>('');
+  const [flexibility, setFlexibility] = useState<'all' | 'fixed' | 'flexible'>('all');
   const tasks = useQuery({ queryKey: ['calendar'], queryFn: api.calendar });
   const move = useMutation({
     mutationFn: ({ id, dueAt }: { id: string; dueAt: string }) => api.updateTask(id, { dueAt }),
     onSuccess: () => queryClient.invalidateQueries(),
   });
 
-  const events = (tasks.data ?? []).map((task) => ({
+  const visibleTasks = useMemo(() => {
+    return (tasks.data ?? []).filter((task) => {
+      if (priority && task.priority !== priority) return false;
+      if (kind && task.kind !== kind) return false;
+      if (flexibility === 'fixed' && task.isFlexible) return false;
+      if (flexibility === 'flexible' && !task.isFlexible) return false;
+      return true;
+    });
+  }, [flexibility, kind, priority, tasks.data]);
+
+  const events = visibleTasks.map((task) => ({
     id: task.id,
-    title: task.title,
+    title: `${taskKindLabel[task.kind ?? 'TASK']} · ${task.title}`,
     start: task.dueAt ?? undefined,
     url: `/tasks/${task.id}`,
     backgroundColor: eventColor(task),
@@ -44,7 +59,7 @@ export default function CalendarPage() {
   }
 
   return (
-    <Page title="Календарь" description="Месяц, неделя и день в едином Focus-стиле.">
+    <Page title="Календарь" description="Месяц, неделя, день и список с фильтрами Focus UI.">
       <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
         <section className="rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-4 shadow-sm">
           <Calendar events={events} move={move.mutate} focus />
@@ -56,21 +71,42 @@ export default function CalendarPage() {
               <h2 className="font-semibold">Фильтры</h2>
             </div>
             <div className="grid gap-3 text-sm text-[var(--focus-text-secondary)]">
-              <label className="flex items-center justify-between rounded-xl bg-[var(--focus-surface-secondary)] p-3">
-                Все проекты <input type="checkbox" defaultChecked />
+              <label className="grid gap-1">
+                <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--focus-text-muted)]">Приоритет</span>
+                <select className="h-11 rounded-xl border border-[var(--focus-border)] bg-[var(--focus-surface-secondary)] px-3" value={priority} onChange={(event) => setPriority(event.target.value as TaskPriority | '')}>
+                  <option value="">Все приоритеты</option>
+                  {(['URGENT', 'HIGH', 'NORMAL', 'LOW'] as TaskPriority[]).map((value) => (
+                    <option key={value} value={value}>{priorityLabel[value]}</option>
+                  ))}
+                </select>
               </label>
-              <label className="flex items-center justify-between rounded-xl bg-[var(--focus-surface-secondary)] p-3">
-                Фиксированные задачи <input type="checkbox" defaultChecked />
+              <label className="grid gap-1">
+                <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--focus-text-muted)]">Тип</span>
+                <select className="h-11 rounded-xl border border-[var(--focus-border)] bg-[var(--focus-surface-secondary)] px-3" value={kind} onChange={(event) => setKind(event.target.value as TaskKind | '')}>
+                  <option value="">Все типы</option>
+                  {(['TASK', 'CALL', 'MEETING', 'IDEA', 'NOTE'] as TaskKind[]).map((value) => (
+                    <option key={value} value={value}>{taskKindLabel[value]}</option>
+                  ))}
+                </select>
               </label>
-              <label className="flex items-center justify-between rounded-xl bg-[var(--focus-surface-secondary)] p-3">
-                Гибкие задачи <input type="checkbox" defaultChecked />
+              <label className="grid gap-1">
+                <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--focus-text-muted)]">Планирование</span>
+                <select className="h-11 rounded-xl border border-[var(--focus-border)] bg-[var(--focus-surface-secondary)] px-3" value={flexibility} onChange={(event) => setFlexibility(event.target.value as typeof flexibility)}>
+                  <option value="all">Все задачи</option>
+                  <option value="fixed">Фиксированные</option>
+                  <option value="flexible">Гибкие</option>
+                </select>
               </label>
+              <div className="rounded-xl bg-[var(--focus-surface-secondary)] p-3">
+                <p className="text-xs text-[var(--focus-text-muted)]">Показано</p>
+                <p className="mt-1 text-2xl font-semibold text-[var(--focus-text)]">{visibleTasks.length}</p>
+              </div>
             </div>
           </section>
           <section className="rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-primary-soft)] p-5">
             <p className="text-sm font-semibold text-[var(--focus-primary)]">Подсказка</p>
             <p className="mt-2 text-sm text-[var(--focus-text-secondary)]">
-              В месяце показывается overflow “+ ещё N”, а неделя и день открываются с рабочего времени.
+              Месяц показывает компактные задачи, неделя и день — рабочую сетку 07:00–21:00. Задачи можно перетаскивать на другое время.
             </p>
           </section>
         </aside>
@@ -127,9 +163,7 @@ function Calendar({
       events={events}
       eventDrop={(arg) => {
         if (!arg.event.start) return;
-        move(
-          { id: arg.event.id, dueAt: arg.event.start.toISOString() },
-        );
+        move({ id: arg.event.id, dueAt: arg.event.start.toISOString() });
       }}
       eventResize={(arg) => {
         if (!arg.event.start) return;
@@ -143,5 +177,6 @@ function eventColor(task: Task) {
   if (task.priority === 'URGENT') return '#ef4444';
   if (task.priority === 'HIGH') return '#f97316';
   if (task.status === 'COMPLETED') return '#22c55e';
+  if (task.kind === 'MEETING' || task.kind === 'CALL') return '#8b5cf6';
   return '#356fe8';
 }

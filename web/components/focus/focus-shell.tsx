@@ -10,7 +10,6 @@ import {
   Home,
   LogOut,
   Menu,
-  Mic,
   Moon,
   Plus,
   Search,
@@ -223,9 +222,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
               </span>
             </button>
             <div className="ml-auto flex items-center gap-2">
-              <button className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--focus-border)] bg-[var(--focus-surface)] text-[var(--focus-text-secondary)] shadow-sm">
-                <Mic size={18} />
-              </button>
+              <VoiceCommandButton variant="inline" />
               <Link
                 href="/tasks?create=1"
                 className="hidden h-11 items-center gap-2 rounded-xl border border-[var(--focus-border)] bg-[var(--focus-surface)] px-4 text-sm font-semibold shadow-sm transition hover:bg-[var(--focus-surface-secondary)] sm:flex"
@@ -255,8 +252,6 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
-
-      <VoiceCommandButton />
 
       <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-[var(--focus-border)] bg-[var(--focus-surface)] px-1 py-2 shadow-[var(--focus-shadow)] lg:hidden">
         {[
