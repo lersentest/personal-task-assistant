@@ -300,7 +300,7 @@ export class DelegatedTasksService {
     await this.api.sendMessage(
       task.executor.telegramUserId.toString(),
       this.formatExecutorTask(task),
-      { reply_markup: this.executorKeyboard(task.id, task.status, task.publicAccessToken) },
+      { reply_markup: this.executorKeyboard(task.id, 'SENT', task.publicAccessToken) },
     );
 
     await this.prisma.$transaction(async (tx) => {
@@ -617,8 +617,9 @@ export class DelegatedTasksService {
     publicToken?: string,
   ): InlineKeyboard {
     const keyboard = new InlineKeyboard();
-    if (publicToken) {
-      keyboard.url('Открыть задачу', this.publicTaskUrl(publicToken)).row();
+    const publicUrl = publicToken ? this.publicTelegramTaskUrl(publicToken) : null;
+    if (publicUrl) {
+      keyboard.url('Открыть задачу', publicUrl).row();
     }
     if (['SENT', 'RETURNED'].includes(status)) {
       keyboard.text('Принять', `delegated:accept:${taskId}`).row();
@@ -641,6 +642,18 @@ export class DelegatedTasksService {
       this.config.get<string>('FRONTEND_ORIGINS')?.split(',')[0]?.trim() ||
       'http://localhost:3001';
     return `${frontend.replace(/\/$/, '')}/public/delegated/${token}`;
+  }
+
+  private publicTelegramTaskUrl(token: string): string | null {
+    const url = this.publicTaskUrl(token);
+    try {
+      const parsed = new URL(url);
+      const isWebProtocol = parsed.protocol === 'https:' || parsed.protocol === 'http:';
+      const isLocalHost = ['localhost', '127.0.0.1', '::1'].includes(parsed.hostname);
+      return isWebProtocol && !isLocalHost ? url : null;
+    } catch {
+      return null;
+    }
   }
 
   private async notifyOwner(ownerId: string, message: string): Promise<void> {
