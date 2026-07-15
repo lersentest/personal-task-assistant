@@ -8,6 +8,7 @@ export interface AppEnvironment {
   OPENAI_TRANSCRIPTION_MODEL: string;
   PORT: string;
   FRONTEND_ORIGINS: string;
+  PUBLIC_WEB_URL: string;
   SUPABASE_URL: string;
   SUPABASE_JWT_SECRET: string;
 }
@@ -67,6 +68,10 @@ export function validateEnvironment(
       values.FRONTEND_ORIGINS.trim()
         ? values.FRONTEND_ORIGINS
         : 'http://localhost:3001,http://localhost:3000',
+    PUBLIC_WEB_URL:
+      typeof values.PUBLIC_WEB_URL === 'string' && values.PUBLIC_WEB_URL.trim()
+        ? values.PUBLIC_WEB_URL
+        : '',
     SUPABASE_URL:
       typeof values.SUPABASE_URL === 'string' && values.SUPABASE_URL.trim()
         ? values.SUPABASE_URL

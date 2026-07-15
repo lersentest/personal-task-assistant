@@ -71,9 +71,12 @@ APP_TIMEZONE
 OPENAI_API_KEY
 OPENAI_TEXT_MODEL
 OPENAI_TRANSCRIPTION_MODEL
+PUBLIC_WEB_URL
 ```
 
 Значения токена и пароля базы намеренно не приведены в документации.
+
+Для продакшена `PUBLIC_WEB_URL` должен указывать на веб-интерфейс Vercel, например `https://personal-task-assistant-ruby.vercel.app`. Эта переменная используется в Telegram-кнопке **Открыть задачу** для публичной страницы исполнителя.
 
 Чтобы изменить переменную:
 
