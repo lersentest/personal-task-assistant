@@ -8,6 +8,7 @@ export const taskStatusSchema = z.enum([
   'CANCELLED',
 ]);
 export const taskPrioritySchema = z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT']);
+export const taskKindSchema = z.enum(['TASK', 'CALL', 'MEETING', 'IDEA', 'NOTE']);
 export const dueDateTypeSchema = z.enum([
   'ON_DATE',
   'BEFORE_DATE',
@@ -26,6 +27,8 @@ export const createTaskSchema = z.object({
   projectId: z.string().uuid().nullable().optional(),
   status: taskStatusSchema.optional(),
   priority: taskPrioritySchema.optional(),
+  kind: taskKindSchema.optional(),
+  isFlexible: z.boolean().optional(),
   dueAt: z.string().datetime().nullable().optional(),
   dueDateType: dueDateTypeSchema.nullable().optional(),
   remindAt: z.string().datetime().nullable().optional(),
@@ -44,6 +47,7 @@ export const listTasksSchema = z.object({
   search: z.string().max(200).optional(),
   status: taskStatusSchema.optional(),
   priority: taskPrioritySchema.optional(),
+  kind: taskKindSchema.optional(),
   unassigned: z.coerce.boolean().optional(),
   sort: z.enum(['dueAt', 'priority', 'createdAt', 'updatedAt']).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(40),

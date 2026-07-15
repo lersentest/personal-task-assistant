@@ -11,7 +11,7 @@ export default function SearchPage() {
   const { interfaceMode } = useUiMode();
   const isFocus = interfaceMode === 'focus';
   const [query, setQuery] = useState('');
-  const search = useQuery({ queryKey: ['search'], queryFn: api.search });
+  const search = useQuery({ queryKey: ['search'], queryFn: () => api.search() });
   const filteredTasks = useMemo(() => (search.data?.tasks ?? []).filter((task) => task.title.toLowerCase().includes(query.toLowerCase())), [query, search.data]);
   const filteredProjects = useMemo(() => (search.data?.projects ?? []).filter((project) => project.name.toLowerCase().includes(query.toLowerCase())), [query, search.data]);
 

@@ -54,6 +54,8 @@ export class TasksService {
           sourceType: input.sourceType ?? 'TEXT',
           status: input.status ?? 'NEW',
           priority: input.priority ?? 'NORMAL',
+          kind: input.kind ?? 'TASK',
+          isFlexible: input.isFlexible ?? input.dueDateType !== 'EXACT_TIME',
           dueAt: input.dueAt ?? null,
           dueDateType: input.dueDateType ?? null,
           remindAt: input.remindAt ?? null,
@@ -66,6 +68,21 @@ export class TasksService {
         dueAt: input.dueAt ?? null,
         dueDateType: input.dueDateType ?? null,
         remindAt: input.remindAt ?? null,
+      });
+
+      await tx.activityEvent.create({
+        data: {
+          ownerId: input.ownerId,
+          actorId: input.createdById,
+          type: 'TASK_CREATED',
+          taskId: task.id,
+          projectId: input.projectId ?? null,
+          title,
+          metadata: {
+            priority: input.priority ?? 'NORMAL',
+            kind: input.kind ?? 'TASK',
+          },
+        },
       });
 
       return tx.task.findUniqueOrThrow({
@@ -108,6 +125,10 @@ export class TasksService {
           ...(input.priority !== undefined
             ? { priority: input.priority }
             : {}),
+          ...(input.kind !== undefined ? { kind: input.kind } : {}),
+          ...(input.isFlexible !== undefined
+            ? { isFlexible: input.isFlexible }
+            : {}),
           ...(input.dueAt !== undefined ? { dueAt: input.dueAt } : {}),
           ...(input.dueDateType !== undefined
             ? { dueDateType: input.dueDateType }
@@ -149,6 +170,26 @@ export class TasksService {
         });
       }
 
+      const updatedTask = await tx.task.findUniqueOrThrow({
+        where: { id: taskId },
+        select: { title: true, projectId: true, status: true },
+      });
+
+      await tx.activityEvent.create({
+        data: {
+          ownerId,
+          actorId: ownerId,
+          type:
+            input.status === 'COMPLETED'
+              ? 'TASK_COMPLETED'
+              : 'TASK_UPDATED',
+          taskId,
+          projectId: updatedTask.projectId,
+          title: updatedTask.title,
+          metadata: { status: updatedTask.status },
+        },
+      });
+
       return tx.task.findUniqueOrThrow({
         where: { id: taskId },
         include: taskInclude,
@@ -171,6 +212,7 @@ export class TasksService {
       ...(options.unassigned ? { projectId: null } : {}),
       ...(options.status ? { status: options.status } : {}),
       ...(options.priority ? { priority: options.priority } : {}),
+      ...(options.kind ? { kind: options.kind } : {}),
       ...(options.tagId
         ? { tags: { some: { tagId: options.tagId } } }
         : {}),
@@ -287,6 +329,7 @@ export class TasksService {
       ...(tagId ? { tagId } : {}),
       ...(filter.status ? { status: filter.status } : {}),
       ...(filter.priority ? { priority: filter.priority } : {}),
+      ...(filter.kind ? { kind: filter.kind } : {}),
       ...(filter.unassigned ? { unassigned: true } : {}),
       sort: 'updatedAt',
     }).then((tasks) =>
@@ -317,10 +360,22 @@ export class TasksService {
   }
 
   async softDelete(ownerId: string, taskId: string): Promise<void> {
-    await this.getOwned(ownerId, taskId);
-    await this.prisma.task.update({
-      where: { id: taskId },
-      data: { deletedAt: new Date() },
+    const task = await this.getOwned(ownerId, taskId);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.task.update({
+        where: { id: taskId },
+        data: { deletedAt: new Date() },
+      });
+      await tx.activityEvent.create({
+        data: {
+          ownerId,
+          actorId: ownerId,
+          type: 'TASK_DELETED',
+          taskId,
+          projectId: task.projectId,
+          title: task.title,
+        },
+      });
     });
   }
 

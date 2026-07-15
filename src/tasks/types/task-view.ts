@@ -16,6 +16,7 @@ export interface ListTasksOptions {
   limit?: number;
   status?: 'NEW' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   priority?: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+  kind?: 'TASK' | 'CALL' | 'MEETING' | 'IDEA' | 'NOTE';
   unassigned?: boolean;
   sort?: 'dueAt' | 'priority' | 'createdAt' | 'updatedAt';
 }
@@ -27,6 +28,7 @@ export interface BulkTaskFilter {
   tag?: string | null;
   status?: 'NEW' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | null;
   priority?: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT' | null;
+  kind?: 'TASK' | 'CALL' | 'MEETING' | 'IDEA' | 'NOTE' | null;
   view?: TaskView | null;
   unassigned?: boolean | null;
 }

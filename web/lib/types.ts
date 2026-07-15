@@ -1,5 +1,6 @@
 export type TaskStatus = 'NEW' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 export type TaskPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+export type TaskKind = 'TASK' | 'CALL' | 'MEETING' | 'IDEA' | 'NOTE';
 export type ProjectStatus = 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'ARCHIVED';
 
 export interface Project {
@@ -29,6 +30,8 @@ export interface Task {
   description: string | null;
   status: TaskStatus;
   priority: TaskPriority;
+  kind: TaskKind;
+  isFlexible: boolean;
   dueAt: string | null;
   dueDateType: 'ON_DATE' | 'BEFORE_DATE' | 'EXACT_TIME' | null;
   remindAt: string | null;
@@ -53,7 +56,9 @@ export interface DashboardData {
   today: Task[];
   overdue: Task[];
   upcoming: Task[];
+  attention: Task[];
   activeProjects: Project[];
+  recentActivity: ActivityEvent[];
 }
 
 export interface TaskInput {
@@ -62,6 +67,8 @@ export interface TaskInput {
   projectId?: string | null;
   status?: TaskStatus;
   priority?: TaskPriority;
+  kind?: TaskKind;
+  isFlexible?: boolean;
   dueAt?: string | null;
   remindAt?: string | null;
   estimatedDurationMinutes?: number | null;
@@ -84,6 +91,26 @@ export interface Attachment {
   createdAt: string;
   task?: { id: string; title: string } | null;
   project?: { id: string; name: string } | null;
+}
+
+export interface ActivityEvent {
+  id: string;
+  ownerId: string;
+  actorId: string;
+  type:
+    | 'TASK_CREATED'
+    | 'TASK_UPDATED'
+    | 'TASK_COMPLETED'
+    | 'TASK_DELETED'
+    | 'PROJECT_CREATED'
+    | 'PROJECT_UPDATED'
+    | 'FILE_ADDED';
+  taskId: string | null;
+  projectId: string | null;
+  fileId: string | null;
+  title: string;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
 }
 
 export interface DailyPlanItem {

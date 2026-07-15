@@ -8,6 +8,8 @@ export interface CreateTaskInput {
   originalText?: string | null;
   status?: 'NEW' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   priority?: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+  kind?: 'TASK' | 'CALL' | 'MEETING' | 'IDEA' | 'NOTE';
+  isFlexible?: boolean;
   dueAt?: Date | null;
   dueDateType?: 'ON_DATE' | 'BEFORE_DATE' | 'EXACT_TIME' | null;
   remindAt?: Date | null;

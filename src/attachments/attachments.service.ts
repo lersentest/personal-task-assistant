@@ -93,28 +93,43 @@ export class AttachmentsService {
       throw new BadRequestException('File is too large. Maximum is 10 MB.');
     }
 
-    const attachment = await this.prisma.attachment.create({
-      data: {
-        ownerId,
-        uploadedById,
-        taskId,
-        projectId,
-        fileName,
-        mimeType,
-        sizeBytes: data.byteLength,
-        data,
-      },
-      select: {
-        id: true,
-        fileName: true,
-        mimeType: true,
-        sizeBytes: true,
-        taskId: true,
-        projectId: true,
-        createdAt: true,
-        task: { select: { id: true, title: true } },
-        project: { select: { id: true, name: true } },
-      },
+    const attachment = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.attachment.create({
+        data: {
+          ownerId,
+          uploadedById,
+          taskId,
+          projectId,
+          fileName,
+          mimeType,
+          sizeBytes: data.byteLength,
+          data,
+        },
+        select: {
+          id: true,
+          fileName: true,
+          mimeType: true,
+          sizeBytes: true,
+          taskId: true,
+          projectId: true,
+          createdAt: true,
+          task: { select: { id: true, title: true } },
+          project: { select: { id: true, name: true } },
+        },
+      });
+      await tx.activityEvent.create({
+        data: {
+          ownerId,
+          actorId: uploadedById,
+          type: 'FILE_ADDED',
+          taskId,
+          projectId,
+          fileId: created.id,
+          title: created.fileName,
+          metadata: { mimeType, sizeBytes: data.byteLength },
+        },
+      });
+      return created;
     });
     return attachment;
   }

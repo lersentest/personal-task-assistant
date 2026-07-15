@@ -1,4 +1,4 @@
-import { ProjectStatus, TaskPriority, TaskStatus } from './types';
+import { ProjectStatus, TaskKind, TaskPriority, TaskStatus } from './types';
 
 export const statusLabel: Record<TaskStatus, string> = {
   NEW: 'Новая',
@@ -12,6 +12,14 @@ export const priorityLabel: Record<TaskPriority, string> = {
   NORMAL: 'Обычный',
   HIGH: 'Высокий',
   URGENT: 'Срочный',
+};
+
+export const taskKindLabel: Record<TaskKind, string> = {
+  TASK: 'Задача',
+  CALL: 'Звонок',
+  MEETING: 'Встреча',
+  IDEA: 'Идея',
+  NOTE: 'Заметка',
 };
 
 export const projectStatusLabel: Record<ProjectStatus, string> = {
@@ -30,4 +38,3 @@ export function formatDate(value: string | null | undefined) {
     minute: '2-digit',
   }).format(new Date(value));
 }
-

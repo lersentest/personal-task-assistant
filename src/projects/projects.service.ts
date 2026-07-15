@@ -16,13 +16,25 @@ export class ProjectsService {
       throw new BadRequestException('Название проекта не может быть пустым.');
     }
 
-    return this.prisma.project.create({
-      data: {
-        ownerId: input.ownerId,
-        createdById: input.createdById,
-        name,
-        description: input.description?.trim() || null,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const project = await tx.project.create({
+        data: {
+          ownerId: input.ownerId,
+          createdById: input.createdById,
+          name,
+          description: input.description?.trim() || null,
+        },
+      });
+      await tx.activityEvent.create({
+        data: {
+          ownerId: input.ownerId,
+          actorId: input.createdById,
+          type: 'PROJECT_CREATED',
+          projectId: project.id,
+          title: project.name,
+        },
+      });
+      return project;
     });
   }
 
@@ -91,20 +103,33 @@ export class ProjectsService {
       throw new BadRequestException('Название проекта не может быть пустым.');
     }
     const now = new Date();
-    return this.prisma.project.update({
-      where: { id: projectId },
-      data: {
-        ...(input.name !== undefined ? { name: input.name.trim() } : {}),
-        ...(input.description !== undefined
-          ? { description: input.description?.trim() || null }
-          : {}),
-        ...(input.status !== undefined
-          ? {
-              status: input.status,
-              archivedAt: input.status === 'ARCHIVED' ? now : null,
-            }
-          : {}),
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const project = await tx.project.update({
+        where: { id: projectId },
+        data: {
+          ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+          ...(input.description !== undefined
+            ? { description: input.description?.trim() || null }
+            : {}),
+          ...(input.status !== undefined
+            ? {
+                status: input.status,
+                archivedAt: input.status === 'ARCHIVED' ? now : null,
+              }
+            : {}),
+        },
+      });
+      await tx.activityEvent.create({
+        data: {
+          ownerId,
+          actorId: ownerId,
+          type: 'PROJECT_UPDATED',
+          projectId,
+          title: project.name,
+          metadata: { status: project.status },
+        },
+      });
+      return project;
     });
   }
 
