@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { randomUUID } from 'crypto';
 import { Api, InlineKeyboard } from 'grammy';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../database/prisma.service';
@@ -20,6 +21,20 @@ const delegatedTaskInclude = {
   events: {
     orderBy: { createdAt: 'desc' as const },
     take: 30,
+  },
+  attachments: {
+    where: { deletedAt: null },
+    orderBy: { createdAt: 'desc' as const },
+    select: {
+      id: true,
+      fileName: true,
+      mimeType: true,
+      sizeBytes: true,
+      taskId: true,
+      projectId: true,
+      delegatedTaskId: true,
+      createdAt: true,
+    },
   },
 } as const;
 
@@ -55,7 +70,7 @@ export class DelegatedTasksService {
   private readonly api: Api;
 
   constructor(
-    config: ConfigService,
+    private readonly config: ConfigService,
     private readonly prisma: PrismaService,
     private readonly executors: ExecutorsService,
     private readonly projects: ProjectsService,
@@ -108,6 +123,53 @@ export class DelegatedTasksService {
   async getOwned(ownerId: string, taskId: string): Promise<DelegatedTaskDetails> {
     const task = await this.prisma.delegatedTask.findFirst({
       where: { id: taskId, ownerId, deletedAt: null },
+      include: delegatedTaskInclude,
+    });
+    if (!task) throw new NotFoundException('Delegated task not found.');
+    return task;
+  }
+
+  async publicLink(ownerId: string, taskId: string) {
+    const task = await this.getOwned(ownerId, taskId);
+    return {
+      token: task.publicAccessToken,
+      revokedAt: task.publicAccessRevokedAt,
+      url: this.publicTaskUrl(task.publicAccessToken),
+    };
+  }
+
+  async regeneratePublicLink(ownerId: string, taskId: string) {
+    await this.getOwned(ownerId, taskId);
+    const updated = await this.prisma.delegatedTask.update({
+      where: { id: taskId },
+      data: {
+        publicAccessToken: randomUUID(),
+        publicAccessRevokedAt: null,
+      },
+      select: { publicAccessToken: true, publicAccessRevokedAt: true },
+    });
+    return {
+      token: updated.publicAccessToken,
+      revokedAt: updated.publicAccessRevokedAt,
+      url: this.publicTaskUrl(updated.publicAccessToken),
+    };
+  }
+
+  async revokePublicLink(ownerId: string, taskId: string): Promise<void> {
+    await this.getOwned(ownerId, taskId);
+    await this.prisma.delegatedTask.update({
+      where: { id: taskId },
+      data: { publicAccessRevokedAt: new Date() },
+    });
+  }
+
+  async getByPublicToken(token: string): Promise<DelegatedTaskDetails> {
+    const task = await this.prisma.delegatedTask.findFirst({
+      where: {
+        publicAccessToken: token,
+        publicAccessRevokedAt: null,
+        deletedAt: null,
+      },
       include: delegatedTaskInclude,
     });
     if (!task) throw new NotFoundException('Delegated task not found.');
@@ -238,7 +300,7 @@ export class DelegatedTasksService {
     await this.api.sendMessage(
       task.executor.telegramUserId.toString(),
       this.formatExecutorTask(task),
-      { reply_markup: this.executorKeyboard(task.id, task.status) },
+      { reply_markup: this.executorKeyboard(task.id, task.status, task.publicAccessToken) },
     );
 
     await this.prisma.$transaction(async (tx) => {
@@ -267,7 +329,7 @@ export class DelegatedTasksService {
     await this.api.sendMessage(
       task.executor.telegramUserId.toString(),
       ['Напоминание по задаче', '', this.formatExecutorTask(task)].join('\n'),
-      { reply_markup: this.executorKeyboard(task.id, task.status) },
+      { reply_markup: this.executorKeyboard(task.id, task.status, task.publicAccessToken) },
     );
     await this.prisma.$transaction(async (tx) => {
       await tx.delegatedTask.update({
@@ -300,10 +362,88 @@ export class DelegatedTasksService {
       await this.api.sendMessage(
         task.executor.telegramUserId.toString(),
         [`Комментарий по задаче: ${task.title}`, '', text].join('\n'),
-        { reply_markup: this.executorKeyboard(task.id, task.status) },
+        { reply_markup: this.executorKeyboard(task.id, task.status, task.publicAccessToken) },
       );
     }
     return this.getOwned(ownerId, taskId);
+  }
+
+  async publicExecutorComment(
+    token: string,
+    message: string,
+  ): Promise<DelegatedTaskDetails> {
+    const task = await this.getByPublicToken(token);
+    const text = message.trim();
+    if (!text) throw new BadRequestException('Comment is required.');
+    await this.addComment(task.id, task.ownerId, task.executorId, 'EXECUTOR', text);
+    await this.notifyOwner(
+      task.ownerId,
+      [
+        `Комментарий исполнителя по задаче: ${task.title}`,
+        '',
+        text,
+        '',
+        this.publicTaskUrl(token),
+      ].join('\n'),
+    );
+    return this.getByPublicToken(token);
+  }
+
+  async publicExecutorTransition(
+    token: string,
+    action: 'accept' | 'start' | 'question' | 'done',
+    message?: string | null,
+  ): Promise<DelegatedTaskDetails> {
+    const task = await this.getByPublicToken(token);
+    const now = new Date();
+    const next = this.nextExecutorStatus(task.status, action);
+    const comment = message?.trim();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.delegatedTask.update({
+        where: { id: task.id },
+        data: {
+          status: next.status,
+          ...(next.status === 'ACCEPTED' ? { acceptedAt: now } : {}),
+          ...(next.status === 'IN_PROGRESS' ? { startedAt: now } : {}),
+          ...(next.status === 'WAITING_REVIEW'
+            ? { submittedAt: now, resultText: comment || task.resultText }
+            : {}),
+        },
+      });
+      if (comment) {
+        await tx.delegatedTaskComment.create({
+          data: {
+            taskId: task.id,
+            ownerId: task.ownerId,
+            executorId: task.executorId,
+            author: 'EXECUTOR',
+            message: comment,
+          },
+        });
+      }
+      await tx.delegatedTaskEvent.create({
+        data: {
+          taskId: task.id,
+          ownerId: task.ownerId,
+          executorId: task.executorId,
+          type: next.event,
+          title: task.title,
+          metadata: comment ? { message: comment, source: 'public_page' } : { source: 'public_page' },
+        },
+      });
+    });
+    const updated = await this.getByPublicToken(token);
+    await this.notifyOwner(
+      task.ownerId,
+      [
+        `Исполнитель обновил задачу: ${task.title}`,
+        `Статус: ${updated.status}`,
+        comment ? `Комментарий: ${comment}` : null,
+        '',
+        this.publicTaskUrl(token),
+      ].filter(Boolean).join('\n'),
+    );
+    return updated;
   }
 
   async executorTransition(
@@ -405,7 +545,7 @@ export class DelegatedTasksService {
         action === 'accept'
           ? `Задача принята владельцем: ${task.title}`
           : [`Задача возвращена в работу: ${task.title}`, '', text ?? 'Без комментария.'].join('\n'),
-        { reply_markup: this.executorKeyboard(task.id, status) },
+        { reply_markup: this.executorKeyboard(task.id, status, task.publicAccessToken) },
       );
     }
     return this.getOwned(ownerId, taskId);
@@ -471,8 +611,15 @@ export class DelegatedTasksService {
     throw new BadRequestException('This status transition is not allowed.');
   }
 
-  private executorKeyboard(taskId: string, status: string): InlineKeyboard {
+  private executorKeyboard(
+    taskId: string,
+    status: string,
+    publicToken?: string,
+  ): InlineKeyboard {
     const keyboard = new InlineKeyboard();
+    if (publicToken) {
+      keyboard.url('Открыть задачу', this.publicTaskUrl(publicToken)).row();
+    }
     if (['SENT', 'RETURNED'].includes(status)) {
       keyboard.text('Принять', `delegated:accept:${taskId}`).row();
     }
@@ -485,6 +632,24 @@ export class DelegatedTasksService {
         .text('Выполнено', `delegated:done:${taskId}`);
     }
     return keyboard;
+  }
+
+  private publicTaskUrl(token: string): string {
+    const configured = this.config.get<string>('PUBLIC_WEB_URL')?.trim();
+    const frontend =
+      configured ||
+      this.config.get<string>('FRONTEND_ORIGINS')?.split(',')[0]?.trim() ||
+      'http://localhost:3001';
+    return `${frontend.replace(/\/$/, '')}/public/delegated/${token}`;
+  }
+
+  private async notifyOwner(ownerId: string, message: string): Promise<void> {
+    const owner = await this.prisma.user.findUnique({
+      where: { id: ownerId },
+      select: { telegramId: true },
+    });
+    if (!owner) return;
+    await this.api.sendMessage(owner.telegramId.toString(), message);
   }
 
   private formatExecutorTask(task: {

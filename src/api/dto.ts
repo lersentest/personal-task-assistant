@@ -114,6 +114,11 @@ export const delegatedCommentSchema = z.object({
   message: z.string().min(1).max(10000),
 });
 
+export const publicDelegatedActionSchema = z.object({
+  action: z.enum(['accept', 'start', 'question', 'done']),
+  message: z.string().max(10000).nullable().optional(),
+});
+
 export const reviewDelegatedTaskSchema = z.object({
   message: z.string().max(10000).nullable().optional(),
 });
@@ -121,11 +126,13 @@ export const reviewDelegatedTaskSchema = z.object({
 export const listAttachmentsSchema = z.object({
   taskId: z.string().uuid().optional(),
   projectId: z.string().uuid().optional(),
+  delegatedTaskId: z.string().uuid().optional(),
 });
 
 export const createAttachmentSchema = z.object({
   taskId: z.string().uuid().nullable().optional(),
   projectId: z.string().uuid().nullable().optional(),
+  delegatedTaskId: z.string().uuid().nullable().optional(),
   fileName: z.string().min(1).max(255),
   mimeType: z.string().min(1).max(255),
   dataBase64: z.string().min(1),

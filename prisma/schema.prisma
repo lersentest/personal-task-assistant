@@ -259,6 +259,8 @@ model DelegatedTask {
   completedAt  DateTime?           @map("completed_at") @db.Timestamptz(3)
   cancelledAt  DateTime?           @map("cancelled_at") @db.Timestamptz(3)
   lastReminderAt DateTime?         @map("last_reminder_at") @db.Timestamptz(3)
+  publicAccessToken String         @unique @default(uuid()) @map("public_access_token") @db.Uuid
+  publicAccessRevokedAt DateTime?  @map("public_access_revoked_at") @db.Timestamptz(3)
   createdAt    DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt    DateTime?           @map("deleted_at") @db.Timestamptz(3)
@@ -269,11 +271,13 @@ model DelegatedTask {
   comments  DelegatedTaskComment[]
   events    DelegatedTaskEvent[]
   reminders DelegatedTaskReminder[]
+  attachments Attachment[]
 
   @@index([ownerId, status, deletedAt])
   @@index([ownerId, dueAt])
   @@index([executorId, status, deletedAt])
   @@index([projectId, status, deletedAt])
+  @@index([publicAccessToken, publicAccessRevokedAt])
   @@map("delegated_tasks")
 }
 
@@ -478,6 +482,7 @@ model Attachment {
   uploadedById String   @map("uploaded_by_id") @db.Uuid
   taskId       String?  @map("task_id") @db.Uuid
   projectId    String?  @map("project_id") @db.Uuid
+  delegatedTaskId String? @map("delegated_task_id") @db.Uuid
   fileName     String   @map("file_name") @db.VarChar(255)
   mimeType     String   @map("mime_type") @db.VarChar(255)
   sizeBytes    Int      @map("size_bytes")
@@ -489,9 +494,11 @@ model Attachment {
   uploadedBy User     @relation("AttachmentUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
   task       Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
   project    Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  delegatedTask DelegatedTask? @relation(fields: [delegatedTaskId], references: [id], onDelete: Cascade)
 
   @@index([ownerId, createdAt])
   @@index([taskId])
   @@index([projectId])
+  @@index([delegatedTaskId])
   @@map("attachments")
 }

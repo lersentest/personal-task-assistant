@@ -7,6 +7,7 @@ import { DelegatedTasksController } from './delegated-tasks.controller';
 import { ExecutorsController } from './executors.controller';
 import { MyDayController } from './my-day.controller';
 import { ProjectsController } from './projects.controller';
+import { PublicDelegatedTasksController } from './public-delegated-tasks.controller';
 import { TagsController } from './tags.controller';
 import { TasksController } from './tasks.controller';
 import { VoiceController } from './voice.controller';
@@ -39,6 +40,7 @@ import { VoiceModule } from '../voice/voice.module';
     MyDayController,
     ExecutorsController,
     DelegatedTasksController,
+    PublicDelegatedTasksController,
     TasksController,
     ProjectsController,
     TagsController,

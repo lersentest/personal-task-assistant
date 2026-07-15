@@ -78,6 +78,28 @@ export class DelegatedTasksController {
     return jsonSafe(await this.delegatedTasks.remind(request.user.id, id));
   }
 
+  @Get(':id/public-link')
+  async publicLink(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    return this.delegatedTasks.publicLink(request.user.id, id);
+  }
+
+  @Post(':id/public-link/regenerate')
+  async regeneratePublicLink(
+    @Req() request: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
+    return this.delegatedTasks.regeneratePublicLink(request.user.id, id);
+  }
+
+  @Post(':id/public-link/revoke')
+  async revokePublicLink(
+    @Req() request: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
+    await this.delegatedTasks.revokePublicLink(request.user.id, id);
+    return { ok: true };
+  }
+
   @Post(':id/cancel')
   async cancel(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
     return jsonSafe(await this.delegatedTasks.update(request.user.id, id, {
