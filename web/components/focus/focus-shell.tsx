@@ -23,6 +23,7 @@ import {
   Trash2,
   User,
   Users,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -96,6 +97,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
   const [createModal, setCreateModal] = useState<CreateEntityState | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const filteredCommands = useMemo(() => {
     const value = commandQuery.trim().toLowerCase();
@@ -131,11 +133,16 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
       if (event.key === 'Escape') {
         setPaletteOpen(false);
         setCreateOpen(false);
+        setMobileMenuOpen(false);
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [router]);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   async function logout() {
     await supabase.auth.signOut();
@@ -151,6 +158,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
   function go(href: string) {
     setPaletteOpen(false);
     setCreateOpen(false);
+    setMobileMenuOpen(false);
     setCommandQuery('');
     router.push(href);
   }
@@ -158,6 +166,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
   function openCreate(state: CreateEntityState) {
     setPaletteOpen(false);
     setCreateOpen(false);
+    setMobileMenuOpen(false);
     setCommandQuery('');
     setCreateModal(state);
   }
@@ -269,7 +278,12 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
       <div className="lg:col-start-2">
         <header className="sticky top-0 z-20 border-b border-[var(--focus-border-soft)] bg-[var(--focus-bg)]/88 px-4 py-3 backdrop-blur-xl lg:px-8">
           <div className="mx-auto flex max-w-[1600px] items-center gap-3">
-            <button className="rounded-xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-2 text-[var(--focus-text-secondary)] lg:hidden">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Открыть меню"
+              className="rounded-xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-2 text-[var(--focus-text-secondary)] lg:hidden"
+            >
               <Menu size={20} />
             </button>
             <button
@@ -327,10 +341,23 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
           { href: '/calendar', label: 'Календарь', icon: CalendarDays },
           { href: '/tasks?create=1', label: 'Создать', icon: Plus, create: true },
           { href: '/tasks', label: 'Задачи', icon: CheckSquare },
-          { href: '/dashboard', label: 'Ещё', icon: Menu },
+          { href: '/menu', label: 'Ещё', icon: Menu, menu: true },
         ].map((item) => {
           const Icon = item.icon;
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          if (item.menu) {
+            return (
+              <button
+                key={item.href}
+                type="button"
+                onClick={() => setMobileMenuOpen(true)}
+                className="flex flex-col items-center gap-1 rounded-xl px-1 py-1 text-[11px] text-[var(--focus-text-secondary)]"
+              >
+                <Icon size={18} />
+                {item.label}
+              </button>
+            );
+          }
           if (item.create) {
             return (
               <button
@@ -358,6 +385,127 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
           );
         })}
       </nav>
+
+      {mobileMenuOpen ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-sm lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          <aside
+            className="flex h-full w-[min(92vw,380px)] flex-col overflow-y-auto border-r border-[var(--focus-border)] bg-[var(--focus-surface)] p-4 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <Link href="/my-day" className="flex min-w-0 items-center gap-3">
+                <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[var(--focus-primary)] text-white shadow-sm">
+                  <CheckSquare size={19} />
+                  <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-[var(--focus-surface)] bg-[var(--focus-success)]" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-base font-semibold tracking-tight">Personal Tasks</span>
+                  <span className="block text-xs text-[var(--focus-text-muted)]">Focus workspace</span>
+                </span>
+              </Link>
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-label="Закрыть меню"
+                className="rounded-xl border border-[var(--focus-border)] bg-[var(--focus-surface-secondary)] p-2 text-[var(--focus-text-secondary)]"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setPaletteOpen(true);
+              }}
+              className="mb-4 flex h-11 items-center gap-3 rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface-secondary)] px-3 text-left text-sm text-[var(--focus-text-muted)]"
+            >
+              <Search size={17} />
+              Поиск и команды
+              <span className="ml-auto rounded-lg bg-[var(--focus-surface)] px-2 py-1 text-xs">⌘K</span>
+            </button>
+
+            <div className="mb-5 grid grid-cols-2 gap-2">
+              {createItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.href}
+                    type="button"
+                    onClick={() =>
+                      openCreate(
+                        item.entity === 'project'
+                          ? { entity: 'project' }
+                          : { entity: 'task', kind: item.kind as TaskKind },
+                      )
+                    }
+                    className="flex min-h-20 flex-col items-start justify-between rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface-secondary)] p-3 text-left text-sm"
+                  >
+                    <Icon size={17} className="text-[var(--focus-primary)]" />
+                    <span className="font-semibold">{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <nav className="grid gap-5">
+              {sections.map((section) => (
+                <div key={section.title}>
+                  <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--focus-text-muted)]">
+                    {section.title}
+                  </p>
+                  <div className="grid gap-1">
+                    {section.items.map((item) => {
+                      const Icon = item.icon;
+                      const active =
+                        pathname === item.href || pathname.startsWith(`${item.href}/`);
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition ${
+                            active
+                              ? 'bg-[var(--focus-primary-soft)] text-[var(--focus-primary)] shadow-sm'
+                              : 'text-[var(--focus-text-secondary)] hover:bg-[var(--focus-surface-secondary)] hover:text-[var(--focus-text)]'
+                          }`}
+                        >
+                          <Icon size={18} />
+                          {item.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </nav>
+
+            <div className="mt-5 grid gap-1 border-t border-[var(--focus-border-soft)] pt-4 text-sm text-[var(--focus-text-secondary)]">
+              <button
+                onClick={cycleAppearance}
+                className="flex items-center gap-3 rounded-2xl px-3 py-3 text-left hover:bg-[var(--focus-surface-secondary)]"
+              >
+                {appearance === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
+                {appearance === 'system' ? 'Системная тема' : appearance === 'dark' ? 'Тёмная тема' : 'Светлая тема'}
+              </button>
+              <Link href="/settings" className="flex items-center gap-3 rounded-2xl px-3 py-3 hover:bg-[var(--focus-surface-secondary)]">
+                <Settings size={18} /> Настройки
+              </Link>
+              <Link href="/profile" className="flex items-center gap-3 rounded-2xl px-3 py-3 hover:bg-[var(--focus-surface-secondary)]">
+                <User size={18} /> Профиль
+              </Link>
+              <button onClick={logout} className="flex items-center gap-3 rounded-2xl px-3 py-3 text-left hover:bg-[var(--focus-surface-secondary)]">
+                <LogOut size={18} /> Выход
+              </button>
+            </div>
+          </aside>
+        </div>
+      ) : null}
 
       {paletteOpen ? (
         <div

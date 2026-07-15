@@ -106,9 +106,9 @@ export default function PublicDelegatedTaskPage() {
   const isClosed = data ? ['COMPLETED', 'CANCELLED'].includes(data.status) : false;
 
   return (
-    <main className="min-h-screen bg-[var(--background)] px-4 py-6 text-[var(--foreground)]">
+    <main className="min-h-screen bg-[var(--background)] px-3 py-4 text-[var(--foreground)] sm:px-4 sm:py-6">
       <div className="mx-auto grid max-w-3xl gap-4">
-        <header className="rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
+        <header className="rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm sm:p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">Personal Tasks</p>
           <h1 className="mt-2 text-2xl font-semibold">Задача исполнителя</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">Здесь можно посмотреть детали, оставить комментарий, загрузить файлы и обновить статус.</p>
@@ -128,8 +128,8 @@ export default function PublicDelegatedTaskPage() {
 
         {data ? (
           <>
-            <section className="rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
-              <div className="flex flex-wrap items-start justify-between gap-3">
+            <section className="rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm sm:p-5">
+              <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-start sm:justify-between">
                 <div>
                   <span className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-sm font-medium text-[var(--accent)]">
                     {statusLabel[data.status] ?? data.status}
@@ -148,23 +148,23 @@ export default function PublicDelegatedTaskPage() {
             </section>
 
             {!isClosed ? (
-              <section className="rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
+              <section className="rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm sm:p-5">
                 <h3 className="font-semibold">Действия</h3>
                 <div className="mt-4 grid gap-2 sm:grid-cols-2">
                   {['SENT', 'RETURNED'].includes(data.status) ? (
-                    <button className="btn-base btn-secondary" disabled={action.isPending} onClick={() => action.mutate({ action: 'accept' })}>
+                    <button className="btn-base btn-secondary w-full" disabled={action.isPending} onClick={() => action.mutate({ action: 'accept' })}>
                       <CheckCircle2 size={17} /> Принять
                     </button>
                   ) : null}
                   {['SENT', 'ACCEPTED', 'RETURNED'].includes(data.status) ? (
-                    <button className="btn-base btn-secondary" disabled={action.isPending} onClick={() => action.mutate({ action: 'start' })}>
+                    <button className="btn-base btn-secondary w-full" disabled={action.isPending} onClick={() => action.mutate({ action: 'start' })}>
                       <Play size={17} /> Начать
                     </button>
                   ) : null}
-                  <button className="btn-base btn-warning" disabled={action.isPending} onClick={() => action.mutate({ action: 'question', message: resultMessage || null })}>
+                  <button className="btn-base btn-warning w-full" disabled={action.isPending} onClick={() => action.mutate({ action: 'question', message: resultMessage || null })}>
                     <MessageSquare size={17} /> Задать вопрос
                   </button>
-                  <button className="btn-base btn-success" disabled={action.isPending} onClick={() => action.mutate({ action: 'done', message: resultMessage || null })}>
+                  <button className="btn-base btn-success w-full" disabled={action.isPending} onClick={() => action.mutate({ action: 'done', message: resultMessage || null })}>
                     <CheckCircle2 size={17} /> Выполнено
                   </button>
                 </div>
@@ -177,7 +177,7 @@ export default function PublicDelegatedTaskPage() {
               </section>
             ) : null}
 
-            <section className="rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
+            <section className="rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm sm:p-5">
               <h3 className="font-semibold">Комментарии</h3>
               <div className="mt-4 grid gap-3">
                 {data.comments?.length ? data.comments.map((item) => (
@@ -194,19 +194,19 @@ export default function PublicDelegatedTaskPage() {
                   value={message}
                   onChange={(event) => setMessage(event.target.value)}
                 />
-                <button className="btn-base btn-primary" disabled={comment.isPending || !message.trim()} onClick={() => comment.mutate(message)}>
+                <button className="btn-base btn-primary w-full" disabled={comment.isPending || !message.trim()} onClick={() => comment.mutate(message)}>
                   <Send size={17} /> Отправить комментарий
                 </button>
               </div>
             </section>
 
-            <section className="rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-3">
+            <section className="rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm sm:p-5">
+              <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
                 <div>
                   <h3 className="font-semibold">Файлы</h3>
                   <p className="text-sm text-[var(--muted)]">Можно приложить PDF, изображения и другие файлы до 10 МБ.</p>
                 </div>
-                <label className="btn-base btn-primary cursor-pointer">
+                <label className="btn-base btn-primary w-full cursor-pointer sm:w-auto">
                   <UploadCloud size={17} /> Загрузить
                   <input
                     ref={fileRef}
@@ -222,15 +222,15 @@ export default function PublicDelegatedTaskPage() {
               {upload.isPending ? <p className="mt-3 text-sm text-[var(--muted)]">Загружаю файл...</p> : null}
               <div className="mt-4 grid gap-2">
                 {data.attachments?.length ? data.attachments.map((attachment) => (
-                  <div key={attachment.id} className="interactive-card flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--line)] bg-[var(--background)] p-3">
-                    <div className="flex items-center gap-3">
+                  <div key={attachment.id} className="interactive-card grid gap-3 rounded-2xl border border-[var(--line)] bg-[var(--background)] p-3 sm:flex sm:items-center sm:justify-between">
+                    <div className="flex min-w-0 items-center gap-3">
                       <FileUp size={18} className="text-[var(--accent)]" />
-                      <div>
-                        <p className="font-medium">{attachment.fileName}</p>
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{attachment.fileName}</p>
                         <p className="text-sm text-[var(--muted)]">{formatSize(attachment.sizeBytes)}</p>
                       </div>
                     </div>
-                    <button className="btn-base btn-secondary" onClick={() => download(attachment)}>
+                    <button className="btn-base btn-secondary w-full sm:w-auto" onClick={() => download(attachment)}>
                       <Download size={16} /> Скачать
                     </button>
                   </div>
@@ -250,3 +250,4 @@ export default function PublicDelegatedTaskPage() {
     </main>
   );
 }
+

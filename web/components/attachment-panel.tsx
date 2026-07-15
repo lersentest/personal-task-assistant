@@ -211,22 +211,22 @@ export function AttachmentPanel({
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6"
+          className="fixed inset-0 z-50 flex items-stretch justify-center bg-black/70 p-0 sm:items-center sm:p-6"
           onClick={closePreview}
         >
           <div
-            className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--background)] shadow-2xl"
+            className="flex h-full w-full max-w-5xl flex-col overflow-hidden border border-[var(--line)] bg-[var(--background)] shadow-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] p-4">
-              <div>
-                <h3 className="font-semibold">{preview.attachment.fileName}</h3>
+            <div className="grid gap-3 border-b border-[var(--line)] p-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:p-4">
+              <div className="min-w-0">
+                <h3 className="truncate font-semibold">{preview.attachment.fileName}</h3>
                 <p className="text-sm text-[var(--muted)]">
                   {preview.attachment.mimeType} ·{' '}
                   {formatSize(preview.attachment.sizeBytes)}
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:flex">
                 <button
                   onClick={() => downloadAttachment(preview.attachment)}
                   className="btn-base btn-secondary"
@@ -241,19 +241,19 @@ export function AttachmentPanel({
                 </button>
               </div>
             </div>
-            <div className="min-h-0 flex-1 overflow-auto bg-black/5 p-3">
+            <div className="min-h-0 flex-1 overflow-auto bg-black/5 p-2 sm:p-3">
               {preview.type === 'image' ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={preview.url}
                   alt={preview.attachment.fileName}
-                  className="mx-auto max-h-[75vh] max-w-full rounded-lg object-contain"
+                  className="mx-auto max-h-[82vh] max-w-full rounded-lg object-contain sm:max-h-[75vh]"
                 />
               ) : (
                 <iframe
                   src={preview.url}
                   title={preview.attachment.fileName}
-                  className="h-[75vh] w-full rounded-lg bg-white"
+                  className="h-[82vh] w-full rounded-lg bg-white sm:h-[75vh]"
                 />
               )}
             </div>

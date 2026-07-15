@@ -118,14 +118,14 @@ export function TaskDetailsModal({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/55 p-3 backdrop-blur-sm sm:p-6"
+      className="fixed inset-0 z-[10000] flex items-stretch justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-6"
       onMouseDown={onClose}
     >
       <div
-        className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface,var(--panel))] text-[var(--foreground)] shadow-2xl"
+        className="flex h-full w-full max-w-5xl flex-col overflow-hidden border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface,var(--panel))] text-[var(--foreground)] shadow-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-3xl"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-[var(--focus-border-soft,var(--line))] p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-4 border-b border-[var(--focus-border-soft,var(--line))] p-4 sm:p-6">
           <div className="min-w-0">
             <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
               <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-1 font-medium text-[var(--accent)]">
@@ -140,7 +140,7 @@ export function TaskDetailsModal({
                 <span>Без проекта</span>
               )}
             </div>
-            <h2 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
+            <h2 className="text-xl font-semibold tracking-[-0.03em] text-[var(--foreground)] sm:text-2xl">
               {data?.title ?? 'Загружаю задачу…'}
             </h2>
             <p className="mt-1 text-sm text-[var(--muted)]">
@@ -166,7 +166,7 @@ export function TaskDetailsModal({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
           {task.isLoading && !data ? (
             <div className="rounded-2xl border border-dashed border-[var(--line)] p-8 text-center text-[var(--muted)]">
               Загружаю задачу…

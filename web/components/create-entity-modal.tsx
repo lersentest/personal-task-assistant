@@ -108,20 +108,20 @@ export function CreateEntityModal({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/55 p-3 backdrop-blur-sm sm:p-6"
+      className="fixed inset-0 z-[10000] flex items-stretch justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-6"
       onMouseDown={onClose}
     >
       <div
-        className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface,var(--panel))] shadow-2xl"
+        className="flex h-full w-full max-w-4xl flex-col overflow-hidden border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface,var(--panel))] shadow-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-3xl"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <header className="flex items-start justify-between gap-4 border-b border-[var(--focus-border-soft,var(--line))] p-5 sm:p-6">
+        <header className="flex items-start justify-between gap-4 border-b border-[var(--focus-border-soft,var(--line))] p-4 sm:p-6">
           <div className="min-w-0">
             <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[var(--accent)]">
               <Sparkles size={14} />
               Быстрое создание
             </div>
-            <h2 className="text-2xl font-semibold tracking-[-0.03em]">
+            <h2 className="text-xl font-semibold tracking-[-0.03em] sm:text-2xl">
               {isProject ? 'Новый проект' : `Новая: ${taskKindLabel[selectedKind].toLowerCase()}`}
             </h2>
             <p className="mt-1 text-sm text-[var(--muted)]">
@@ -140,12 +140,12 @@ export function CreateEntityModal({
           </button>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
           {isProject ? (
             <ProjectForm onDone={onClose} />
           ) : (
             <div className="grid gap-5">
-              <div className="grid gap-2 sm:grid-cols-5">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                 {(['TASK', 'CALL', 'MEETING', 'IDEA', 'NOTE'] as TaskKind[]).map((kind) => {
                   const Icon = taskKindIcons[kind];
                   const active = selectedKind === kind;

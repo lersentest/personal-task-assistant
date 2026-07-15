@@ -132,32 +132,32 @@ export default function DelegatedPage() {
       title="Делегированные"
       description="Отдельные задачи для исполнителей. Они не смешиваются с личными задачами и Моим днём."
     >
-      <div className="grid gap-5 xl:grid-cols-[420px_1fr]">
-        <form onSubmit={submit} className="grid content-start gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
+      <div className="grid gap-4 xl:grid-cols-[420px_1fr] xl:gap-5">
+        <form onSubmit={submit} className="grid content-start gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm sm:p-5">
           <div>
             <h2 className="text-lg font-semibold">Новая делегированная задача</h2>
             <p className="mt-1 text-sm text-[var(--muted)]">
               Выбери исполнителя и опиши результат, который нужно получить.
             </p>
           </div>
-          <input className="rounded-xl border border-[var(--line)] bg-transparent px-3 py-2" placeholder="Название *" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-          <textarea className="min-h-28 rounded-xl border border-[var(--line)] bg-transparent px-3 py-2" placeholder="Описание" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          <select className="rounded-xl border border-[var(--line)] bg-transparent px-3 py-2" value={form.executorId} onChange={(e) => setForm({ ...form, executorId: e.target.value })}>
+          <input className="h-11 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 py-2" placeholder="Название *" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          <textarea className="min-h-28 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 py-2" placeholder="Описание" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          <select className="h-11 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 py-2" value={form.executorId} onChange={(e) => setForm({ ...form, executorId: e.target.value })}>
             <option value="">Выберите исполнителя</option>
             {executors.data?.map((executor) => <option key={executor.id} value={executor.id}>{executor.fullName}</option>)}
           </select>
-          <select className="rounded-xl border border-[var(--line)] bg-transparent px-3 py-2" value={form.projectId} onChange={(e) => setForm({ ...form, projectId: e.target.value })}>
+          <select className="h-11 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 py-2" value={form.projectId} onChange={(e) => setForm({ ...form, projectId: e.target.value })}>
             <option value="">Без проекта</option>
             {projects.data?.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
           </select>
-          <select className="rounded-xl border border-[var(--line)] bg-transparent px-3 py-2" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as TaskPriority })}>
+          <select className="h-11 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 py-2" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as TaskPriority })}>
             <option value="LOW">Низкий</option>
             <option value="NORMAL">Обычный</option>
             <option value="HIGH">Высокий</option>
             <option value="URGENT">Срочный</option>
           </select>
-          <input type="datetime-local" className="rounded-xl border border-[var(--line)] bg-transparent px-3 py-2" value={form.dueAt} onChange={(e) => setForm({ ...form, dueAt: e.target.value })} />
-          <button disabled={create.isPending || !form.executorId || !form.title.trim()} className="btn-base btn-primary">
+          <input type="datetime-local" className="h-11 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 py-2" value={form.dueAt} onChange={(e) => setForm({ ...form, dueAt: e.target.value })} />
+          <button disabled={create.isPending || !form.executorId || !form.title.trim()} className="btn-base btn-primary w-full">
             {create.isPending ? 'Создаю...' : 'Создать задачу'}
           </button>
           {message ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</p> : null}
@@ -165,17 +165,17 @@ export default function DelegatedPage() {
         </form>
 
         <section className="grid content-start gap-4">
-          <div className="flex flex-wrap gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3 shadow-sm">
-            <select className="rounded-xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm" value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
+          <div className="grid gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3 shadow-sm sm:grid-cols-2">
+            <select className="h-11 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm" value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
               <option value="">Все статусы</option>
               {Object.entries(statusLabel).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
-            <select className="rounded-xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm" value={filters.executorId} onChange={(e) => setFilters({ ...filters, executorId: e.target.value })}>
+            <select className="h-11 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm" value={filters.executorId} onChange={(e) => setFilters({ ...filters, executorId: e.target.value })}>
               <option value="">Все исполнители</option>
               {executors.data?.map((executor) => <option key={executor.id} value={executor.id}>{executor.fullName}</option>)}
             </select>
           </div>
-          <input className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2" placeholder="Комментарий для проверки/возврата" value={reviewMessage} onChange={(e) => setReviewMessage(e.target.value)} />
+          <input className="h-11 w-full rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2" placeholder="Комментарий для проверки/возврата" value={reviewMessage} onChange={(e) => setReviewMessage(e.target.value)} />
 
           {tasks.isLoading ? <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-5 text-sm text-[var(--muted)]">Загружаю делегированные задачи...</div> : null}
           {tasks.error ? <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">Не удалось загрузить задачи: {tasks.error.message}</div> : null}
@@ -268,7 +268,7 @@ function DelegatedTaskCard({
   }
 
   return (
-    <article className="interactive-card rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
+    <article className="interactive-card rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm sm:p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="mb-2 flex flex-wrap gap-2 text-xs">
@@ -293,10 +293,10 @@ function DelegatedTaskCard({
             </div>
           ) : null}
         </div>
-        <div className="flex min-w-[220px] flex-wrap gap-2 lg:justify-end">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:flex-wrap lg:min-w-[220px] lg:justify-end">
           <button
             type="button"
-            className="btn-base btn-secondary"
+            className="btn-base btn-secondary w-full sm:w-auto"
             onClick={() => {
               navigator.clipboard?.writeText(publicUrl);
               setCardMessage('Ссылка исполнителя скопирована.');
@@ -305,27 +305,27 @@ function DelegatedTaskCard({
             <LinkIcon size={16} /> Ссылка
           </button>
           {task.status === 'DRAFT' ? (
-            <button disabled={busyAction.send} onClick={onSend} className="btn-base btn-primary">
+            <button disabled={busyAction.send} onClick={onSend} className="btn-base btn-primary w-full sm:w-auto">
               {busyAction.send ? 'Отправляю...' : 'Отправить'}
             </button>
           ) : null}
           {task.status === 'WAITING_REVIEW' ? (
             <>
-              <button disabled={busyAction.accept} onClick={onAccept} className="btn-base btn-success">
+              <button disabled={busyAction.accept} onClick={onAccept} className="btn-base btn-success w-full sm:w-auto">
                 {busyAction.accept ? 'Принимаю...' : 'Принять'}
               </button>
-              <button disabled={busyAction.return} onClick={onReturn} className="btn-base btn-warning">
+              <button disabled={busyAction.return} onClick={onReturn} className="btn-base btn-warning w-full sm:w-auto">
                 {busyAction.return ? 'Возвращаю...' : 'Вернуть'}
               </button>
             </>
           ) : null}
           {!isClosed ? (
-            <button disabled={busyAction.remind} onClick={onRemind} className="btn-base btn-secondary">
+            <button disabled={busyAction.remind} onClick={onRemind} className="btn-base btn-secondary w-full sm:w-auto">
               {busyAction.remind ? 'Отправляю...' : 'Напомнить'}
             </button>
           ) : null}
           {!isClosed ? (
-            <button disabled={busyAction.cancel} onClick={onCancel} className="btn-base btn-danger">
+            <button disabled={busyAction.cancel} onClick={onCancel} className="btn-base btn-danger w-full sm:w-auto">
               {busyAction.cancel ? 'Отменяю...' : 'Отменить'}
             </button>
           ) : null}
@@ -333,7 +333,7 @@ function DelegatedTaskCard({
       </div>
 
       <div className="mt-4 grid gap-4 border-t border-[var(--line)] pt-4 lg:grid-cols-2">
-        <section className="rounded-2xl bg-[var(--background)] p-3">
+        <section className="rounded-2xl bg-[var(--background)] p-3 sm:p-4">
           <h3 className="font-semibold">Комментарии</h3>
           <div className="mt-3 grid max-h-56 gap-2 overflow-auto">
             {task.comments?.length ? task.comments.map((item) => (
@@ -351,18 +351,18 @@ function DelegatedTaskCard({
                 value={ownerComment}
                 onChange={(event) => setOwnerComment(event.target.value)}
               />
-              <button className="btn-base btn-primary" disabled={comment.isPending || !ownerComment.trim()} onClick={() => comment.mutate(ownerComment)}>
+              <button className="btn-base btn-primary w-full" disabled={comment.isPending || !ownerComment.trim()} onClick={() => comment.mutate(ownerComment)}>
                 <Send size={16} /> Ответить
               </button>
             </div>
           ) : null}
         </section>
 
-        <section className="rounded-2xl bg-[var(--background)] p-3">
-          <div className="flex items-center justify-between gap-3">
+        <section className="rounded-2xl bg-[var(--background)] p-3 sm:p-4">
+          <div className="grid gap-3 sm:flex sm:items-center sm:justify-between">
             <h3 className="font-semibold">Файлы</h3>
             {!isClosed ? (
-              <label className="btn-base btn-secondary min-h-0 cursor-pointer px-3 py-1">
+              <label className="btn-base btn-secondary min-h-0 w-full cursor-pointer px-3 py-2 sm:w-auto sm:py-1">
                 <UploadCloud size={16} /> Загрузить
                 <input
                   type="file"
@@ -377,15 +377,15 @@ function DelegatedTaskCard({
           </div>
           <div className="mt-3 grid gap-2">
             {task.attachments?.length ? task.attachments.map((file) => (
-              <div key={file.id} className="interactive-card flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-sm">
-                <div className="flex items-center gap-2">
+              <div key={file.id} className="interactive-card grid gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-sm sm:flex sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-2">
                   <FileUp size={16} className="text-[var(--accent)]" />
-                  <div>
-                    <p className="font-medium">{file.fileName}</p>
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{file.fileName}</p>
                     <p className="text-xs text-[var(--muted)]">{formatSize(file.sizeBytes)}</p>
                   </div>
                 </div>
-                <button className="btn-base btn-secondary min-h-0 px-3 py-1" onClick={() => downloadAttachment(file.id, file.fileName)}>
+                <button className="btn-base btn-secondary min-h-0 w-full px-3 py-2 sm:w-auto sm:py-1" onClick={() => downloadAttachment(file.id, file.fileName)}>
                   <Download size={15} /> Скачать
                 </button>
               </div>
