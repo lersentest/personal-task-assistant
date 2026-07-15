@@ -19,6 +19,7 @@ import {
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { CreateEntityModal, CreateEntityState } from '@/components/create-entity-modal';
 import { supabase } from '@/lib/supabase';
 import { FocusShell } from './focus/focus-shell';
 import { useUiMode } from './ui-mode-provider';
@@ -42,6 +43,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { interfaceMode, resolvedAppearance, setAppearance } = useUiMode();
   const [createOpen, setCreateOpen] = useState(false);
+  const [createModal, setCreateModal] = useState<CreateEntityState | null>(null);
 
   if (interfaceMode === 'focus') {
     return <FocusShell>{children}</FocusShell>;
@@ -54,6 +56,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   async function logout() {
     await supabase.auth.signOut();
     router.replace('/login');
+  }
+
+  function openCreate(state: CreateEntityState) {
+    setCreateOpen(false);
+    setCreateModal(state);
   }
 
   return (
@@ -70,8 +77,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </button>
         {createOpen ? (
           <div className="mb-4 grid gap-2 rounded-lg border border-[var(--line)] bg-[var(--background)] p-2 text-sm">
-            <Link href="/tasks?create=1" className="rounded-md px-3 py-2 hover:bg-[var(--panel)]">Новая задача</Link>
-            <Link href="/projects?create=1" className="rounded-md px-3 py-2 hover:bg-[var(--panel)]">Новый проект</Link>
+            <button type="button" onClick={() => openCreate({ entity: 'task', kind: 'TASK' })} className="rounded-md px-3 py-2 text-left hover:bg-[var(--panel)]">Новая задача</button>
+            <button type="button" onClick={() => openCreate({ entity: 'project' })} className="rounded-md px-3 py-2 text-left hover:bg-[var(--panel)]">Новый проект</button>
           </div>
         ) : null}
         <nav className="grid gap-1">
@@ -114,11 +121,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {[
           { href: '/my-day', label: 'Мой день', icon: ClipboardList },
           { href: '/calendar', label: 'Календарь', icon: CalendarDays },
-          { href: '/tasks?create=1', label: 'Создать', icon: Plus },
+          { href: '/tasks?create=1', label: 'Создать', icon: Plus, create: true },
           { href: '/projects', label: 'Проекты', icon: FolderKanban },
           { href: '/dashboard', label: 'Ещё', icon: Menu },
         ].map((item) => {
           const Icon = item.icon;
+          if (item.create) {
+            return (
+              <button key={item.href} type="button" onClick={() => openCreate({ entity: 'task', kind: 'TASK' })} className="flex flex-col items-center gap-1 rounded-md px-1 py-1 text-[11px] text-[var(--muted)]">
+                <Icon size={18} />
+                {item.label}
+              </button>
+            );
+          }
           return (
             <Link key={item.href} href={item.href} className="flex flex-col items-center gap-1 rounded-md px-1 py-1 text-[11px] text-[var(--muted)]">
               <Icon size={18} />
@@ -127,6 +142,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           );
         })}
       </nav>
+      <CreateEntityModal
+        open={Boolean(createModal)}
+        state={createModal ?? { entity: 'task', kind: 'TASK' }}
+        onClose={() => setCreateModal(null)}
+      />
     </div>
   );
 }

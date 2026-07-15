@@ -2,9 +2,10 @@
 
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import { CreateEntityModal, CreateEntityState } from '@/components/create-entity-modal';
 import { Page } from '@/components/page';
-import { ProjectForm } from '@/components/project-form';
 import { useUiMode } from '@/components/ui-mode-provider';
 import { api } from '@/lib/api';
 import { projectStatusLabel } from '@/lib/labels';
@@ -13,16 +14,25 @@ export default function ProjectsPage() {
   const { interfaceMode } = useUiMode();
   const isFocus = interfaceMode === 'focus';
   const params = useSearchParams();
+  const router = useRouter();
+  const [createModal, setCreateModal] = useState<CreateEntityState | null>(null);
   const projects = useQuery({ queryKey: ['projects'], queryFn: api.projects });
-  const showCreate = params.get('create') === '1';
+  const urlCreateOpen = params.get('create') === '1';
 
   return (
     <Page
       title="Проекты"
       description="Активные направления, прогресс и связанные задачи."
-      actions={<a className="rounded-xl bg-[var(--foreground)] px-4 py-2 text-sm font-medium text-[var(--background)]" href="/projects?create=1">Новый проект</a>}
+      actions={
+        <button
+          type="button"
+          onClick={() => setCreateModal({ entity: 'project' })}
+          className="rounded-xl bg-[var(--foreground)] px-4 py-2 text-sm font-medium text-[var(--background)]"
+        >
+          Новый проект
+        </button>
+      }
     >
-      {showCreate ? <div className="mb-6"><ProjectForm /></div> : null}
       <div className={isFocus ? 'grid gap-4 md:grid-cols-2 2xl:grid-cols-3' : 'grid gap-4 md:grid-cols-2 xl:grid-cols-3'}>
         {projects.data?.map((project) => {
           const count = project._count?.tasks ?? 0;
@@ -66,6 +76,14 @@ export default function ProjectsPage() {
           );
         })}
       </div>
+      <CreateEntityModal
+        open={Boolean(createModal) || urlCreateOpen}
+        state={createModal ?? { entity: 'project' }}
+        onClose={() => {
+          setCreateModal(null);
+          if (urlCreateOpen) router.replace('/projects');
+        }}
+      />
     </Page>
   );
 }

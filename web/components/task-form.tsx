@@ -13,11 +13,13 @@ export function TaskForm({
   projectId,
   onDone,
   compact = false,
+  initialKind = 'TASK',
 }: {
   task?: Task;
   projectId?: string;
   onDone?: () => void;
   compact?: boolean;
+  initialKind?: TaskKind;
 }) {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState(task?.title ?? '');
@@ -25,7 +27,7 @@ export function TaskForm({
   const [selectedProjectId, setSelectedProjectId] = useState(task?.project?.id ?? projectId ?? '');
   const [priority, setPriority] = useState(task?.priority ?? 'NORMAL');
   const [status, setStatus] = useState(task?.status ?? 'NEW');
-  const [kind, setKind] = useState<TaskKind>(task?.kind ?? 'TASK');
+  const [kind, setKind] = useState<TaskKind>(task?.kind ?? initialKind);
   const [isFlexible, setIsFlexible] = useState(task?.isFlexible ?? true);
   const [dueAt, setDueAt] = useState(task?.dueAt ? task.dueAt.slice(0, 16) : '');
   const [estimatedDurationMinutes, setEstimatedDurationMinutes] = useState(

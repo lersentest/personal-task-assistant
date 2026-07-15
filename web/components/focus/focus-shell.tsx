@@ -27,6 +27,8 @@ import {
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import { CreateEntityModal, CreateEntityState } from '@/components/create-entity-modal';
+import { TaskKind } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import { useUiMode } from '../ui-mode-provider';
 import { VoiceCommandButton } from '../voice-command-button';
@@ -64,22 +66,22 @@ const sections = [
 ];
 
 const createItems = [
-  { label: 'Задача', href: '/tasks?create=1&type=TASK', icon: CheckSquare, hint: 'Обычная рабочая задача' },
-  { label: 'Звонок', href: '/tasks?create=1&type=CALL', icon: Phone, hint: 'Запланировать звонок' },
-  { label: 'Встреча', href: '/tasks?create=1&type=MEETING', icon: Users, hint: 'Встреча или созвон' },
-  { label: 'Идея', href: '/tasks?create=1&type=IDEA', icon: Lightbulb, hint: 'Быстро сохранить мысль' },
-  { label: 'Заметка', href: '/tasks?create=1&type=NOTE', icon: FileText, hint: 'Текстовая заметка' },
-  { label: 'Проект', href: '/projects?create=1', icon: FolderKanban, hint: 'Новый проект' },
+  { label: 'Задача', href: '/tasks?create=1&type=TASK', icon: CheckSquare, hint: 'Обычная рабочая задача', entity: 'task', kind: 'TASK' },
+  { label: 'Звонок', href: '/tasks?create=1&type=CALL', icon: Phone, hint: 'Запланировать звонок', entity: 'task', kind: 'CALL' },
+  { label: 'Встреча', href: '/tasks?create=1&type=MEETING', icon: Users, hint: 'Встреча или созвон', entity: 'task', kind: 'MEETING' },
+  { label: 'Идея', href: '/tasks?create=1&type=IDEA', icon: Lightbulb, hint: 'Быстро сохранить мысль', entity: 'task', kind: 'IDEA' },
+  { label: 'Заметка', href: '/tasks?create=1&type=NOTE', icon: FileText, hint: 'Текстовая заметка', entity: 'task', kind: 'NOTE' },
+  { label: 'Проект', href: '/projects?create=1', icon: FolderKanban, hint: 'Новый проект', entity: 'project' },
 ];
 
 const commands = [
   { label: 'Перейти в Мой день', href: '/my-day', hint: 'Планирование дня' },
   { label: 'Открыть обзор', href: '/dashboard', hint: 'Сегодня, риски, проекты, активность' },
   { label: 'Открыть календарь', href: '/calendar', hint: 'Месяц, неделя, день, список' },
-  { label: 'Создать задачу', href: '/tasks?create=1&type=TASK', hint: 'Новая задача' },
-  { label: 'Создать звонок', href: '/tasks?create=1&type=CALL', hint: 'Тип задачи: звонок' },
-  { label: 'Создать встречу', href: '/tasks?create=1&type=MEETING', hint: 'Тип задачи: встреча' },
-  { label: 'Создать проект', href: '/projects?create=1', hint: 'Новый проект' },
+  { label: 'Создать задачу', href: '/tasks?create=1&type=TASK', hint: 'Новая задача', create: { entity: 'task', kind: 'TASK' } },
+  { label: 'Создать звонок', href: '/tasks?create=1&type=CALL', hint: 'Тип задачи: звонок', create: { entity: 'task', kind: 'CALL' } },
+  { label: 'Создать встречу', href: '/tasks?create=1&type=MEETING', hint: 'Тип задачи: встреча', create: { entity: 'task', kind: 'MEETING' } },
+  { label: 'Создать проект', href: '/projects?create=1', hint: 'Новый проект', create: { entity: 'project' } },
   { label: 'Найти задачу', href: '/search', hint: 'Поиск по системе' },
   { label: 'Открыть файлы', href: '/files', hint: 'Вложения и документы' },
 ];
@@ -89,6 +91,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { appearance, setAppearance } = useUiMode();
   const [createOpen, setCreateOpen] = useState(false);
+  const [createModal, setCreateModal] = useState<CreateEntityState | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
 
@@ -113,8 +116,12 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
         event.preventDefault();
         setPaletteOpen(true);
       }
-      if (!typing && event.key.toLowerCase() === 'n') router.push('/tasks?create=1&type=TASK');
-      if (!typing && event.key.toLowerCase() === 'p') router.push('/projects?create=1');
+      if (!typing && event.key.toLowerCase() === 'n') {
+        setCreateModal({ entity: 'task', kind: 'TASK' });
+      }
+      if (!typing && event.key.toLowerCase() === 'p') {
+        setCreateModal({ entity: 'project' });
+      }
       if (!typing && event.key === '/') {
         event.preventDefault();
         router.push('/search');
@@ -144,6 +151,13 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
     setCreateOpen(false);
     setCommandQuery('');
     router.push(href);
+  }
+
+  function openCreate(state: CreateEntityState) {
+    setPaletteOpen(false);
+    setCreateOpen(false);
+    setCommandQuery('');
+    setCreateModal(state);
   }
 
   return (
@@ -176,7 +190,13 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
                 return (
                   <button
                     key={item.href}
-                    onClick={() => go(item.href)}
+                    onClick={() =>
+                      openCreate(
+                        item.entity === 'project'
+                          ? { entity: 'project' }
+                          : { entity: 'task', kind: item.kind as TaskKind },
+                      )
+                    }
                     className="flex items-center gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-[var(--focus-primary-soft)]"
                   >
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--focus-surface-secondary)] text-[var(--focus-primary)]">
@@ -269,13 +289,13 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
                 <Sparkles size={17} />
                 Команды
               </button>
-              <Link
-                href="/tasks?create=1"
+              <button
+                onClick={() => openCreate({ entity: 'task', kind: 'TASK' })}
                 className="hidden h-11 items-center gap-2 rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] px-4 text-sm font-semibold shadow-sm transition hover:bg-[var(--focus-surface-secondary)] sm:flex"
               >
                 <Plus size={18} />
                 Создать
-              </Link>
+              </button>
               <Link
                 href="/profile"
                 className="flex h-11 items-center gap-3 rounded-2xl px-2 text-sm hover:bg-[var(--focus-surface-secondary)]"
@@ -303,12 +323,25 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
         {[
           { href: '/my-day', label: 'Мой день', icon: Sun },
           { href: '/calendar', label: 'Календарь', icon: CalendarDays },
-          { href: '/tasks?create=1', label: 'Создать', icon: Plus },
+          { href: '/tasks?create=1', label: 'Создать', icon: Plus, create: true },
           { href: '/tasks', label: 'Задачи', icon: CheckSquare },
           { href: '/dashboard', label: 'Ещё', icon: Menu },
         ].map((item) => {
           const Icon = item.icon;
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          if (item.create) {
+            return (
+              <button
+                key={item.href}
+                type="button"
+                onClick={() => openCreate({ entity: 'task', kind: 'TASK' })}
+                className="flex flex-col items-center gap-1 rounded-xl px-1 py-1 text-[11px] text-[var(--focus-primary)]"
+              >
+                <Icon size={18} />
+                {item.label}
+              </button>
+            );
+          }
           return (
             <Link
               key={item.href}
@@ -350,7 +383,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
               {filteredCommands.map((command) => (
                 <button
                   key={command.href}
-                  onClick={() => go(command.href)}
+                  onClick={() => command.create ? openCreate(command.create as CreateEntityState) : go(command.href)}
                   className="flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left hover:bg-[var(--focus-primary-soft)]"
                 >
                   <span>
@@ -373,6 +406,11 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       ) : null}
+      <CreateEntityModal
+        open={Boolean(createModal)}
+        state={createModal ?? { entity: 'task', kind: 'TASK' }}
+        onClose={() => setCreateModal(null)}
+      />
     </div>
   );
 }
