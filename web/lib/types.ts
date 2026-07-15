@@ -101,9 +101,11 @@ export interface Attachment {
   sizeBytes: number;
   taskId: string | null;
   projectId: string | null;
+  delegatedTaskId: string | null;
   createdAt: string;
   task?: { id: string; title: string } | null;
   project?: { id: string; name: string } | null;
+  delegatedTask?: { id: string; title: string } | null;
 }
 
 export interface ActivityEvent {
@@ -271,12 +273,15 @@ export interface DelegatedTask {
   completedAt: string | null;
   cancelledAt: string | null;
   lastReminderAt: string | null;
+  publicAccessToken: string;
+  publicAccessRevokedAt: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
   executor: Executor;
   project: Project | null;
   comments: DelegatedTaskComment[];
+  attachments?: Attachment[];
   events?: Array<{ id: string; type: string; title: string; createdAt: string; metadata: Record<string, unknown> | null }>;
 }
 

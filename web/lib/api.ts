@@ -56,9 +56,34 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+async function publicRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await fetch(`${apiUrl}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(init.headers ?? {}),
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(extractErrorMessage(text));
+  }
+  return response.json() as Promise<T>;
+}
+
 async function download(path: string): Promise<Blob> {
   const headers = await authHeaders();
   const response = await fetch(`${apiUrl}${path}`, { headers });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(extractErrorMessage(text, 'Не удалось скачать файл'));
+  }
+  return response.blob();
+}
+
+async function publicDownload(path: string): Promise<Blob> {
+  const response = await fetch(`${apiUrl}${path}`);
   if (!response.ok) {
     const text = await response.text();
     throw new Error(extractErrorMessage(text, 'Не удалось скачать файл'));
@@ -127,6 +152,12 @@ export const api = {
     request<{ ok: true }>(`/api/executors/${id}/invite/revoke`, { method: 'POST' }),
   delegatedTasks: (query = '') => request<DelegatedTask[]>(`/api/delegated-tasks${query}`),
   delegatedTask: (id: string) => request<DelegatedTask>(`/api/delegated-tasks/${id}`),
+  delegatedTaskPublicLink: (id: string) =>
+    request<{ token: string; url: string; revokedAt: string | null }>(`/api/delegated-tasks/${id}/public-link`),
+  regenerateDelegatedTaskPublicLink: (id: string) =>
+    request<{ token: string; url: string; revokedAt: string | null }>(`/api/delegated-tasks/${id}/public-link/regenerate`, { method: 'POST' }),
+  revokeDelegatedTaskPublicLink: (id: string) =>
+    request<{ ok: true }>(`/api/delegated-tasks/${id}/public-link/revoke`, { method: 'POST' }),
   createDelegatedTask: (input: DelegatedTaskInput) =>
     request<DelegatedTask>('/api/delegated-tasks', { method: 'POST', body: JSON.stringify(input) }),
   updateDelegatedTask: (id: string, input: Partial<DelegatedTaskInput> & { status?: string; resultText?: string | null }) =>
@@ -163,6 +194,7 @@ export const api = {
   createAttachment: (input: {
     taskId?: string | null;
     projectId?: string | null;
+    delegatedTaskId?: string | null;
     fileName: string;
     mimeType: string;
     dataBase64: string;
@@ -175,6 +207,16 @@ export const api = {
     download(`/api/attachments/${id}/download`),
   deleteAttachment: (id: string) =>
     request<{ ok: true }>(`/api/attachments/${id}`, { method: 'DELETE' }),
+  publicDelegatedTask: (token: string) =>
+    publicRequest<DelegatedTask>(`/api/public/delegated-tasks/${token}`),
+  publicDelegatedTaskAction: (token: string, input: { action: 'accept' | 'start' | 'question' | 'done'; message?: string | null }) =>
+    publicRequest<DelegatedTask>(`/api/public/delegated-tasks/${token}/actions`, { method: 'POST', body: JSON.stringify(input) }),
+  publicDelegatedTaskComment: (token: string, message: string) =>
+    publicRequest<DelegatedTask>(`/api/public/delegated-tasks/${token}/comments`, { method: 'POST', body: JSON.stringify({ message }) }),
+  publicDelegatedTaskAttachment: (token: string, input: { fileName: string; mimeType: string; dataBase64: string }) =>
+    publicRequest<Attachment>(`/api/public/delegated-tasks/${token}/attachments`, { method: 'POST', body: JSON.stringify(input) }),
+  publicDelegatedTaskDownloadAttachment: (token: string, id: string) =>
+    publicDownload(`/api/public/delegated-tasks/${token}/attachments/${id}/download`),
   myDay: (date: string) => request<MyDayData>(`/api/my-day?date=${date}`),
   myDaySuggestions: (query: string) =>
     request<Task[]>(`/api/my-day/suggestions${query}`),

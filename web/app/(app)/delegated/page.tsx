@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Download, FileUp, Link as LinkIcon, Send, UploadCloud } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { EmptyState, Page } from '@/components/page';
 import { api } from '@/lib/api';
@@ -26,6 +27,24 @@ const emptyForm = {
   priority: 'NORMAL' as TaskPriority,
   dueAt: '',
 };
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
+    reader.onload = () => {
+      const value = String(reader.result ?? '');
+      resolve(value.includes(',') ? value.split(',')[1] : value);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function formatSize(size: number) {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
+}
 
 export default function DelegatedPage() {
   const queryClient = useQueryClient();
@@ -202,7 +221,51 @@ function DelegatedTaskCard({
   onAccept: () => void;
   onReturn: () => void;
 }) {
+  const queryClient = useQueryClient();
+  const [ownerComment, setOwnerComment] = useState('');
+  const [cardMessage, setCardMessage] = useState<string | null>(null);
   const isClosed = ['COMPLETED', 'CANCELLED'].includes(task.status);
+  const publicUrl =
+    typeof window === 'undefined'
+      ? ''
+      : `${window.location.origin}/public/delegated/${task.publicAccessToken}`;
+
+  const comment = useMutation({
+    mutationFn: (message: string) => api.commentDelegatedTask(task.id, message),
+    onSuccess: async () => {
+      setOwnerComment('');
+      setCardMessage('Комментарий отправлен исполнителю.');
+      await queryClient.invalidateQueries({ queryKey: ['delegated-tasks'] });
+    },
+  });
+
+  const upload = useMutation({
+    mutationFn: async (file: File) => {
+      if (file.size > 10 * 1024 * 1024) {
+        throw new Error('Файл слишком большой. Максимум 10 МБ.');
+      }
+      return api.createAttachment({
+        delegatedTaskId: task.id,
+        fileName: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        dataBase64: await fileToBase64(file),
+      });
+    },
+    onSuccess: async () => {
+      setCardMessage('Файл добавлен.');
+      await queryClient.invalidateQueries({ queryKey: ['delegated-tasks'] });
+    },
+  });
+
+  async function downloadAttachment(id: string, fileName: string) {
+    const blob = await api.downloadAttachment(id);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <article className="interactive-card rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
@@ -231,6 +294,16 @@ function DelegatedTaskCard({
           ) : null}
         </div>
         <div className="flex min-w-[220px] flex-wrap gap-2 lg:justify-end">
+          <button
+            type="button"
+            className="btn-base btn-secondary"
+            onClick={() => {
+              navigator.clipboard?.writeText(publicUrl);
+              setCardMessage('Ссылка исполнителя скопирована.');
+            }}
+          >
+            <LinkIcon size={16} /> Ссылка
+          </button>
           {task.status === 'DRAFT' ? (
             <button disabled={busyAction.send} onClick={onSend} className="btn-base btn-primary">
               {busyAction.send ? 'Отправляю...' : 'Отправить'}
@@ -258,6 +331,71 @@ function DelegatedTaskCard({
           ) : null}
         </div>
       </div>
+
+      <div className="mt-4 grid gap-4 border-t border-[var(--line)] pt-4 lg:grid-cols-2">
+        <section className="rounded-2xl bg-[var(--background)] p-3">
+          <h3 className="font-semibold">Комментарии</h3>
+          <div className="mt-3 grid max-h-56 gap-2 overflow-auto">
+            {task.comments?.length ? task.comments.map((item) => (
+              <div key={item.id} className="rounded-xl bg-[var(--panel)] p-3 text-sm">
+                <p className="text-xs text-[var(--muted)]">{item.author} · {new Date(item.createdAt).toLocaleString('ru-RU')}</p>
+                <p className="mt-1 whitespace-pre-wrap">{item.message}</p>
+              </div>
+            )) : <p className="text-sm text-[var(--muted)]">Комментариев пока нет.</p>}
+          </div>
+          {!isClosed ? (
+            <div className="mt-3 grid gap-2">
+              <textarea
+                className="min-h-20 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-sm"
+                placeholder="Ответить исполнителю"
+                value={ownerComment}
+                onChange={(event) => setOwnerComment(event.target.value)}
+              />
+              <button className="btn-base btn-primary" disabled={comment.isPending || !ownerComment.trim()} onClick={() => comment.mutate(ownerComment)}>
+                <Send size={16} /> Ответить
+              </button>
+            </div>
+          ) : null}
+        </section>
+
+        <section className="rounded-2xl bg-[var(--background)] p-3">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="font-semibold">Файлы</h3>
+            {!isClosed ? (
+              <label className="btn-base btn-secondary min-h-0 cursor-pointer px-3 py-1">
+                <UploadCloud size={16} /> Загрузить
+                <input
+                  type="file"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) upload.mutate(file);
+                  }}
+                />
+              </label>
+            ) : null}
+          </div>
+          <div className="mt-3 grid gap-2">
+            {task.attachments?.length ? task.attachments.map((file) => (
+              <div key={file.id} className="interactive-card flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <FileUp size={16} className="text-[var(--accent)]" />
+                  <div>
+                    <p className="font-medium">{file.fileName}</p>
+                    <p className="text-xs text-[var(--muted)]">{formatSize(file.sizeBytes)}</p>
+                  </div>
+                </div>
+                <button className="btn-base btn-secondary min-h-0 px-3 py-1" onClick={() => downloadAttachment(file.id, file.fileName)}>
+                  <Download size={15} /> Скачать
+                </button>
+              </div>
+            )) : <p className="text-sm text-[var(--muted)]">Файлов пока нет.</p>}
+          </div>
+        </section>
+      </div>
+
+      {cardMessage ? <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{cardMessage}</p> : null}
+      {(comment.error || upload.error) ? <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{(comment.error || upload.error)?.message}</p> : null}
     </article>
   );
 }
