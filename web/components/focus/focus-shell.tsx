@@ -70,6 +70,7 @@ const sections = [
 
 const createItems = [
   { label: 'Задача', href: '/tasks?create=1&type=TASK', icon: CheckSquare, hint: 'Обычная рабочая задача', entity: 'task', kind: 'TASK' },
+  { label: 'Делегированная', href: '/delegated', icon: Users, hint: 'Задача для исполнителя', entity: 'delegated' },
   { label: 'Звонок', href: '/tasks?create=1&type=CALL', icon: Phone, hint: 'Запланировать звонок', entity: 'task', kind: 'CALL' },
   { label: 'Встреча', href: '/tasks?create=1&type=MEETING', icon: Users, hint: 'Встреча или созвон', entity: 'task', kind: 'MEETING' },
   { label: 'Идея', href: '/tasks?create=1&type=IDEA', icon: Lightbulb, hint: 'Быстро сохранить мысль', entity: 'task', kind: 'IDEA' },
@@ -82,6 +83,7 @@ const commands = [
   { label: 'Открыть обзор', href: '/dashboard', hint: 'Сегодня, риски, проекты, активность' },
   { label: 'Открыть календарь', href: '/calendar', hint: 'Месяц, неделя, день, список' },
   { label: 'Создать задачу', href: '/tasks?create=1&type=TASK', hint: 'Новая задача', create: { entity: 'task', kind: 'TASK' } },
+  { label: 'Создать делегированную задачу', href: '/delegated', hint: 'Задача для исполнителя' },
   { label: 'Создать звонок', href: '/tasks?create=1&type=CALL', hint: 'Тип задачи: звонок', create: { entity: 'task', kind: 'CALL' } },
   { label: 'Создать встречу', href: '/tasks?create=1&type=MEETING', hint: 'Тип задачи: встреча', create: { entity: 'task', kind: 'MEETING' } },
   { label: 'Создать проект', href: '/projects?create=1', hint: 'Новый проект', create: { entity: 'project' } },
@@ -180,6 +182,18 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
     setCreateModal(state);
   }
 
+  function openCreateItem(item: (typeof createItems)[number]) {
+    if (item.entity === 'delegated') {
+      go(item.href);
+      return;
+    }
+    openCreate(
+      item.entity === 'project'
+        ? { entity: 'project' }
+        : { entity: 'task', kind: item.kind as TaskKind },
+    );
+  }
+
   function openMobileMenu(event?: React.MouseEvent | React.PointerEvent) {
     event?.preventDefault();
     event?.stopPropagation();
@@ -216,13 +230,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
                 return (
                   <button
                     key={item.href}
-                    onClick={() =>
-                      openCreate(
-                        item.entity === 'project'
-                          ? { entity: 'project' }
-                          : { entity: 'task', kind: item.kind as TaskKind },
-                      )
-                    }
+                    onClick={() => openCreateItem(item)}
                     className="flex items-center gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-[var(--focus-primary-soft)]"
                   >
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--focus-surface-secondary)] text-[var(--focus-primary)]">
@@ -460,13 +468,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
                   <button
                     key={item.href}
                     type="button"
-                    onClick={() =>
-                      openCreate(
-                        item.entity === 'project'
-                          ? { entity: 'project' }
-                          : { entity: 'task', kind: item.kind as TaskKind },
-                      )
-                    }
+                    onClick={() => openCreateItem(item)}
                     className="flex min-h-20 flex-col items-start justify-between rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface-secondary)] p-3 text-left text-sm"
                   >
                     <Icon size={17} className="text-[var(--focus-primary)]" />
