@@ -78,6 +78,63 @@ enum DailyPlanScheduleType {
   FIXED
 }
 
+enum ExecutorLanguage {
+  RU
+  UK
+  EN
+  DE
+}
+
+enum ExecutorConnectionStatus {
+  NOT_CONNECTED
+  INVITE_CREATED
+  CONNECTED
+  INACTIVE
+}
+
+enum DelegatedTaskStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  IN_PROGRESS
+  QUESTION
+  WAITING_REVIEW
+  RETURNED
+  COMPLETED
+  CANCELLED
+}
+
+enum DelegatedTaskCommentAuthor {
+  OWNER
+  EXECUTOR
+  SYSTEM
+}
+
+enum DelegatedTaskEventType {
+  CREATED
+  UPDATED
+  SENT
+  ACCEPTED
+  STARTED
+  QUESTION_ASKED
+  OWNER_REPLIED
+  SUBMITTED
+  ACCEPTED_BY_OWNER
+  RETURNED
+  CANCELLED
+  REMINDED
+  REASSIGNED
+  FILE_ADDED
+}
+
+enum DelegatedReminderType {
+  MANUAL
+  DAY_BEFORE
+  DUE_DATE
+  OVERDUE
+  DIGEST
+}
+
 model User {
   id             String   @id @default(uuid()) @db.Uuid
   telegramId     BigInt   @unique @map("telegram_id")
@@ -101,6 +158,9 @@ model User {
   dailySummaries  DailySummaryDelivery[]
   dailyPlanItems  DailyPlanItem[]
   activityEvents  ActivityEvent[]
+  executors       Executor[]
+  delegatedTasks  DelegatedTask[] @relation("DelegatedTaskOwner")
+  delegatedEvents DelegatedTaskEvent[]
 
   @@map("users")
 }
@@ -121,10 +181,153 @@ model Project {
   createdBy User   @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: Restrict)
   tasks     Task[]
   attachments Attachment[]
+  delegatedTasks DelegatedTask[]
 
   @@unique([ownerId, name])
   @@index([ownerId, status, deletedAt])
   @@map("projects")
+}
+
+model Executor {
+  id                 String                   @id @default(uuid()) @db.Uuid
+  ownerId            String                   @map("owner_id") @db.Uuid
+  fullName           String                   @map("full_name") @db.VarChar(255)
+  company            String?                  @db.VarChar(255)
+  role               String?                  @db.VarChar(255)
+  email              String?                  @db.VarChar(255)
+  phone              String?                  @db.VarChar(64)
+  telegramUserId     BigInt?                  @map("telegram_user_id")
+  telegramUsername   String?                  @map("telegram_username") @db.VarChar(255)
+  telegramFirstName  String?                  @map("telegram_first_name") @db.VarChar(255)
+  telegramLastName   String?                  @map("telegram_last_name") @db.VarChar(255)
+  language           ExecutorLanguage         @default(RU)
+  timezone           String                   @default("Europe/Zurich") @db.VarChar(64)
+  dailyDigestEnabled Boolean                  @default(true) @map("daily_digest_enabled")
+  dailyDigestTime    String                   @default("08:00") @map("daily_digest_time") @db.VarChar(5)
+  connectionStatus   ExecutorConnectionStatus @default(NOT_CONNECTED) @map("connection_status")
+  isActive           Boolean                  @default(true) @map("is_active")
+  connectedAt        DateTime?                @map("connected_at") @db.Timestamptz(3)
+  createdAt          DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
+  archivedAt         DateTime?                @map("archived_at") @db.Timestamptz(3)
+  deletedAt          DateTime?                @map("deleted_at") @db.Timestamptz(3)
+
+  owner          User                   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  invites        ExecutorInvite[]
+  delegatedTasks DelegatedTask[]
+  comments       DelegatedTaskComment[]
+  events         DelegatedTaskEvent[]
+
+  @@unique([ownerId, telegramUserId])
+  @@index([ownerId, deletedAt])
+  @@index([ownerId, connectionStatus, isActive])
+  @@map("executors")
+}
+
+model ExecutorInvite {
+  id        String    @id @default(uuid()) @db.Uuid
+  executorId String   @map("executor_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash") @db.VarChar(128)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  executor Executor @relation(fields: [executorId], references: [id], onDelete: Cascade)
+
+  @@index([executorId, createdAt])
+  @@index([expiresAt])
+  @@map("executor_invites")
+}
+
+model DelegatedTask {
+  id           String              @id @default(uuid()) @db.Uuid
+  ownerId      String              @map("owner_id") @db.Uuid
+  executorId   String              @map("executor_id") @db.Uuid
+  projectId    String?             @map("project_id") @db.Uuid
+  title        String              @db.VarChar(500)
+  description  String?             @db.Text
+  resultText   String?             @map("result_text") @db.Text
+  status       DelegatedTaskStatus @default(DRAFT)
+  priority     TaskPriority        @default(NORMAL)
+  dueAt        DateTime?           @map("due_at") @db.Timestamptz(3)
+  sentAt       DateTime?           @map("sent_at") @db.Timestamptz(3)
+  acceptedAt   DateTime?           @map("accepted_at") @db.Timestamptz(3)
+  startedAt    DateTime?           @map("started_at") @db.Timestamptz(3)
+  submittedAt  DateTime?           @map("submitted_at") @db.Timestamptz(3)
+  returnedAt   DateTime?           @map("returned_at") @db.Timestamptz(3)
+  completedAt  DateTime?           @map("completed_at") @db.Timestamptz(3)
+  cancelledAt  DateTime?           @map("cancelled_at") @db.Timestamptz(3)
+  lastReminderAt DateTime?         @map("last_reminder_at") @db.Timestamptz(3)
+  createdAt    DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt    DateTime?           @map("deleted_at") @db.Timestamptz(3)
+
+  owner     User     @relation("DelegatedTaskOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  executor  Executor @relation(fields: [executorId], references: [id], onDelete: Restrict)
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  comments  DelegatedTaskComment[]
+  events    DelegatedTaskEvent[]
+  reminders DelegatedTaskReminder[]
+
+  @@index([ownerId, status, deletedAt])
+  @@index([ownerId, dueAt])
+  @@index([executorId, status, deletedAt])
+  @@index([projectId, status, deletedAt])
+  @@map("delegated_tasks")
+}
+
+model DelegatedTaskComment {
+  id          String                     @id @default(uuid()) @db.Uuid
+  taskId      String                     @map("task_id") @db.Uuid
+  ownerId     String                     @map("owner_id") @db.Uuid
+  executorId  String?                    @map("executor_id") @db.Uuid
+  author      DelegatedTaskCommentAuthor
+  message     String                     @db.Text
+  createdAt   DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
+  deletedAt   DateTime?                  @map("deleted_at") @db.Timestamptz(3)
+
+  task     DelegatedTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  executor Executor?     @relation(fields: [executorId], references: [id], onDelete: SetNull)
+
+  @@index([taskId, createdAt])
+  @@index([ownerId, createdAt])
+  @@map("delegated_task_comments")
+}
+
+model DelegatedTaskEvent {
+  id          String                 @id @default(uuid()) @db.Uuid
+  taskId      String                 @map("task_id") @db.Uuid
+  ownerId     String                 @map("owner_id") @db.Uuid
+  executorId  String?                @map("executor_id") @db.Uuid
+  type        DelegatedTaskEventType
+  title       String                 @db.VarChar(500)
+  metadata    Json?
+  createdAt   DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  task     DelegatedTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  owner    User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  executor Executor?     @relation(fields: [executorId], references: [id], onDelete: SetNull)
+
+  @@index([ownerId, createdAt])
+  @@index([taskId, createdAt])
+  @@map("delegated_task_events")
+}
+
+model DelegatedTaskReminder {
+  id        String            @id @default(uuid()) @db.Uuid
+  taskId    String            @map("task_id") @db.Uuid
+  remindAt  DateTime          @map("remind_at") @db.Timestamptz(3)
+  type      DelegatedReminderType @default(MANUAL)
+  status    ReminderStatus    @default(PENDING)
+  sentAt    DateTime?         @map("sent_at") @db.Timestamptz(3)
+  createdAt DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  task DelegatedTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([status, remindAt])
+  @@index([taskId, status])
+  @@map("delegated_task_reminders")
 }
 
 model Task {
