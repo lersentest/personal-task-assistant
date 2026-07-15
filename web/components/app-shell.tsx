@@ -20,6 +20,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { FocusShell } from './focus/focus-shell';
+import { useUiMode } from './ui-mode-provider';
 import { VoiceCommandButton } from './voice-command-button';
 
 const nav = [
@@ -38,12 +40,15 @@ const nav = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { interfaceMode, resolvedAppearance, setAppearance } = useUiMode();
   const [createOpen, setCreateOpen] = useState(false);
 
+  if (interfaceMode === 'focus') {
+    return <FocusShell>{children}</FocusShell>;
+  }
+
   function toggleTheme() {
-    const next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
-    document.documentElement.classList.toggle('dark', next === 'dark');
-    localStorage.setItem('theme', next);
+    setAppearance(resolvedAppearance === 'dark' ? 'light' : 'dark');
   }
 
   async function logout() {

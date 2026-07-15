@@ -1,10 +1,10 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { UiModeProvider } from './ui-mode-provider';
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [mounted, setMounted] = useState(false);
   const queryClient = useMemo(
     () =>
       new QueryClient({
@@ -18,18 +18,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
     [],
   );
 
-  useEffect(() => {
-    setMounted(true);
-    const saved = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    document.documentElement.classList.toggle(
-      'dark',
-      saved === 'dark' || (!saved && prefersDark),
-    );
-  }, []);
-
-  if (!mounted) return null;
-
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <UiModeProvider>{children}</UiModeProvider>
+    </QueryClientProvider>
+  );
 }
-
