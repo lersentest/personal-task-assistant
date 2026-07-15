@@ -90,6 +90,10 @@ select {
   --fc-today-bg-color: rgba(37, 99, 235, 0.08);
 }
 
+.fc .fc-popover {
+  z-index: 60;
+}
+
 [data-ui-mode="focus"] .focus-page {
   min-height: calc(100vh - 96px);
 }
