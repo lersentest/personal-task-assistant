@@ -465,7 +465,7 @@ export class DelegatedTasksService {
     if (action === 'question' && ['SENT', 'ACCEPTED', 'IN_PROGRESS', 'RETURNED', 'QUESTION'].includes(current)) {
       return { status: 'QUESTION' as const, event: 'QUESTION_ASKED' as const };
     }
-    if (action === 'done' && ['ACCEPTED', 'IN_PROGRESS', 'QUESTION', 'RETURNED'].includes(current)) {
+    if (action === 'done' && ['SENT', 'ACCEPTED', 'IN_PROGRESS', 'QUESTION', 'RETURNED'].includes(current)) {
       return { status: 'WAITING_REVIEW' as const, event: 'SUBMITTED' as const };
     }
     throw new BadRequestException('This status transition is not allowed.');
