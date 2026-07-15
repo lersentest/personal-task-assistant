@@ -1,10 +1,19 @@
 import 'reflect-metadata';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { createRequire } from 'node:module';
 import { AppModule } from './app.module';
 
+const requireExpress = createRequire(__filename);
+const expressBodyParser = requireExpress('express') as {
+  json: (options: { limit: string }) => unknown;
+  urlencoded: (options: { extended: boolean; limit: string }) => unknown;
+};
+
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
+  app.use(expressBodyParser.json({ limit: '20mb' }));
+  app.use(expressBodyParser.urlencoded({ extended: true, limit: '20mb' }));
   app.enableShutdownHooks();
   const origins = new Set(
     [
