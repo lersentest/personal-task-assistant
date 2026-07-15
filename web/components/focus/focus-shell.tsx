@@ -46,6 +46,8 @@ const sections = [
     title: 'Работа',
     items: [
       { href: '/tasks', label: 'Задачи', icon: CheckSquare },
+      { href: '/delegated', label: 'Делегированные', icon: Users },
+      { href: '/executors', label: 'Исполнители', icon: Users },
       { href: '/projects', label: 'Проекты', icon: FolderKanban },
     ],
   },

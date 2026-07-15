@@ -4,6 +4,10 @@ import {
   ConfirmedVoiceOperation,
   DashboardData,
   DailyPlanItem,
+  DelegatedTask,
+  DelegatedTaskInput,
+  Executor,
+  ExecutorInput,
   MyDayData,
   Project,
   ProjectInput,
@@ -94,6 +98,40 @@ export const api = {
     request<Task>(`/api/tasks/${id}/restore`, { method: 'POST' }),
   deleteTask: (id: string) =>
     request<{ ok: true }>(`/api/tasks/${id}`, { method: 'DELETE' }),
+  executors: () => request<Executor[]>('/api/executors'),
+  executor: (id: string) => request<Executor>(`/api/executors/${id}`),
+  createExecutor: (input: ExecutorInput) =>
+    request<Executor>('/api/executors', { method: 'POST', body: JSON.stringify(input) }),
+  updateExecutor: (id: string, input: Partial<ExecutorInput>) =>
+    request<Executor>(`/api/executors/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
+  deleteExecutor: (id: string) =>
+    request<{ ok: true }>(`/api/executors/${id}`, { method: 'DELETE' }),
+  inviteExecutor: (id: string) =>
+    request<{ token: string; link: string; expiresAt: string }>(`/api/executors/${id}/invite`, { method: 'POST' }),
+  regenerateExecutorInvite: (id: string) =>
+    request<{ token: string; link: string; expiresAt: string }>(`/api/executors/${id}/invite/regenerate`, { method: 'POST' }),
+  revokeExecutorInvite: (id: string) =>
+    request<{ ok: true }>(`/api/executors/${id}/invite/revoke`, { method: 'POST' }),
+  delegatedTasks: (query = '') => request<DelegatedTask[]>(`/api/delegated-tasks${query}`),
+  delegatedTask: (id: string) => request<DelegatedTask>(`/api/delegated-tasks/${id}`),
+  createDelegatedTask: (input: DelegatedTaskInput) =>
+    request<DelegatedTask>('/api/delegated-tasks', { method: 'POST', body: JSON.stringify(input) }),
+  updateDelegatedTask: (id: string, input: Partial<DelegatedTaskInput> & { status?: string; resultText?: string | null }) =>
+    request<DelegatedTask>(`/api/delegated-tasks/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
+  deleteDelegatedTask: (id: string) =>
+    request<{ ok: true }>(`/api/delegated-tasks/${id}`, { method: 'DELETE' }),
+  sendDelegatedTask: (id: string) =>
+    request<DelegatedTask>(`/api/delegated-tasks/${id}/send`, { method: 'POST' }),
+  remindDelegatedTask: (id: string) =>
+    request<DelegatedTask>(`/api/delegated-tasks/${id}/remind`, { method: 'POST' }),
+  cancelDelegatedTask: (id: string) =>
+    request<DelegatedTask>(`/api/delegated-tasks/${id}/cancel`, { method: 'POST' }),
+  acceptDelegatedTask: (id: string, message?: string) =>
+    request<DelegatedTask>(`/api/delegated-tasks/${id}/review/accept`, { method: 'POST', body: JSON.stringify({ message }) }),
+  returnDelegatedTask: (id: string, message?: string) =>
+    request<DelegatedTask>(`/api/delegated-tasks/${id}/review/return`, { method: 'POST', body: JSON.stringify({ message }) }),
+  commentDelegatedTask: (id: string, message: string) =>
+    request<DelegatedTask>(`/api/delegated-tasks/${id}/comments`, { method: 'POST', body: JSON.stringify({ message }) }),
   projects: () => request<Project[]>('/api/projects'),
   project: (id: string) => request<Project>(`/api/projects/${id}`),
   createProject: (input: ProjectInput) =>

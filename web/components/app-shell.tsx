@@ -15,6 +15,7 @@ import {
   Sun,
   Trash2,
   User,
+  Users,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -31,6 +32,8 @@ const nav = [
   { href: '/today', label: 'Сегодня', icon: CheckSquare },
   { href: '/calendar', label: 'Календарь', icon: CalendarDays },
   { href: '/tasks', label: 'Задачи', icon: CheckSquare },
+  { href: '/delegated', label: 'Делегированные', icon: Users },
+  { href: '/executors', label: 'Исполнители', icon: Users },
   { href: '/projects', label: 'Проекты', icon: FolderKanban },
   { href: '/unassigned', label: 'Без проекта', icon: Menu },
   { href: '/search', label: 'Поиск', icon: Search },

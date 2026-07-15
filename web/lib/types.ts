@@ -2,6 +2,18 @@ export type TaskStatus = 'NEW' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 export type TaskPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
 export type TaskKind = 'TASK' | 'CALL' | 'MEETING' | 'IDEA' | 'NOTE';
 export type ProjectStatus = 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'ARCHIVED';
+export type ExecutorLanguage = 'RU' | 'UK' | 'EN' | 'DE';
+export type ExecutorConnectionStatus = 'NOT_CONNECTED' | 'INVITE_CREATED' | 'CONNECTED' | 'INACTIVE';
+export type DelegatedTaskStatus =
+  | 'DRAFT'
+  | 'SENT'
+  | 'ACCEPTED'
+  | 'IN_PROGRESS'
+  | 'QUESTION'
+  | 'WAITING_REVIEW'
+  | 'RETURNED'
+  | 'COMPLETED'
+  | 'CANCELLED';
 
 export interface Project {
   id: string;
@@ -182,4 +194,97 @@ export interface ConfirmedVoiceOperation {
   title?: string;
   projectName?: string;
   count?: number;
+}
+
+export interface Executor {
+  id: string;
+  fullName: string;
+  company: string | null;
+  role: string | null;
+  email: string | null;
+  phone: string | null;
+  telegramUserId: string | null;
+  telegramUsername: string | null;
+  telegramFirstName: string | null;
+  telegramLastName: string | null;
+  language: ExecutorLanguage;
+  timezone: string;
+  dailyDigestEnabled: boolean;
+  dailyDigestTime: string;
+  connectionStatus: ExecutorConnectionStatus;
+  isActive: boolean;
+  connectedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  archivedAt: string | null;
+  deletedAt: string | null;
+  invites?: Array<{
+    id: string;
+    expiresAt: string;
+    usedAt: string | null;
+    revokedAt: string | null;
+    createdAt: string;
+  }>;
+  _count?: { delegatedTasks: number };
+}
+
+export interface ExecutorInput {
+  fullName: string;
+  company?: string | null;
+  role?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  language?: ExecutorLanguage;
+  timezone?: string | null;
+  dailyDigestEnabled?: boolean;
+  dailyDigestTime?: string | null;
+  isActive?: boolean;
+}
+
+export interface DelegatedTaskComment {
+  id: string;
+  taskId: string;
+  ownerId: string;
+  executorId: string | null;
+  author: 'OWNER' | 'EXECUTOR' | 'SYSTEM';
+  message: string;
+  createdAt: string;
+  deletedAt: string | null;
+}
+
+export interface DelegatedTask {
+  id: string;
+  ownerId: string;
+  executorId: string;
+  projectId: string | null;
+  title: string;
+  description: string | null;
+  resultText: string | null;
+  status: DelegatedTaskStatus;
+  priority: TaskPriority;
+  dueAt: string | null;
+  sentAt: string | null;
+  acceptedAt: string | null;
+  startedAt: string | null;
+  submittedAt: string | null;
+  returnedAt: string | null;
+  completedAt: string | null;
+  cancelledAt: string | null;
+  lastReminderAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  executor: Executor;
+  project: Project | null;
+  comments: DelegatedTaskComment[];
+  events?: Array<{ id: string; type: string; title: string; createdAt: string; metadata: Record<string, unknown> | null }>;
+}
+
+export interface DelegatedTaskInput {
+  executorId: string;
+  projectId?: string | null;
+  title: string;
+  description?: string | null;
+  priority?: TaskPriority;
+  dueAt?: string | null;
 }
