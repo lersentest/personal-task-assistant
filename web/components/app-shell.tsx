@@ -16,10 +16,11 @@ import {
   Trash2,
   User,
   Users,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CreateEntityModal, CreateEntityState } from '@/components/create-entity-modal';
 import { supabase } from '@/lib/supabase';
 import { FocusShell } from './focus/focus-shell';
@@ -44,9 +45,10 @@ const nav = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { interfaceMode, resolvedAppearance, setAppearance } = useUiMode();
+  const { interfaceMode, resolvedAppearance, setAppearance, setInterfaceMode } = useUiMode();
   const [createOpen, setCreateOpen] = useState(false);
   const [createModal, setCreateModal] = useState<CreateEntityState | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   if (interfaceMode === 'focus') {
     return <FocusShell>{children}</FocusShell>;
@@ -63,8 +65,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   function openCreate(state: CreateEntityState) {
     setCreateOpen(false);
+    setMobileMenuOpen(false);
     setCreateModal(state);
   }
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileMenuOpen]);
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[260px_1fr]">
@@ -127,9 +143,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           { href: '/calendar', label: 'Календарь', icon: CalendarDays },
           { href: '/tasks?create=1', label: 'Создать', icon: Plus, create: true },
           { href: '/projects', label: 'Проекты', icon: FolderKanban },
-          { href: '/dashboard', label: 'Ещё', icon: Menu },
+          { href: '/menu', label: 'Ещё', icon: Menu, menu: true },
         ].map((item) => {
           const Icon = item.icon;
+          if (item.menu) {
+            return (
+              <button key={item.href} type="button" onClick={() => setMobileMenuOpen(true)} className="flex flex-col items-center gap-1 rounded-md px-1 py-1 text-[11px] text-[var(--muted)]">
+                <Icon size={18} />
+                {item.label}
+              </button>
+            );
+          }
           if (item.create) {
             return (
               <button key={item.href} type="button" onClick={() => openCreate({ entity: 'task', kind: 'TASK' })} className="flex flex-col items-center gap-1 rounded-md px-1 py-1 text-[11px] text-[var(--muted)]">
@@ -146,6 +170,81 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           );
         })}
       </nav>
+      <div
+        role="dialog"
+        aria-modal={mobileMenuOpen ? 'true' : undefined}
+        aria-hidden={!mobileMenuOpen}
+        className={`fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-sm transition-opacity lg:hidden ${
+          mobileMenuOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+        onClick={() => setMobileMenuOpen(false)}
+      >
+        <aside
+          className={`flex h-full w-[min(92vw,360px)] flex-col overflow-y-auto border-r border-[var(--line)] bg-[var(--panel)] p-4 shadow-2xl transition-transform ${
+            mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <Link href="/my-day" className="text-lg font-semibold">
+              Personal Tasks
+            </Link>
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(false)}
+              className="rounded-xl border border-[var(--line)] bg-[var(--background)] p-2 text-[var(--muted)]"
+              aria-label="Закрыть меню"
+            >
+              <X size={18} />
+            </button>
+          </div>
+          <div className="mb-4 grid gap-2 rounded-2xl border border-[var(--line)] bg-[var(--background)] p-2 text-sm">
+            <button type="button" onClick={() => openCreate({ entity: 'task', kind: 'TASK' })} className="btn-base btn-ghost justify-start rounded-xl px-3 py-2">Новая задача</button>
+            <button type="button" onClick={() => openCreate({ entity: 'delegated' })} className="btn-base btn-ghost justify-start rounded-xl px-3 py-2">Делегированная задача</button>
+            <button type="button" onClick={() => openCreate({ entity: 'project' })} className="btn-base btn-ghost justify-start rounded-xl px-3 py-2">Новый проект</button>
+          </div>
+          <nav className="grid gap-1">
+            {nav.map((item) => {
+              const Icon = item.icon;
+              const active = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm ${
+                    active ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'text-[var(--muted)] hover:bg-[var(--background)]'
+                  }`}
+                >
+                  <Icon size={18} /> {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="mt-auto grid gap-1 border-t border-[var(--line)] pt-4 text-sm text-[var(--muted)]">
+            <button
+              onClick={() => {
+                setInterfaceMode('focus');
+                setMobileMenuOpen(false);
+              }}
+              className="flex items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-[var(--background)]"
+            >
+              <Home size={17} /> Включить Focus UI
+            </button>
+            <button onClick={toggleTheme} className="flex items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-[var(--background)]">
+              <Sun size={17} /> <Moon size={17} /> Тема
+            </button>
+            <Link href="/settings" className="flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-[var(--background)]">
+              <Settings size={17} /> Настройки
+            </Link>
+            <Link href="/profile" className="flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-[var(--background)]">
+              <User size={17} /> Профиль
+            </Link>
+            <button onClick={logout} className="flex items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-[var(--background)]">
+              <LogOut size={17} /> Выход
+            </button>
+          </div>
+        </aside>
+      </div>
       <CreateEntityModal
         open={Boolean(createModal)}
         state={createModal ?? { entity: 'task', kind: 'TASK' }}
