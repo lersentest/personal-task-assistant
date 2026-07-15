@@ -132,8 +132,8 @@ export default function DelegatedPage() {
       title="Делегированные"
       description="Отдельные задачи для исполнителей. Они не смешиваются с личными задачами и Моим днём."
     >
-      <div className="grid gap-4 xl:grid-cols-[420px_1fr] xl:gap-5">
-        <form onSubmit={submit} className="grid content-start gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm sm:p-5">
+      <div className="grid items-start gap-4 xl:grid-cols-[420px_1fr] xl:gap-5">
+        <form onSubmit={submit} className="grid self-start gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm sm:p-5">
           <div>
             <h2 className="text-lg font-semibold">Новая делегированная задача</h2>
             <p className="mt-1 text-sm text-[var(--muted)]">
