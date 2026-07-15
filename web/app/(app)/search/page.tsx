@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Page } from '@/components/page';
+import { TaskModalLink } from '@/components/task-detail-modal';
 import { useUiMode } from '@/components/ui-mode-provider';
 import { api } from '@/lib/api';
 
@@ -28,7 +29,15 @@ export default function SearchPage() {
         <section className={isFocus ? 'rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-5 shadow-sm' : 'grid content-start gap-3'}>
           <h2 className="mb-3 font-semibold">Задачи</h2>
           <div className="grid gap-3">
-            {filteredTasks.map((task) => <Link key={task.id} href={`/tasks/${task.id}`} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 hover:border-[var(--accent)]">{task.title}</Link>)}
+            {filteredTasks.map((task) => (
+              <TaskModalLink
+                key={task.id}
+                task={task}
+                className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-left hover:border-[var(--accent)]"
+              >
+                {task.title}
+              </TaskModalLink>
+            ))}
           </div>
         </section>
         <section className={isFocus ? 'rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-5 shadow-sm' : 'grid content-start gap-3'}>

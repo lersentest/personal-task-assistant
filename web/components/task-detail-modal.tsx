@@ -1,0 +1,312 @@
+'use client';
+
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  CalendarClock,
+  CheckCircle2,
+  Clock3,
+  ExternalLink,
+  FolderKanban,
+  Pencil,
+  Tag,
+  Trash2,
+  X,
+} from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { api } from '@/lib/api';
+import { formatDate, priorityLabel, statusLabel, taskKindLabel } from '@/lib/labels';
+import { Task } from '@/lib/types';
+import { AttachmentPanel } from './attachment-panel';
+import { TaskForm } from './task-form';
+
+export function TaskModalLink({
+  task,
+  taskId,
+  children,
+  className,
+  title,
+}: {
+  task?: Task;
+  taskId?: string;
+  children: React.ReactNode;
+  className?: string;
+  title?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const id = task?.id ?? taskId;
+
+  if (!id) return <>{children}</>;
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={className}
+        title={title ?? 'Открыть задачу'}
+      >
+        {children}
+      </button>
+      <TaskDetailsModal
+        taskId={id}
+        initialTask={task}
+        open={open}
+        onClose={() => setOpen(false)}
+      />
+    </>
+  );
+}
+
+export function TaskDetailsModal({
+  taskId,
+  initialTask,
+  open,
+  onClose,
+}: {
+  taskId: string;
+  initialTask?: Task;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const task = useQuery({
+    queryKey: ['task', taskId],
+    queryFn: () => api.task(taskId),
+    enabled: open,
+    initialData: initialTask,
+  });
+
+  const complete = useMutation({
+    mutationFn: () => api.completeTask(taskId),
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+    },
+  });
+
+  const remove = useMutation({
+    mutationFn: () => api.deleteTask(taskId),
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+      onClose();
+    },
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [onClose, open]);
+
+  useEffect(() => {
+    if (!open) setEditing(false);
+  }, [open]);
+
+  if (!open) return null;
+
+  const data = task.data;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/55 p-3 backdrop-blur-sm sm:p-6"
+      onMouseDown={onClose}
+    >
+      <div
+        className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface,var(--panel))] text-[var(--foreground)] shadow-2xl"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-[var(--focus-border-soft,var(--line))] p-5 sm:p-6">
+          <div className="min-w-0">
+            <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
+              <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-1 font-medium text-[var(--accent)]">
+                {data ? taskKindLabel[data.kind ?? 'TASK'] : 'Задача'}
+              </span>
+              {data?.project ? (
+                <span className="inline-flex items-center gap-1">
+                  <FolderKanban size={13} />
+                  {data.project.name}
+                </span>
+              ) : (
+                <span>Без проекта</span>
+              )}
+            </div>
+            <h2 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
+              {data?.title ?? 'Загружаю задачу…'}
+            </h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Детали задачи, редактирование, файлы и быстрые действия.
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Link
+              href={`/tasks/${taskId}`}
+              className="hidden rounded-xl border border-[var(--line)] px-3 py-2 text-sm text-[var(--muted)] hover:bg-[var(--background)] sm:inline-flex sm:items-center sm:gap-2"
+            >
+              <ExternalLink size={16} />
+              Страница
+            </Link>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-[var(--line)] p-2 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)]"
+              title="Закрыть"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
+          {task.isLoading && !data ? (
+            <div className="rounded-2xl border border-dashed border-[var(--line)] p-8 text-center text-[var(--muted)]">
+              Загружаю задачу…
+            </div>
+          ) : null}
+
+          {task.error ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {task.error.message}
+            </div>
+          ) : null}
+
+          {data && editing ? (
+            <TaskForm
+              task={data}
+              onDone={() => {
+                setEditing(false);
+                queryClient.invalidateQueries({ queryKey: ['task', taskId] });
+              }}
+            />
+          ) : null}
+
+          {data && !editing ? (
+            <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+              <section className="grid gap-5">
+                <div className="rounded-2xl border border-[var(--line)] bg-[var(--background)]/45 p-5">
+                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
+                    Описание
+                  </h3>
+                  <p className="whitespace-pre-wrap leading-7">
+                    {data.description?.trim() || 'Описание пока не указано.'}
+                  </p>
+                </div>
+
+                <AttachmentPanel taskId={taskId} title="Файлы задачи" />
+              </section>
+
+              <aside className="grid content-start gap-4">
+                <div className="rounded-2xl border border-[var(--line)] bg-[var(--background)]/45 p-4">
+                  <h3 className="mb-3 font-semibold">Сводка</h3>
+                  <div className="grid gap-2">
+                    <InfoRow icon={<CheckCircle2 size={16} />} label="Статус" value={statusLabel[data.status]} />
+                    <InfoRow label="Приоритет" value={priorityLabel[data.priority]} tone={priorityTone(data.priority)} />
+                    <InfoRow icon={<CalendarClock size={16} />} label="Срок" value={formatDate(data.dueAt)} />
+                    <InfoRow icon={<Clock3 size={16} />} label="Оценка" value={data.estimatedDurationMinutes ? `${data.estimatedDurationMinutes} мин` : 'Без оценки'} />
+                    <InfoRow label="Планирование" value={data.isFlexible ? 'Гибкая задача' : 'Фиксированное время'} />
+                    <InfoRow label="Создана" value={formatDate(data.createdAt)} />
+                  </div>
+                </div>
+
+                {data.tags?.length ? (
+                  <div className="rounded-2xl border border-[var(--line)] bg-[var(--background)]/45 p-4">
+                    <h3 className="mb-3 flex items-center gap-2 font-semibold">
+                      <Tag size={17} />
+                      Теги
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {data.tags.map((item) => (
+                        <span key={item.tag.id} className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-sm text-[var(--accent)]">
+                          #{item.tag.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="rounded-2xl border border-[var(--line)] bg-[var(--background)]/45 p-4">
+                  <h3 className="mb-3 font-semibold">Действия</h3>
+                  <div className="grid gap-2">
+                    {data.status !== 'COMPLETED' && !data.deletedAt ? (
+                      <button
+                        type="button"
+                        onClick={() => complete.mutate()}
+                        disabled={complete.isPending}
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                      >
+                        <CheckCircle2 size={17} />
+                        Завершить
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => setEditing(true)}
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--foreground)] px-4 text-sm font-semibold text-[var(--background)]"
+                    >
+                      <Pencil size={17} />
+                      Редактировать
+                    </button>
+                    {!data.deletedAt ? (
+                      <button
+                        type="button"
+                        onClick={() => remove.mutate()}
+                        disabled={remove.isPending}
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-red-200 px-4 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60"
+                      >
+                        <Trash2 size={17} />
+                        В корзину
+                      </button>
+                    ) : null}
+                  </div>
+                  {(complete.error || remove.error) ? (
+                    <p className="mt-3 text-sm text-red-500">
+                      {(complete.error || remove.error)?.message}
+                    </p>
+                  ) : null}
+                </div>
+              </aside>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({
+  icon,
+  label,
+  value,
+  tone,
+}: {
+  icon?: React.ReactNode;
+  label: string;
+  value: string;
+  tone?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl bg-[var(--panel)] px-3 py-2.5 text-sm">
+      <span className="inline-flex items-center gap-2 text-[var(--muted)]">
+        {icon}
+        {label}
+      </span>
+      <span className={tone ?? 'font-medium'}>{value}</span>
+    </div>
+  );
+}
+
+function priorityTone(priority: Task['priority']) {
+  if (priority === 'URGENT') return 'font-semibold text-red-600';
+  if (priority === 'HIGH') return 'font-semibold text-orange-600';
+  if (priority === 'LOW') return 'font-semibold text-slate-500';
+  return 'font-semibold text-blue-600';
+}

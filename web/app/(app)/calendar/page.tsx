@@ -10,6 +10,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { SlidersHorizontal } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Page } from '@/components/page';
+import { TaskDetailsModal } from '@/components/task-detail-modal';
 import { useUiMode } from '@/components/ui-mode-provider';
 import { api } from '@/lib/api';
 import { priorityLabel, taskKindLabel } from '@/lib/labels';
@@ -22,6 +23,7 @@ export default function CalendarPage() {
   const [priority, setPriority] = useState<TaskPriority | ''>('');
   const [kind, setKind] = useState<TaskKind | ''>('');
   const [flexibility, setFlexibility] = useState<'all' | 'fixed' | 'flexible'>('all');
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const tasks = useQuery({ queryKey: ['calendar'], queryFn: api.calendar });
   const move = useMutation({
     mutationFn: ({ id, dueAt }: { id: string; dueAt: string }) => api.updateTask(id, { dueAt }),
@@ -42,7 +44,6 @@ export default function CalendarPage() {
     id: task.id,
     title: `${taskKindLabel[task.kind ?? 'TASK']} · ${task.title}`,
     start: task.dueAt ?? undefined,
-    url: `/tasks/${task.id}`,
     backgroundColor: eventColor(task),
     borderColor: 'transparent',
     extendedProps: { priority: task.priority, status: task.status },
@@ -52,8 +53,9 @@ export default function CalendarPage() {
     return (
       <Page title="Календарь" description="Задачи с установленным сроком.">
         <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3 shadow-sm">
-          <Calendar events={events} move={move.mutate} />
+          <Calendar events={events} move={move.mutate} onOpenTask={setSelectedTaskId} />
         </div>
+        <TaskDetailsModal taskId={selectedTaskId ?? ''} open={Boolean(selectedTaskId)} onClose={() => setSelectedTaskId(null)} />
       </Page>
     );
   }
@@ -62,7 +64,7 @@ export default function CalendarPage() {
     <Page title="Календарь" description="Месяц, неделя, день и список с фильтрами Focus UI.">
       <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
         <section className="rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-4 shadow-sm">
-          <Calendar events={events} move={move.mutate} focus />
+          <Calendar events={events} move={move.mutate} focus onOpenTask={setSelectedTaskId} />
         </section>
         <aside className="grid content-start gap-4">
           <section className="rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-5 shadow-sm">
@@ -111,6 +113,7 @@ export default function CalendarPage() {
           </section>
         </aside>
       </div>
+      <TaskDetailsModal taskId={selectedTaskId ?? ''} open={Boolean(selectedTaskId)} onClose={() => setSelectedTaskId(null)} />
     </Page>
   );
 }
@@ -119,18 +122,19 @@ function Calendar({
   events,
   move,
   focus,
+  onOpenTask,
 }: {
   events: Array<{
     id: string;
     title: string;
     start?: string;
-    url: string;
     backgroundColor: string;
     borderColor: string;
     extendedProps: Record<string, string>;
   }>;
   move: (input: { id: string; dueAt: string }) => void;
   focus?: boolean;
+  onOpenTask: (id: string) => void;
 }) {
   return (
     <FullCalendar
@@ -161,6 +165,10 @@ function Calendar({
         timeGridDay: { slotDuration: '00:30:00' },
       }}
       events={events}
+      eventClick={(arg) => {
+        arg.jsEvent.preventDefault();
+        onOpenTask(arg.event.id);
+      }}
       eventDrop={(arg) => {
         if (!arg.event.start) return;
         move({ id: arg.event.id, dueAt: arg.event.start.toISOString() });

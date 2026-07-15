@@ -11,8 +11,8 @@ import {
   Search,
   Trash2,
 } from 'lucide-react';
-import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { TaskModalLink } from '@/components/task-detail-modal';
 import { useUiMode } from '@/components/ui-mode-provider';
 import { api } from '@/lib/api';
 import { formatDate, priorityLabel, statusLabel, taskKindLabel } from '@/lib/labels';
@@ -92,9 +92,9 @@ function TaskPill({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <Link href={`/tasks/${task.id}`} className={isFocus ? 'text-sm font-semibold hover:text-[var(--focus-primary)]' : 'font-medium hover:text-[var(--accent)]'}>
+          <TaskModalLink task={task} className={isFocus ? 'text-left text-sm font-semibold hover:text-[var(--focus-primary)]' : 'text-left font-medium hover:text-[var(--accent)]'}>
             {task.title}
-          </Link>
+          </TaskModalLink>
           <div className={isFocus ? 'mt-2 flex flex-wrap gap-1.5 text-[11px] text-[var(--focus-text-muted)]' : 'mt-2 flex flex-wrap gap-2 text-xs text-[var(--muted)]'}>
             <span>{formatDate(task.dueAt)}</span>
             {taskMeta(task).map((item) => (
@@ -164,9 +164,9 @@ function PlanItemCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <Link href={`/tasks/${item.task.id}`} className={isFocus ? 'text-sm font-semibold hover:text-[var(--focus-primary)]' : 'font-medium hover:text-[var(--accent)]'}>
+          <TaskModalLink task={item.task} className={isFocus ? 'text-left text-sm font-semibold hover:text-[var(--focus-primary)]' : 'text-left font-medium hover:text-[var(--accent)]'}>
             {item.task.title}
-          </Link>
+          </TaskModalLink>
           <div className={isFocus ? 'mt-1.5 flex flex-wrap gap-1.5 text-[11px] text-[var(--focus-text-muted)]' : 'mt-2 flex flex-wrap gap-2 text-xs text-[var(--muted)]'}>
             {item.scheduledStartAt ? (
               <span className="inline-flex items-center gap-1">

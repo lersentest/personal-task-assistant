@@ -1,7 +1,7 @@
 import { CheckCircle2, Clock, FolderKanban } from 'lucide-react';
-import Link from 'next/link';
 import { formatDate, priorityLabel, statusLabel, taskKindLabel } from '@/lib/labels';
 import { Task } from '@/lib/types';
+import { TaskModalLink } from './task-detail-modal';
 import { useUiMode } from './ui-mode-provider';
 
 export function TaskCard({
@@ -30,12 +30,12 @@ export function TaskCard({
         <div className="flex items-start gap-3">
           <span className="mt-1 h-3 w-3 rounded-full border-2 border-[var(--focus-primary)] bg-[var(--focus-surface)]" />
           <div className="min-w-0 flex-1">
-            <Link
-              href={`/tasks/${task.id}`}
+            <TaskModalLink
+              task={task}
               className="font-semibold leading-snug text-[var(--focus-text)] hover:text-[var(--focus-primary)]"
             >
               {task.title}
-            </Link>
+            </TaskModalLink>
             {task.description ? (
               <p className="mt-1 line-clamp-2 text-sm text-[var(--focus-text-secondary)]">
                 {task.description}
@@ -92,9 +92,9 @@ export function TaskCard({
     <article className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <Link href={`/tasks/${task.id}`} className="font-medium hover:text-[var(--accent)]">
+          <TaskModalLink task={task} className="text-left font-medium hover:text-[var(--accent)]">
             {task.title}
-          </Link>
+          </TaskModalLink>
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-[var(--muted)]">
             <span className="inline-flex items-center gap-1"><Clock size={13} />{formatDate(task.dueAt)}</span>
             <span>{statusLabel[task.status]}</span>
