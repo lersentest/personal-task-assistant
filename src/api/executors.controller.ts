@@ -17,6 +17,7 @@ import {
   parseDto,
   updateExecutorSchema,
 } from './dto';
+import { jsonSafe } from './json-safe';
 
 @Controller('api/executors')
 @UseGuards(SupabaseAuthGuard)
@@ -24,29 +25,29 @@ export class ExecutorsController {
   constructor(private readonly executors: ExecutorsService) {}
 
   @Get()
-  list(@Req() request: AuthenticatedRequest) {
-    return this.executors.list(request.user.id);
+  async list(@Req() request: AuthenticatedRequest) {
+    return jsonSafe(await this.executors.list(request.user.id));
   }
 
   @Get(':id')
-  get(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
-    return this.executors.getOwned(request.user.id, id);
+  async get(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    return jsonSafe(await this.executors.getOwned(request.user.id, id));
   }
 
   @Post()
-  create(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
+  async create(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
     const input = parseDto(createExecutorSchema, body);
-    return this.executors.create(request.user.id, input);
+    return jsonSafe(await this.executors.create(request.user.id, input));
   }
 
   @Patch(':id')
-  update(
+  async update(
     @Req() request: AuthenticatedRequest,
     @Param('id') id: string,
     @Body() body: unknown,
   ) {
     const input = parseDto(updateExecutorSchema, body);
-    return this.executors.update(request.user.id, id, input);
+    return jsonSafe(await this.executors.update(request.user.id, id, input));
   }
 
   @Delete(':id')

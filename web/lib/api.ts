@@ -51,7 +51,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || 'Не удалось выполнить запрос');
+    throw new Error(extractErrorMessage(text));
   }
   return response.json() as Promise<T>;
 }
@@ -61,7 +61,7 @@ async function download(path: string): Promise<Blob> {
   const response = await fetch(`${apiUrl}${path}`, { headers });
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || 'Не удалось скачать файл');
+    throw new Error(extractErrorMessage(text, 'Не удалось скачать файл'));
   }
   return response.blob();
 }
@@ -75,9 +75,22 @@ async function formRequest<T>(path: string, formData: FormData): Promise<T> {
   });
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || 'Не удалось выполнить запрос');
+    throw new Error(extractErrorMessage(text));
   }
   return response.json() as Promise<T>;
+}
+
+function extractErrorMessage(text: string, fallback = 'Не удалось выполнить запрос') {
+  if (!text) return fallback;
+  try {
+    const parsed = JSON.parse(text) as { message?: string | string[]; error?: string };
+    if (Array.isArray(parsed.message)) return parsed.message.join(', ');
+    if (parsed.message) return parsed.message;
+    if (parsed.error) return parsed.error;
+  } catch {
+    // API can return plain text for proxy/deployment errors.
+  }
+  return text;
 }
 
 export const api = {

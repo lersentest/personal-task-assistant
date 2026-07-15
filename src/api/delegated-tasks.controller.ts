@@ -22,6 +22,7 @@ import {
   reviewDelegatedTaskSchema,
   updateDelegatedTaskSchema,
 } from './dto';
+import { jsonSafe } from './json-safe';
 
 @Controller('api/delegated-tasks')
 @UseGuards(SupabaseAuthGuard)
@@ -29,36 +30,36 @@ export class DelegatedTasksController {
   constructor(private readonly delegatedTasks: DelegatedTasksService) {}
 
   @Get()
-  list(@Req() request: AuthenticatedRequest, @Query() query: unknown) {
+  async list(@Req() request: AuthenticatedRequest, @Query() query: unknown) {
     const filters = parseDto(listDelegatedTasksSchema, query);
-    return this.delegatedTasks.list(request.user.id, filters);
+    return jsonSafe(await this.delegatedTasks.list(request.user.id, filters));
   }
 
   @Get(':id')
-  get(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
-    return this.delegatedTasks.getOwned(request.user.id, id);
+  async get(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    return jsonSafe(await this.delegatedTasks.getOwned(request.user.id, id));
   }
 
   @Post()
-  create(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
+  async create(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
     const input = parseDto(createDelegatedTaskSchema, body);
-    return this.delegatedTasks.create(request.user.id, {
+    return jsonSafe(await this.delegatedTasks.create(request.user.id, {
       ...input,
       dueAt: optionalDate(input.dueAt),
-    });
+    }));
   }
 
   @Patch(':id')
-  update(
+  async update(
     @Req() request: AuthenticatedRequest,
     @Param('id') id: string,
     @Body() body: unknown,
   ) {
     const input = parseDto(updateDelegatedTaskSchema, body);
-    return this.delegatedTasks.update(request.user.id, id, {
+    return jsonSafe(await this.delegatedTasks.update(request.user.id, id, {
       ...input,
       dueAt: optionalDate(input.dueAt),
-    });
+    }));
   }
 
   @Delete(':id')
@@ -68,50 +69,50 @@ export class DelegatedTasksController {
   }
 
   @Post(':id/send')
-  send(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
-    return this.delegatedTasks.send(request.user.id, id);
+  async send(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    return jsonSafe(await this.delegatedTasks.send(request.user.id, id));
   }
 
   @Post(':id/remind')
-  remind(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
-    return this.delegatedTasks.remind(request.user.id, id);
+  async remind(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    return jsonSafe(await this.delegatedTasks.remind(request.user.id, id));
   }
 
   @Post(':id/cancel')
-  cancel(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
-    return this.delegatedTasks.update(request.user.id, id, {
+  async cancel(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    return jsonSafe(await this.delegatedTasks.update(request.user.id, id, {
       status: 'CANCELLED',
-    });
+    }));
   }
 
   @Post(':id/review/accept')
-  acceptReview(
+  async acceptReview(
     @Req() request: AuthenticatedRequest,
     @Param('id') id: string,
     @Body() body: unknown,
   ) {
     const input = parseDto(reviewDelegatedTaskSchema, body);
-    return this.delegatedTasks.ownerReview(
+    return jsonSafe(await this.delegatedTasks.ownerReview(
       request.user.id,
       id,
       'accept',
       input.message ?? undefined,
-    );
+    ));
   }
 
   @Post(':id/review/return')
-  returnReview(
+  async returnReview(
     @Req() request: AuthenticatedRequest,
     @Param('id') id: string,
     @Body() body: unknown,
   ) {
     const input = parseDto(reviewDelegatedTaskSchema, body);
-    return this.delegatedTasks.ownerReview(
+    return jsonSafe(await this.delegatedTasks.ownerReview(
       request.user.id,
       id,
       'return',
       input.message ?? undefined,
-    );
+    ));
   }
 
   @Get(':id/comments')
@@ -121,12 +122,14 @@ export class DelegatedTasksController {
   }
 
   @Post(':id/comments')
-  comment(
+  async comment(
     @Req() request: AuthenticatedRequest,
     @Param('id') id: string,
     @Body() body: unknown,
   ) {
     const input = parseDto(delegatedCommentSchema, body);
-    return this.delegatedTasks.ownerComment(request.user.id, id, input.message);
+    return jsonSafe(
+      await this.delegatedTasks.ownerComment(request.user.id, id, input.message),
+    );
   }
 }
