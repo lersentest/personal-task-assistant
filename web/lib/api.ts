@@ -145,7 +145,7 @@ export const api = {
       body: JSON.stringify(input),
     }),
   calendar: () => request<Task[]>('/api/calendar'),
-  search: (query = '') => request<{ tasks: Task[]; projects: Project[]; files: Attachment[] }>(`/api/search${query}`),
+  search: (query = '') => request<{ tasks: Task[]; delegatedTasks: DelegatedTask[]; projects: Project[]; files: Attachment[] }>(`/api/search${query}`),
   attachments: (query = '') => request<Attachment[]>(`/api/attachments${query}`),
   createAttachment: (input: {
     taskId?: string | null;

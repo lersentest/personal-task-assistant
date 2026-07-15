@@ -2,6 +2,7 @@ import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { SupabaseAuthGuard } from './auth/supabase-auth.guard';
 import { AuthenticatedRequest } from './current-user';
 import { PrismaService } from '../database/prisma.service';
+import { DelegatedTasksService } from '../delegated-tasks/delegated-tasks.service';
 import { ProjectsService } from '../projects/projects.service';
 import { TasksService } from '../tasks/tasks.service';
 
@@ -11,6 +12,7 @@ export class DashboardController {
   constructor(
     private readonly tasks: TasksService,
     private readonly projects: ProjectsService,
+    private readonly delegatedTasks: DelegatedTasksService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -74,7 +76,10 @@ export class DashboardController {
       sort: 'updatedAt',
       ...(search ? { search } : {}),
     });
+    const delegatedTasks = await this.delegatedTasks.list(request.user.id, {
+      ...(search ? { search } : {}),
+    });
     const projects = await this.projects.list(request.user.id);
-    return { tasks, projects, files: [] };
+    return { tasks, delegatedTasks: delegatedTasks.slice(0, 20), projects, files: [] };
   }
 }
