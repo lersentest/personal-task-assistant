@@ -27,17 +27,17 @@ export default function TaskDetailsPage() {
     <Page title={task.data?.title ?? 'Задача'} description={task.data?.project?.name ?? 'Без проекта'}>
       {task.data && editing ? <TaskForm task={task.data} onDone={() => setEditing(false)} /> : null}
       {task.data && !editing ? (
-        <div className="grid gap-4 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
-          <div className="grid gap-2 text-sm text-[var(--muted)] sm:grid-cols-2 lg:grid-cols-4">
-            <p>Статус: {statusLabel[task.data.status]}</p>
-            <p>Приоритет: {priorityLabel[task.data.priority]}</p>
-            <p>Срок: {formatDate(task.data.dueAt)}</p>
-            <p>Создана: {formatDate(task.data.createdAt)}</p>
+        <div className="grid gap-5 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
+          <div className="grid gap-3 text-sm text-[var(--muted)] sm:grid-cols-2 lg:grid-cols-4">
+            <Info label="Статус" value={statusLabel[task.data.status]} />
+            <Info label="Приоритет" value={priorityLabel[task.data.priority]} />
+            <Info label="Срок" value={formatDate(task.data.dueAt)} />
+            <Info label="Создана" value={formatDate(task.data.createdAt)} />
           </div>
-          <p className="whitespace-pre-wrap">{task.data.description ?? 'Описание не указано.'}</p>
+          <p className="whitespace-pre-wrap text-[var(--foreground)]">{task.data.description ?? 'Описание не указано.'}</p>
           <div className="flex flex-wrap gap-2">
-            <button onClick={() => setEditing(true)} className="rounded-lg bg-[var(--foreground)] px-4 py-2 text-sm text-[var(--background)]">Редактировать</button>
-            <button onClick={() => remove.mutate()} className="rounded-lg border border-[var(--line)] px-4 py-2 text-sm">Переместить в корзину</button>
+            <button onClick={() => setEditing(true)} className="rounded-xl bg-[var(--foreground)] px-4 py-2 text-sm text-[var(--background)]">Редактировать</button>
+            <button onClick={() => remove.mutate()} className="rounded-xl border border-[var(--line)] px-4 py-2 text-sm">Переместить в корзину</button>
           </div>
         </div>
       ) : null}
@@ -45,5 +45,14 @@ export default function TaskDetailsPage() {
         <AttachmentPanel taskId={id} />
       </div>
     </Page>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-[var(--background)] p-3">
+      <p className="text-xs text-[var(--muted)]">{label}</p>
+      <p className="mt-1 font-medium text-[var(--foreground)]">{value}</p>
+    </div>
   );
 }

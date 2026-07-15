@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useUiMode } from '../ui-mode-provider';
 import { VoiceCommandButton } from '../voice-command-button';
@@ -58,11 +58,54 @@ const sections = [
   },
 ];
 
+const commands = [
+  { label: 'Перейти в Мой день', href: '/my-day', hint: 'Планирование дня' },
+  { label: 'Открыть календарь', href: '/calendar', hint: 'Месяц, неделя, день' },
+  { label: 'Создать задачу', href: '/tasks?create=1', hint: 'Новая задача' },
+  { label: 'Создать проект', href: '/projects?create=1', hint: 'Новый проект' },
+  { label: 'Найти задачу', href: '/search', hint: 'Поиск по системе' },
+  { label: 'Открыть проекты', href: '/projects', hint: 'Активные проекты' },
+];
+
 export function FocusShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { appearance, setAppearance } = useUiMode();
   const [createOpen, setCreateOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [commandQuery, setCommandQuery] = useState('');
+
+  const filteredCommands = useMemo(() => {
+    const value = commandQuery.trim().toLowerCase();
+    if (!value) return commands;
+    return commands.filter((command) =>
+      `${command.label} ${command.hint}`.toLowerCase().includes(value),
+    );
+  }, [commandQuery]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const typing =
+        target?.tagName === 'INPUT' ||
+        target?.tagName === 'TEXTAREA' ||
+        target?.tagName === 'SELECT' ||
+        target?.isContentEditable;
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setPaletteOpen(true);
+      }
+      if (!typing && event.key.toLowerCase() === 'n') router.push('/tasks?create=1');
+      if (!typing && event.key.toLowerCase() === 'p') router.push('/projects?create=1');
+      if (!typing && event.key === '/') {
+        event.preventDefault();
+        router.push('/search');
+      }
+      if (event.key === 'Escape') setPaletteOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [router]);
 
   async function logout() {
     await supabase.auth.signOut();
@@ -73,6 +116,12 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
     setAppearance(
       appearance === 'light' ? 'dark' : appearance === 'dark' ? 'system' : 'light',
     );
+  }
+
+  function go(href: string) {
+    setPaletteOpen(false);
+    setCommandQuery('');
+    router.push(href);
   }
 
   return (
@@ -163,7 +212,10 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
             <button className="rounded-xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-2 text-[var(--focus-text-secondary)] lg:hidden">
               <Menu size={20} />
             </button>
-            <button className="hidden h-11 min-w-0 flex-1 items-center gap-3 rounded-xl border border-[var(--focus-border)] bg-[var(--focus-surface)] px-4 text-sm text-[var(--focus-text-muted)] shadow-sm md:flex md:max-w-[620px]">
+            <button
+              onClick={() => setPaletteOpen(true)}
+              className="hidden h-11 min-w-0 flex-1 items-center gap-3 rounded-xl border border-[var(--focus-border)] bg-[var(--focus-surface)] px-4 text-sm text-[var(--focus-text-muted)] shadow-sm md:flex md:max-w-[620px]"
+            >
               <Search size={18} />
               Поиск по задачам, проектам, тегам...
               <span className="ml-auto inline-flex items-center gap-1 rounded-lg bg-[var(--focus-surface-secondary)] px-2 py-1 text-xs text-[var(--focus-text-muted)]">
@@ -223,7 +275,47 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
           );
         })}
       </nav>
+
+      {paletteOpen ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-start justify-center bg-slate-950/45 p-4 pt-[12vh] backdrop-blur-sm"
+          onClick={() => setPaletteOpen(false)}
+        >
+          <div
+            className="w-full max-w-2xl overflow-hidden rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] shadow-[var(--focus-shadow)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 border-b border-[var(--focus-border-soft)] px-4">
+              <Search size={18} className="text-[var(--focus-text-muted)]" />
+              <input
+                value={commandQuery}
+                onChange={(event) => setCommandQuery(event.target.value)}
+                autoFocus
+                placeholder="Команда или переход..."
+                className="h-14 flex-1 bg-transparent outline-none"
+              />
+              <span className="rounded-lg bg-[var(--focus-surface-secondary)] px-2 py-1 text-xs text-[var(--focus-text-muted)]">Esc</span>
+            </div>
+            <div className="max-h-[420px] overflow-y-auto p-2">
+              {filteredCommands.map((command) => (
+                <button
+                  key={command.href}
+                  onClick={() => go(command.href)}
+                  className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-left hover:bg-[var(--focus-primary-soft)]"
+                >
+                  <span>
+                    <span className="block font-medium">{command.label}</span>
+                    <span className="text-sm text-[var(--focus-text-muted)]">{command.hint}</span>
+                  </span>
+                  <Command size={16} className="text-[var(--focus-text-muted)]" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
-

@@ -24,9 +24,11 @@ export default function TodayPage() {
           { title: 'Сегодня', tasks: today.data ?? [] },
           { title: 'Ближайшие 7 дней', tasks: upcoming.data ?? [] },
         ].map(({ title, tasks }: { title: string; tasks: Task[] }) => (
-          <section key={String(title)} className="grid content-start gap-3">
-            <h2 className="font-semibold">{String(title)}</h2>
-            {(tasks ?? []).map((task) => <TaskCard key={task.id} task={task} onComplete={(id) => complete.mutate(id)} />)}
+          <section key={title} className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm">
+            <h2 className="mb-3 font-semibold">{title}</h2>
+            <div className="grid gap-3">
+              {tasks.map((task) => <TaskCard key={task.id} task={task} onComplete={(id) => complete.mutate(id)} />)}
+            </div>
           </section>
         ))}
       </div>

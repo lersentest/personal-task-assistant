@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { useUiMode } from '@/components/ui-mode-provider';
 import { api } from '@/lib/api';
 import { formatDate, priorityLabel, statusLabel } from '@/lib/labels';
 import { DailyPlanItem, MyDayData, Task, TaskPriority } from '@/lib/types';
@@ -240,6 +241,8 @@ function PlanItemCard({
 }
 
 export default function MyDayPage() {
+  const { interfaceMode } = useUiMode();
+  const isFocus = interfaceMode === 'focus';
   const queryClient = useQueryClient();
   const [date, setDate] = useState(todayLocalDate());
   const [search, setSearch] = useState('');
@@ -734,7 +737,7 @@ export default function MyDayPage() {
                     key={time}
                     onDragOver={(event) => event.preventDefault()}
                     onDrop={(event) => handleDropOnSlot(event, time)}
-                    className="grid min-h-16 grid-cols-[64px_1fr] gap-3 rounded-lg border border-[var(--line)] bg-[var(--background)] p-2"
+                    className={isFocus ? 'grid min-h-14 grid-cols-[64px_1fr] gap-3 border-b border-[var(--focus-border-soft)] py-2' : 'grid min-h-16 grid-cols-[64px_1fr] gap-3 rounded-lg border border-[var(--line)] bg-[var(--background)] p-2'}
                   >
                     <div className="pt-2 text-xs font-medium text-[var(--muted)]">{time}</div>
                     <div className="grid gap-2">
@@ -757,7 +760,7 @@ export default function MyDayPage() {
                           />
                         ))
                       ) : (
-                        <div className="rounded-md border border-dashed border-[var(--line)] p-3 text-xs text-[var(--muted)]">
+                        <div className="my-day-free-slot rounded-md border border-dashed border-[var(--line)] p-3 text-xs text-[var(--muted)]">
                           Свободный слот
                         </div>
                       )}

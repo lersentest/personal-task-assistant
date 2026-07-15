@@ -12,10 +12,9 @@ export default function TrashPage() {
 
   return (
     <Page title="Корзина" description="Удалённые задачи. Окончательное удаление пока не включено.">
-      <div className="grid gap-3">
+      <div className="grid gap-3 xl:grid-cols-2">
         {tasks.data?.map((task) => <TaskCard key={task.id} task={task} onRestore={(id) => restore.mutate(id)} />)}
       </div>
     </Page>
   );
 }
-

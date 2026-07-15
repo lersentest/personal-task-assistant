@@ -89,3 +89,76 @@ select {
   --fc-neutral-bg-color: var(--background);
   --fc-today-bg-color: rgba(37, 99, 235, 0.08);
 }
+
+[data-ui-mode="focus"] .focus-page {
+  min-height: calc(100vh - 96px);
+}
+
+[data-ui-mode="focus"] input,
+[data-ui-mode="focus"] textarea,
+[data-ui-mode="focus"] select {
+  border-radius: 0.875rem;
+}
+
+[data-ui-mode="focus"] form,
+[data-ui-mode="focus"] .focus-card {
+  border-color: var(--focus-border);
+  background: var(--focus-surface);
+  box-shadow: var(--focus-shadow);
+}
+
+[data-ui-mode="focus"] .fc {
+  --fc-border-color: var(--focus-border-soft);
+  --fc-page-bg-color: var(--focus-surface);
+  --fc-neutral-bg-color: var(--focus-surface-secondary);
+  --fc-today-bg-color: rgba(53, 111, 232, 0.12);
+  --fc-event-bg-color: var(--focus-primary);
+  --fc-event-border-color: transparent;
+  font-size: 0.875rem;
+}
+
+[data-ui-mode="focus"] .fc .fc-toolbar-title {
+  font-size: 1.45rem;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+
+[data-ui-mode="focus"] .fc .fc-button {
+  border-radius: 0.75rem;
+  border-color: var(--focus-border);
+  background: var(--focus-surface);
+  color: var(--focus-text);
+  box-shadow: none;
+}
+
+[data-ui-mode="focus"] .fc .fc-button-primary:not(:disabled).fc-button-active,
+[data-ui-mode="focus"] .fc .fc-button-primary:not(:disabled):active {
+  background: var(--focus-primary-soft);
+  color: var(--focus-primary);
+  border-color: var(--focus-primary-soft);
+}
+
+[data-ui-mode="focus"] .fc .fc-daygrid-day,
+[data-ui-mode="focus"] .fc .fc-timegrid-slot {
+  background: var(--focus-surface);
+}
+
+[data-ui-mode="focus"] .fc .fc-event {
+  border-radius: 0.5rem;
+  padding: 2px 4px;
+  font-weight: 600;
+}
+
+[data-ui-mode="focus"] .my-day-free-slot {
+  min-height: 2rem;
+  border-color: transparent;
+  background: transparent;
+  color: transparent;
+  box-shadow: none;
+  padding: 0.5rem;
+}
+
+[data-ui-mode="focus"] .my-day-free-slot:hover {
+  border-color: var(--focus-border);
+  background: var(--focus-surface-secondary);
+}
