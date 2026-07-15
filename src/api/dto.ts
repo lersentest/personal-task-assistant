@@ -20,6 +20,18 @@ export const projectStatusSchema = z.enum([
   'COMPLETED',
   'ARCHIVED',
 ]);
+export const executorLanguageSchema = z.enum(['RU', 'UK', 'EN', 'DE']);
+export const delegatedTaskStatusSchema = z.enum([
+  'DRAFT',
+  'SENT',
+  'ACCEPTED',
+  'IN_PROGRESS',
+  'QUESTION',
+  'WAITING_REVIEW',
+  'RETURNED',
+  'COMPLETED',
+  'CANCELLED',
+]);
 
 export const createTaskSchema = z.object({
   title: z.string().min(1).max(500),
@@ -60,6 +72,51 @@ export const createProjectSchema = z.object({
 });
 
 export const updateProjectSchema = createProjectSchema.partial();
+
+export const createExecutorSchema = z.object({
+  fullName: z.string().min(1).max(255),
+  company: z.string().max(255).nullable().optional(),
+  role: z.string().max(255).nullable().optional(),
+  email: z.string().max(255).nullable().optional(),
+  phone: z.string().max(64).nullable().optional(),
+  language: executorLanguageSchema.optional(),
+  timezone: z.string().max(64).nullable().optional(),
+  dailyDigestEnabled: z.boolean().optional(),
+  dailyDigestTime: z.string().regex(/^\d{2}:\d{2}$/).nullable().optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const updateExecutorSchema = createExecutorSchema.partial();
+
+export const listDelegatedTasksSchema = z.object({
+  executorId: z.string().uuid().optional(),
+  projectId: z.string().uuid().optional(),
+  status: delegatedTaskStatusSchema.optional(),
+  priority: taskPrioritySchema.optional(),
+  search: z.string().max(200).optional(),
+});
+
+export const createDelegatedTaskSchema = z.object({
+  executorId: z.string().uuid(),
+  projectId: z.string().uuid().nullable().optional(),
+  title: z.string().min(1).max(500),
+  description: z.string().max(5000).nullable().optional(),
+  priority: taskPrioritySchema.optional(),
+  dueAt: z.string().datetime().nullable().optional(),
+});
+
+export const updateDelegatedTaskSchema = createDelegatedTaskSchema.partial().extend({
+  status: delegatedTaskStatusSchema.optional(),
+  resultText: z.string().max(10000).nullable().optional(),
+});
+
+export const delegatedCommentSchema = z.object({
+  message: z.string().min(1).max(10000),
+});
+
+export const reviewDelegatedTaskSchema = z.object({
+  message: z.string().max(10000).nullable().optional(),
+});
 
 export const listAttachmentsSchema = z.object({
   taskId: z.string().uuid().optional(),

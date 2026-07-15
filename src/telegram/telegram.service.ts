@@ -12,6 +12,8 @@ import { ConfigService } from '@nestjs/config';
 import { DateTime } from 'luxon';
 import { Bot, Context, InlineKeyboard } from 'grammy';
 import { AiCommand, AiCommandService } from '../ai/ai-command.service';
+import { DelegatedTasksService } from '../delegated-tasks/delegated-tasks.service';
+import { ExecutorsService } from '../executors/executors.service';
 import { ProjectsService } from '../projects/projects.service';
 import { RemindersService } from '../reminders/reminders.service';
 import { TagsService } from '../tags/tags.service';
@@ -64,6 +66,8 @@ export class TelegramService
     private readonly config: ConfigService,
     private readonly access: TelegramAccessService,
     private readonly users: UsersService,
+    private readonly executors: ExecutorsService,
+    private readonly delegatedTasks: DelegatedTasksService,
     private readonly projects: ProjectsService,
     private readonly tasks: TasksService,
     private readonly tags: TagsService,
@@ -97,6 +101,15 @@ export class TelegramService
 
   private registerHandlers(bot: Bot<Context>): void {
     bot.command('start', async (ctx) => {
+      const payload = typeof ctx.match === 'string' ? ctx.match.trim() : '';
+      if (this.executors.isInviteToken(payload)) {
+        await this.handleExecutorInviteStart(ctx, payload);
+        return;
+      }
+      if (!this.access.isAllowed(ctx.from?.id)) {
+        await ctx.reply('Вы подключены как исполнитель. Используйте кнопки под назначенными задачами.');
+        return;
+      }
       await this.users.ensureTelegramUser(this.profile(ctx));
       await ctx.reply(
         [
@@ -112,6 +125,7 @@ export class TelegramService
       await ctx.reply('Меню', { reply_markup: MENU_KEYBOARD });
     });
 
+    this.registerDelegatedTaskHandlers(bot);
     this.registerMenuHandlers(bot);
     this.registerDraftHandlers(bot);
     this.registerViewHandlers(bot);
@@ -120,6 +134,10 @@ export class TelegramService
 
     bot.on('message:voice', async (ctx) => {
       try {
+        if (!this.access.isAllowed(ctx.from?.id)) {
+          await ctx.reply('Голосовые команды доступны только владельцу. Для делегированных задач используйте кнопки под задачей.');
+          return;
+        }
         if ((ctx.message.voice.file_size ?? 0) > 20 * 1024 * 1024) {
           throw new BadRequestException(
             'Голосовое сообщение слишком большое. Максимум 20 МБ.',
@@ -171,6 +189,10 @@ export class TelegramService
       const mode = this.state.get(telegramId);
 
       try {
+        if (!this.access.isAllowed(ctx.from?.id)) {
+          await ctx.reply('Сообщение получено. Для действий по делегированной задаче используйте кнопки под сообщением задачи.');
+          return;
+        }
         if (mode === 'SEARCH_TASKS') {
           this.state.clear(telegramId);
           await this.showTaskList(ctx, 'ALL', { search: text });
@@ -201,6 +223,55 @@ export class TelegramService
         });
       }
     });
+  }
+
+  private registerDelegatedTaskHandlers(bot: Bot<Context>): void {
+    bot.callbackQuery(/^delegated:(accept|start|question|done):(.+)$/, async (ctx) => {
+      try {
+        if (!ctx.from) throw new BadRequestException('Telegram user is missing.');
+        const [, action, taskId] = ctx.match;
+        const message =
+          action === 'question'
+            ? 'Исполнитель задал вопрос.'
+            : action === 'done'
+              ? 'Исполнитель отметил задачу выполненной.'
+              : undefined;
+        const task = await this.delegatedTasks.executorTransition(
+          String(ctx.from.id),
+          taskId,
+          action as 'accept' | 'start' | 'question' | 'done',
+          message,
+        );
+        await ctx.answerCallbackQuery();
+        await ctx.reply(
+          action === 'done'
+            ? 'Задача отправлена владельцу на проверку.'
+            : `Статус обновлён: ${task.status}`,
+        );
+      } catch (error: unknown) {
+        await ctx.answerCallbackQuery({
+          text: this.userFacingError(error),
+          show_alert: true,
+        });
+      }
+    });
+  }
+
+  private async handleExecutorInviteStart(ctx: Context, token: string): Promise<void> {
+    if (!ctx.from) throw new BadRequestException('Telegram user is missing from update');
+    const executor = await this.executors.connectByInvite(token, {
+      telegramId: String(ctx.from.id),
+      username: ctx.from.username,
+      firstName: ctx.from.first_name,
+      lastName: ctx.from.last_name,
+    });
+    await ctx.reply(
+      [
+        'Telegram успешно подключён.',
+        '',
+        `${executor.fullName}, теперь вы будете получать здесь назначенные задачи и напоминания.`,
+      ].join('\n'),
+    );
   }
 
   private registerMenuHandlers(bot: Bot<Context>): void {

@@ -6,6 +6,8 @@ import { ApiModule } from './api/api.module';
 import { AutomationModule } from './automation/automation.module';
 import { validateEnvironment } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
+import { DelegatedTasksModule } from './delegated-tasks/delegated-tasks.module';
+import { ExecutorsModule } from './executors/executors.module';
 import { ProjectsModule } from './projects/projects.module';
 import { RemindersModule } from './reminders/reminders.module';
 import { MyDayModule } from './my-day/my-day.module';
@@ -23,6 +25,8 @@ import { UsersModule } from './users/users.module';
     }),
     ScheduleModule.forRoot(),
     DatabaseModule,
+    ExecutorsModule,
+    DelegatedTasksModule,
     ApiModule,
     AiModule,
     UsersModule,

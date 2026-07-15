@@ -3,12 +3,16 @@ import { AiModule } from '../ai/ai.module';
 import { AttachmentsModule } from '../attachments/attachments.module';
 import { AttachmentsController } from './attachments.controller';
 import { DashboardController } from './dashboard.controller';
+import { DelegatedTasksController } from './delegated-tasks.controller';
+import { ExecutorsController } from './executors.controller';
 import { MyDayController } from './my-day.controller';
 import { ProjectsController } from './projects.controller';
 import { TagsController } from './tags.controller';
 import { TasksController } from './tasks.controller';
 import { VoiceController } from './voice.controller';
 import { ProjectsModule } from '../projects/projects.module';
+import { DelegatedTasksModule } from '../delegated-tasks/delegated-tasks.module';
+import { ExecutorsModule } from '../executors/executors.module';
 import { MyDayModule } from '../my-day/my-day.module';
 import { RemindersModule } from '../reminders/reminders.module';
 import { TagsModule } from '../tags/tags.module';
@@ -25,12 +29,16 @@ import { VoiceModule } from '../voice/voice.module';
     TagsModule,
     RemindersModule,
     AttachmentsModule,
+    ExecutorsModule,
+    DelegatedTasksModule,
     MyDayModule,
     VoiceModule,
   ],
   controllers: [
     DashboardController,
     MyDayController,
+    ExecutorsController,
+    DelegatedTasksController,
     TasksController,
     ProjectsController,
     TagsController,

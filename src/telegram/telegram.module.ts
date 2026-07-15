@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AiModule } from '../ai/ai.module';
+import { DelegatedTasksModule } from '../delegated-tasks/delegated-tasks.module';
+import { ExecutorsModule } from '../executors/executors.module';
 import { ProjectsModule } from '../projects/projects.module';
 import { RemindersModule } from '../reminders/reminders.module';
 import { TagsModule } from '../tags/tags.module';
@@ -15,6 +17,8 @@ import { TextCommandParserService } from './text-command-parser.service';
 @Module({
   imports: [
     UsersModule,
+    ExecutorsModule,
+    DelegatedTasksModule,
     ProjectsModule,
     TasksModule,
     TagsModule,

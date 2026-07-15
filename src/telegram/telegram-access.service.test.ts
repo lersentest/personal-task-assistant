@@ -8,10 +8,14 @@ function accessService(allowedId = '123456789'): TelegramAccessService {
   const config = {
     getOrThrow: () => allowedId,
   } as unknown as ConfigService;
-  return new TelegramAccessService(config);
+  const executors = {
+    isInviteToken: (value?: string) => Boolean(value?.startsWith('exec_')),
+    findConnectedByTelegramId: async () => null,
+  };
+  return new TelegramAccessService(config, executors as never);
 }
 
-test('allows only the configured Telegram user', () => {
+test('allows only the configured Telegram owner', () => {
   const service = accessService();
 
   assert.equal(service.isAllowed(123456789), true);
@@ -20,7 +24,7 @@ test('allows only the configured Telegram user', () => {
   assert.equal(service.isAllowed(undefined), false);
 });
 
-test('middleware blocks another Telegram user without calling next', async () => {
+test('middleware blocks another Telegram user without invite or executor connection', async () => {
   const service = accessService();
   let nextCalled = false;
   const replies: string[] = [];
@@ -39,4 +43,20 @@ test('middleware blocks another Telegram user without calling next', async () =>
 
   assert.equal(nextCalled, false);
   assert.deepEqual(replies, ['Доступ к этому боту ограничен.']);
+});
+
+test('middleware lets executor invite deep links pass through', async () => {
+  const service = accessService();
+  let nextCalled = false;
+  const context = {
+    from: { id: 987654321 },
+    chat: { id: 987654321 },
+    message: { text: '/start exec_test_token' },
+  } as unknown as Context;
+
+  await service.createMiddleware()(context, async () => {
+    nextCalled = true;
+  });
+
+  assert.equal(nextCalled, true);
 });

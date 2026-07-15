@@ -4,6 +4,7 @@ import { Interval } from '@nestjs/schedule';
 import { Api, InlineKeyboard } from 'grammy';
 import { DateTime } from 'luxon';
 import { PrismaService } from '../database/prisma.service';
+import { DelegatedTasksService } from '../delegated-tasks/delegated-tasks.service';
 import { RemindersService } from '../reminders/reminders.service';
 import { TasksService } from '../tasks/tasks.service';
 import { UsersService } from '../users/users.service';
@@ -14,10 +15,12 @@ export class AutomationService {
   private readonly api: Api;
   private remindersRunning = false;
   private summariesRunning = false;
+  private delegatedRemindersRunning = false;
 
   constructor(
     config: ConfigService,
     private readonly prisma: PrismaService,
+    private readonly delegatedTasks: DelegatedTasksService,
     private readonly reminders: RemindersService,
     private readonly tasks: TasksService,
     private readonly users: UsersService,
@@ -58,6 +61,28 @@ export class AutomationService {
       }
     } finally {
       this.remindersRunning = false;
+    }
+  }
+
+  @Interval(60_000)
+  async deliverDelegatedReminders(): Promise<void> {
+    if (this.delegatedRemindersRunning) return;
+    this.delegatedRemindersRunning = true;
+    try {
+      const enabled =
+        process.env.DELEGATED_OVERDUE_REMINDER_ENABLED !== 'false';
+      if (!enabled) return;
+      for (const task of await this.delegatedTasks.dueReminders()) {
+        try {
+          await this.delegatedTasks.sendOverdueReminder(task);
+        } catch (error: unknown) {
+          this.logger.error(
+            `Delegated reminder ${task.id}: ${this.errorMessage(error)}`,
+          );
+        }
+      }
+    } finally {
+      this.delegatedRemindersRunning = false;
     }
   }
 
