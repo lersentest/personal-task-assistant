@@ -83,7 +83,7 @@ const commands = [
   { label: 'Открыть обзор', href: '/dashboard', hint: 'Сегодня, риски, проекты, активность' },
   { label: 'Открыть календарь', href: '/calendar', hint: 'Месяц, неделя, день, список' },
   { label: 'Создать задачу', href: '/tasks?create=1&type=TASK', hint: 'Новая задача', create: { entity: 'task', kind: 'TASK' } },
-  { label: 'Создать делегированную задачу', href: '/delegated', hint: 'Задача для исполнителя' },
+  { label: 'Создать делегированную задачу', href: '/delegated', hint: 'Задача для исполнителя', create: { entity: 'delegated' } },
   { label: 'Создать звонок', href: '/tasks?create=1&type=CALL', hint: 'Тип задачи: звонок', create: { entity: 'task', kind: 'CALL' } },
   { label: 'Создать встречу', href: '/tasks?create=1&type=MEETING', hint: 'Тип задачи: встреча', create: { entity: 'task', kind: 'MEETING' } },
   { label: 'Создать проект', href: '/projects?create=1', hint: 'Новый проект', create: { entity: 'project' } },
@@ -184,7 +184,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
 
   function openCreateItem(item: (typeof createItems)[number]) {
     if (item.entity === 'delegated') {
-      go(item.href);
+      openCreate({ entity: 'delegated' });
       return;
     }
     openCreate(

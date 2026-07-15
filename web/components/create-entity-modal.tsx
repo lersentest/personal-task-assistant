@@ -11,6 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { DelegatedTaskForm } from '@/components/delegated-task-form';
 import { ProjectForm } from '@/components/project-form';
 import { TaskForm } from '@/components/task-form';
 import { taskKindLabel } from '@/lib/labels';
@@ -18,7 +19,8 @@ import { TaskKind } from '@/lib/types';
 
 export type CreateEntityState =
   | { entity: 'task'; kind?: TaskKind }
-  | { entity: 'project' };
+  | { entity: 'project' }
+  | { entity: 'delegated' };
 
 const taskKindIcons: Record<TaskKind, typeof CheckSquare> = {
   TASK: CheckSquare,
@@ -62,7 +64,7 @@ export function CreateModalButton({
       </button>
       <CreateEntityModal
         open={open}
-        state={entity === 'project' ? { entity: 'project' } : { entity: 'task', kind }}
+        state={entity === 'project' ? { entity: 'project' } : entity === 'delegated' ? { entity: 'delegated' } : { entity: 'task', kind }}
         onClose={() => setOpen(false)}
       />
     </>
@@ -103,6 +105,7 @@ export function CreateEntityModal({
   if (!open) return null;
 
   const isProject = state.entity === 'project';
+  const isDelegated = state.entity === 'delegated';
 
   return (
     <div
@@ -122,12 +125,14 @@ export function CreateEntityModal({
               Быстрое создание
             </div>
             <h2 className="text-xl font-semibold tracking-[-0.03em] sm:text-2xl">
-              {isProject ? 'Новый проект' : `Новая: ${taskKindLabel[selectedKind].toLowerCase()}`}
+              {isProject ? 'Новый проект' : isDelegated ? 'Новая делегированная задача' : `Новая: ${taskKindLabel[selectedKind].toLowerCase()}`}
             </h2>
             <p className="mt-1 text-sm text-[var(--muted)]">
               {isProject
                 ? 'Создай направление работы и потом привяжи к нему задачи.'
-                : taskKindDescriptions[selectedKind]}
+                : isDelegated
+                  ? 'Создай отдельную задачу для исполнителя с публичной страницей, комментариями и файлами.'
+                  : taskKindDescriptions[selectedKind]}
             </p>
           </div>
           <button
@@ -143,6 +148,8 @@ export function CreateEntityModal({
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
           {isProject ? (
             <ProjectForm onDone={onClose} />
+          ) : isDelegated ? (
+            <DelegatedTaskForm onDone={onClose} />
           ) : (
             <div className="grid gap-5">
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">

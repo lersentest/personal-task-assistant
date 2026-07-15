@@ -81,6 +81,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {createOpen ? (
           <div className="mb-4 grid gap-2 rounded-lg border border-[var(--line)] bg-[var(--background)] p-2 text-sm">
             <button type="button" onClick={() => openCreate({ entity: 'task', kind: 'TASK' })} className="btn-base btn-ghost justify-start rounded-md px-3 py-2">Новая задача</button>
+            <button type="button" onClick={() => openCreate({ entity: 'delegated' })} className="btn-base btn-ghost justify-start rounded-md px-3 py-2">Делегированная задача</button>
             <button type="button" onClick={() => openCreate({ entity: 'project' })} className="btn-base btn-ghost justify-start rounded-md px-3 py-2">Новый проект</button>
           </div>
         ) : null}
