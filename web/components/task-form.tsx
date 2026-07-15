@@ -168,16 +168,16 @@ export function TaskForm({
       {mutation.error ? <p className="text-sm text-red-500">{mutation.error.message}</p> : null}
       <div className="flex flex-wrap gap-2">
         <button
-          className="h-10 rounded-xl bg-[var(--foreground)] px-4 text-sm font-medium text-[var(--background)]"
+          className="btn-base btn-primary h-10"
           disabled={mutation.isPending}
         >
-          {task ? 'Сохранить' : 'Создать'}
+          {mutation.isPending ? 'Сохраняю...' : task ? 'Сохранить' : 'Создать'}
         </button>
         {onDone ? (
           <button
             type="button"
             onClick={onDone}
-            className="h-10 rounded-xl border border-[var(--line)] px-4 text-sm"
+            className="btn-base btn-secondary h-10"
           >
             Отмена
           </button>

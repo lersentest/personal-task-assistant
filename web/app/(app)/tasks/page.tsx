@@ -44,7 +44,7 @@ export default function TasksPage() {
         <button
           type="button"
           onClick={() => setCreateModal({ entity: 'task', kind: 'TASK' })}
-          className="rounded-xl bg-[var(--foreground)] px-4 py-2 text-sm font-medium text-[var(--background)]"
+          className="btn-base btn-primary"
         >
           Новая задача
         </button>

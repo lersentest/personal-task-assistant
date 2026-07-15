@@ -73,15 +73,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           Personal Tasks
         </Link>
         <button
-          className="mb-4 flex h-11 items-center justify-center gap-2 rounded-lg bg-[var(--foreground)] px-4 text-sm font-medium text-[var(--background)]"
+          className="btn-base btn-primary mb-4 h-11 w-full"
           onClick={() => setCreateOpen((value) => !value)}
         >
           <Plus size={18} /> Создать
         </button>
         {createOpen ? (
           <div className="mb-4 grid gap-2 rounded-lg border border-[var(--line)] bg-[var(--background)] p-2 text-sm">
-            <button type="button" onClick={() => openCreate({ entity: 'task', kind: 'TASK' })} className="rounded-md px-3 py-2 text-left hover:bg-[var(--panel)]">Новая задача</button>
-            <button type="button" onClick={() => openCreate({ entity: 'project' })} className="rounded-md px-3 py-2 text-left hover:bg-[var(--panel)]">Новый проект</button>
+            <button type="button" onClick={() => openCreate({ entity: 'task', kind: 'TASK' })} className="btn-base btn-ghost justify-start rounded-md px-3 py-2">Новая задача</button>
+            <button type="button" onClick={() => openCreate({ entity: 'project' })} className="btn-base btn-ghost justify-start rounded-md px-3 py-2">Новый проект</button>
           </div>
         ) : null}
         <nav className="grid gap-1">

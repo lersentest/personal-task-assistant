@@ -85,7 +85,7 @@ export default function ExecutorsPage() {
           <input className="rounded-xl border border-[var(--line)] bg-transparent px-3 py-2" placeholder="Телефон" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
           <button
             disabled={!canSubmit || create.isPending}
-            className="rounded-xl bg-[var(--foreground)] px-4 py-2 text-sm font-medium text-[var(--background)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn-base btn-primary"
           >
             {create.isPending ? 'Создаю...' : 'Создать исполнителя'}
           </button>
@@ -158,7 +158,7 @@ function ExecutorCard({
   onDelete: () => void;
 }) {
   return (
-    <article className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
+    <article className="interactive-card rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold">{executor.fullName}</h2>
@@ -177,10 +177,10 @@ function ExecutorCard({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button onClick={onInvite} className="rounded-xl border border-[var(--line)] px-3 py-2 text-sm hover:bg-[var(--background)]">
+          <button onClick={onInvite} className="btn-base btn-secondary">
             Подключить Telegram
           </button>
-          <button onClick={onDelete} className="rounded-xl border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50">
+          <button onClick={onDelete} className="btn-base btn-danger">
             Удалить
           </button>
         </div>
@@ -190,7 +190,7 @@ function ExecutorCard({
           <p className="font-medium">Ссылка для подключения:</p>
           <div className="mt-2 flex flex-col gap-2 sm:flex-row">
             <input readOnly value={inviteLink} className="min-w-0 flex-1 rounded-lg border border-blue-200 bg-white px-3 py-2" />
-            <button onClick={() => navigator.clipboard?.writeText(inviteLink)} className="rounded-lg bg-blue-600 px-3 py-2 text-white">
+            <button onClick={() => navigator.clipboard?.writeText(inviteLink)} className="btn-base btn-primary">
               Скопировать
             </button>
           </div>

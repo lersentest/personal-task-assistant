@@ -150,7 +150,7 @@ export function TaskDetailsModal({
           <div className="flex shrink-0 items-center gap-2">
             <Link
               href={`/tasks/${taskId}`}
-              className="hidden rounded-xl border border-[var(--line)] px-3 py-2 text-sm text-[var(--muted)] hover:bg-[var(--background)] sm:inline-flex sm:items-center sm:gap-2"
+              className="btn-base btn-secondary hidden sm:inline-flex"
             >
               <ExternalLink size={16} />
               Страница
@@ -158,7 +158,7 @@ export function TaskDetailsModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-[var(--line)] p-2 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)]"
+              className="btn-base btn-ghost h-10 w-10 p-0"
               title="Закрыть"
             >
               <X size={20} />
@@ -241,7 +241,7 @@ export function TaskDetailsModal({
                         type="button"
                         onClick={() => complete.mutate()}
                         disabled={complete.isPending}
-                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                        className="btn-base btn-success h-11"
                       >
                         <CheckCircle2 size={17} />
                         Завершить
@@ -250,7 +250,7 @@ export function TaskDetailsModal({
                     <button
                       type="button"
                       onClick={() => setEditing(true)}
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--foreground)] px-4 text-sm font-semibold text-[var(--background)]"
+                      className="btn-base btn-primary h-11"
                     >
                       <Pencil size={17} />
                       Редактировать
@@ -260,7 +260,7 @@ export function TaskDetailsModal({
                         type="button"
                         onClick={() => remove.mutate()}
                         disabled={remove.isPending}
-                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-red-200 px-4 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60"
+                        className="btn-base btn-danger h-11"
                       >
                         <Trash2 size={17} />
                         В корзину

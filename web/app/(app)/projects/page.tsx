@@ -27,7 +27,7 @@ export default function ProjectsPage() {
         <button
           type="button"
           onClick={() => setCreateModal({ entity: 'project' })}
-          className="rounded-xl bg-[var(--foreground)] px-4 py-2 text-sm font-medium text-[var(--background)]"
+          className="btn-base btn-primary"
         >
           Новый проект
         </button>
@@ -41,7 +41,7 @@ export default function ProjectsPage() {
             <Link
               key={project.id}
               href={`/projects/${project.id}`}
-              className={isFocus ? 'rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--focus-primary)] hover:shadow-[var(--focus-shadow)]' : 'rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm hover:border-[var(--accent)]'}
+              className={isFocus ? 'interactive-card rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-5 shadow-sm' : 'interactive-card rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm'}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">

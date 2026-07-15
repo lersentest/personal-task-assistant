@@ -37,12 +37,11 @@ export function ProjectForm({ project, onDone }: { project?: Project; onDone?: (
       </select>
       {mutation.error ? <p className="text-sm text-red-500">{mutation.error.message}</p> : null}
       <div className="flex gap-2">
-        <button className="h-10 rounded-lg bg-[var(--foreground)] px-4 text-sm font-medium text-[var(--background)]" disabled={mutation.isPending}>
-          {project ? 'Сохранить' : 'Создать'}
+        <button className="btn-base btn-primary h-10" disabled={mutation.isPending}>
+          {mutation.isPending ? 'Сохраняю...' : project ? 'Сохранить' : 'Создать'}
         </button>
-        {onDone ? <button type="button" onClick={onDone} className="h-10 rounded-lg border border-[var(--line)] px-4 text-sm">Отмена</button> : null}
+        {onDone ? <button type="button" onClick={onDone} className="btn-base btn-secondary h-10">Отмена</button> : null}
       </div>
     </form>
   );
 }
-

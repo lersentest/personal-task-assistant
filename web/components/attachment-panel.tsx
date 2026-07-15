@@ -137,7 +137,7 @@ export function AttachmentPanel({
           </p>
         </div>
         {taskId || projectId ? (
-          <label className="cursor-pointer rounded-lg bg-[var(--foreground)] px-4 py-2 text-sm text-[var(--background)]">
+          <label className="btn-base btn-primary cursor-pointer">
             Загрузить
             <input
               ref={inputRef}
@@ -163,7 +163,7 @@ export function AttachmentPanel({
           return (
             <div
               key={attachment.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--line)] bg-[var(--background)] p-3 text-sm"
+              className="interactive-card flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--line)] bg-[var(--background)] p-3 text-sm"
             >
               <div>
                 <p className="font-medium">{attachment.fileName}</p>
@@ -177,7 +177,7 @@ export function AttachmentPanel({
                 <button
                   disabled={!canPreview}
                   onClick={() => openPreview(attachment)}
-                  className="rounded-md border border-[var(--line)] px-3 py-1 disabled:cursor-not-allowed disabled:opacity-45"
+                  className="btn-base btn-secondary min-h-0 px-3 py-1 disabled:cursor-not-allowed disabled:opacity-45"
                   title={
                     canPreview
                       ? 'Открыть предпросмотр'
@@ -188,13 +188,13 @@ export function AttachmentPanel({
                 </button>
                 <button
                   onClick={() => downloadAttachment(attachment)}
-                  className="rounded-md border border-[var(--line)] px-3 py-1"
+                  className="btn-base btn-secondary min-h-0 px-3 py-1"
                 >
                   Скачать
                 </button>
                 <button
                   onClick={() => remove.mutate(attachment.id)}
-                  className="rounded-md border border-[var(--line)] px-3 py-1"
+                  className="btn-base btn-danger min-h-0 px-3 py-1"
                 >
                   Удалить
                 </button>
@@ -229,13 +229,13 @@ export function AttachmentPanel({
               <div className="flex gap-2">
                 <button
                   onClick={() => downloadAttachment(preview.attachment)}
-                  className="rounded-md border border-[var(--line)] px-3 py-2 text-sm"
+                  className="btn-base btn-secondary"
                 >
                   Скачать
                 </button>
                 <button
                   onClick={closePreview}
-                  className="rounded-md bg-[var(--foreground)] px-3 py-2 text-sm text-[var(--background)]"
+                  className="btn-base btn-primary"
                 >
                   Закрыть
                 </button>

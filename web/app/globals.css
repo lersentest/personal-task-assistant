@@ -83,6 +83,145 @@ select {
   font: inherit;
 }
 
+:where(button, a[href], label, select, input, textarea, [role="button"]) {
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform, filter;
+  transition-duration: 160ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+:where(button, a[href], label, select, [role="button"]):not(:disabled) {
+  cursor: pointer;
+}
+
+:where(button, a[href], label, [role="button"]):not(:disabled):active {
+  transform: translateY(1px) scale(0.985);
+}
+
+:where(button, a[href], input, textarea, select, [role="button"]):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 72%, transparent);
+  outline-offset: 2px;
+}
+
+:where(button, select, input, textarea):disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (hover: hover) {
+  button:not(:disabled):not([class*="hover:"]):hover,
+  a[href]:not([class*="hover:"]):hover,
+  label:not([class*="hover:"]):hover,
+  [role="button"]:not([class*="hover:"]):hover {
+    filter: brightness(0.97);
+  }
+}
+
+.btn-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  border-radius: 0.75rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  border: 1px solid transparent;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.btn-primary {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+  filter: brightness(1.04);
+}
+
+.btn-secondary {
+  border-color: var(--line);
+  background: var(--panel);
+  color: var(--foreground);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--line));
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.btn-ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.btn-success {
+  background: #059669;
+  color: #ffffff;
+}
+
+.btn-success:hover:not(:disabled) {
+  background: #047857;
+  box-shadow: 0 10px 24px rgba(5, 150, 105, 0.22);
+}
+
+.btn-warning {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.btn-warning:hover:not(:disabled) {
+  border-color: #fdba74;
+  background: #ffedd5;
+}
+
+.btn-danger {
+  border-color: #fecaca;
+  background: #fff7f7;
+  color: #dc2626;
+}
+
+.btn-danger:hover:not(:disabled) {
+  border-color: #fca5a5;
+  background: #fee2e2;
+}
+
+.interactive-card {
+  transition-property: border-color, background-color, box-shadow, transform;
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.interactive-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--line));
+  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.press-feedback {
+  animation: press-feedback 420ms ease-out;
+}
+
+@keyframes press-feedback {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 28%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 10px transparent;
+  }
+}
+
 .fc {
   --fc-border-color: var(--line);
   --fc-page-bg-color: var(--panel);
