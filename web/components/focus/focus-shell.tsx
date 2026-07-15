@@ -180,6 +180,12 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
     setCreateModal(state);
   }
 
+  function openMobileMenu(event?: React.MouseEvent | React.PointerEvent) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    setMobileMenuOpen(true);
+  }
+
   return (
     <div className="min-h-screen bg-[var(--focus-bg)] text-[var(--focus-text)] lg:grid lg:grid-cols-[292px_1fr]">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[292px] border-r border-[var(--focus-border-soft)] bg-[var(--focus-surface)]/96 px-4 py-5 shadow-[var(--focus-shadow)] backdrop-blur lg:flex lg:flex-col">
@@ -289,8 +295,8 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
           <div className="mx-auto flex max-w-[1600px] items-center gap-3">
             <button
               type="button"
-              onPointerDown={() => setMobileMenuOpen(true)}
-              onClick={() => setMobileMenuOpen(true)}
+              onPointerDown={openMobileMenu}
+              onClick={openMobileMenu}
               aria-label="Открыть меню"
               className="flex min-h-11 items-center gap-2 rounded-xl border border-[var(--focus-border)] bg-[var(--focus-surface)] px-3 py-2 text-sm font-semibold text-[var(--focus-text-secondary)] lg:hidden"
             >
@@ -361,8 +367,8 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
               <button
                 key={item.href}
                 type="button"
-                onPointerDown={() => setMobileMenuOpen(true)}
-                onClick={() => setMobileMenuOpen(true)}
+                onPointerDown={openMobileMenu}
+                onClick={openMobileMenu}
                 className="flex flex-col items-center gap-1 rounded-xl px-1 py-1 text-[11px] text-[var(--focus-text-secondary)]"
               >
                 <Icon size={18} />
