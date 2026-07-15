@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Download, FileUp, Link as LinkIcon, Send, UploadCloud } from 'lucide-react';
+import { ChevronDown, ChevronRight, Download, FileUp, Link as LinkIcon, Send, UploadCloud } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { EmptyState, Page } from '@/components/page';
 import { api } from '@/lib/api';
@@ -224,6 +224,7 @@ function DelegatedTaskCard({
   const queryClient = useQueryClient();
   const [ownerComment, setOwnerComment] = useState('');
   const [cardMessage, setCardMessage] = useState<string | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
   const isClosed = ['COMPLETED', 'CANCELLED'].includes(task.status);
   const publicUrl =
     typeof window === 'undefined'
@@ -268,7 +269,36 @@ function DelegatedTaskCard({
   }
 
   return (
-    <article className="interactive-card rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm sm:p-5">
+    <article className={`interactive-card overflow-hidden rounded-2xl border bg-[var(--panel)] shadow-sm transition-all ${isExpanded ? 'border-[var(--accent)] shadow-md' : 'border-[var(--line)]'}`}>
+      <button
+        type="button"
+        className="group grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-[var(--accent-soft)] active:scale-[0.995] sm:grid-cols-[auto_minmax(0,1fr)_auto_auto_auto] sm:gap-3 sm:px-4"
+        aria-expanded={isExpanded}
+        onClick={() => setIsExpanded((value) => !value)}
+      >
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--background)] text-[var(--muted)] transition-colors group-hover:text-[var(--accent)]">
+          {isExpanded ? <ChevronDown size={17} /> : <ChevronRight size={17} />}
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-semibold sm:text-base">{task.title}</span>
+          <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-[var(--muted)] sm:hidden">
+            <span className="truncate">{task.executor.fullName}</span>
+            {task.dueAt ? <span className="shrink-0">· {new Date(task.dueAt).toLocaleDateString('ru-RU')}</span> : null}
+          </span>
+        </span>
+        <span className="hidden min-w-0 truncate text-xs text-[var(--muted)] sm:block">{task.executor.fullName}</span>
+        <span className="hidden min-w-0 truncate text-xs text-[var(--muted)] sm:block">
+          {task.project?.name ?? 'Без проекта'}
+          {task.dueAt ? ` · ${new Date(task.dueAt).toLocaleDateString('ru-RU')}` : ''}
+        </span>
+        <span className="flex shrink-0 items-center gap-1.5">
+          <span className="hidden rounded-full bg-[var(--background)] px-2 py-1 text-xs text-[var(--muted)] sm:inline-flex">{task.priority}</span>
+          <span className="rounded-full bg-[var(--accent-soft)] px-2 py-1 text-xs text-[var(--accent)]">{statusLabel[task.status]}</span>
+        </span>
+      </button>
+
+      {isExpanded ? (
+        <div className="border-t border-[var(--line)] p-4 sm:p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="mb-2 flex flex-wrap gap-2 text-xs">
@@ -396,6 +426,8 @@ function DelegatedTaskCard({
 
       {cardMessage ? <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{cardMessage}</p> : null}
       {(comment.error || upload.error) ? <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{(comment.error || upload.error)?.message}</p> : null}
+        </div>
+      ) : null}
     </article>
   );
 }
