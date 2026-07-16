@@ -168,11 +168,13 @@ export function AttachmentPanel({
         {attachments.data?.length ? (
           <div className="grid gap-2">
             {attachments.data.map((attachment) => {
-              const relation =
-                attachment.task?.title ??
-                attachment.delegatedTask?.title ??
-                attachment.project?.name ??
-                'Без связи';
+              const relation = attachment.task?.title
+                ? `Задача: ${attachment.task.title}`
+                : attachment.delegatedTask?.title
+                  ? `Делегированная: ${attachment.delegatedTask.title}`
+                  : attachment.project?.name
+                    ? `Проект: ${attachment.project.name}`
+                    : 'Без связи';
               return (
                 <div
                   key={attachment.id}
@@ -189,11 +191,11 @@ export function AttachmentPanel({
                       >
                         {attachment.fileName}
                       </FileModalLink>
-                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--muted)]">
-                        {attachment.mimeType} · {formatSize(attachment.sizeBytes)} · {relation}
+                      <p className="mt-1 line-clamp-2 text-xs font-medium leading-5 text-[var(--foreground)]">
+                        {relation}
                       </p>
                       <p className="mt-0.5 text-xs text-[var(--muted)]">
-                        {new Date(attachment.createdAt).toLocaleDateString('ru-RU')}
+                        {attachment.mimeType} · {formatSize(attachment.sizeBytes)} · {new Date(attachment.createdAt).toLocaleDateString('ru-RU')}
                       </p>
                     </div>
                   </div>

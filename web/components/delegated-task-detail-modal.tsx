@@ -12,12 +12,12 @@ import { EntityDrawer } from './ui-kit';
 
 const delegatedStatusLabel: Record<DelegatedTaskStatus, string> = {
   DRAFT: 'Черновик',
-  SENT: 'Отправлена',
-  ACCEPTED: 'Принята',
+  SENT: 'Ожидает исполнителя',
+  ACCEPTED: 'В работе',
   IN_PROGRESS: 'В работе',
-  QUESTION: 'Вопрос',
+  QUESTION: 'Есть вопрос',
   WAITING_REVIEW: 'На проверке',
-  RETURNED: 'Возвращена',
+  RETURNED: 'В работе',
   COMPLETED: 'Завершена',
   CANCELLED: 'Отменена',
 };

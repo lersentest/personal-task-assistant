@@ -1,114 +1,168 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, Clock3, MessageSquare, Send, UserRoundCheck } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock3, Send, UserRoundCheck } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { DelegatedTaskModalLink } from '@/components/delegated-task-detail-modal';
 import { Page } from '@/components/page';
-import { EmptyPanel, ErrorState, LoadingState, MetricStrip, UiCard } from '@/components/ui-kit';
+import { EmptyPanel, ErrorState, LoadingState, UiCard } from '@/components/ui-kit';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/labels';
 import type { DelegatedTask, DelegatedTaskStatus } from '@/lib/types';
 
 const delegatedStatusLabel: Record<DelegatedTaskStatus, string> = {
   DRAFT: 'Черновик',
-  SENT: 'Отправлена',
-  ACCEPTED: 'Принята',
+  SENT: 'Ожидает исполнителя',
+  ACCEPTED: 'В работе',
   IN_PROGRESS: 'В работе',
-  QUESTION: 'Вопрос',
+  QUESTION: 'Есть вопрос',
   WAITING_REVIEW: 'На проверке',
-  RETURNED: 'Возвращена',
+  RETURNED: 'В работе',
   COMPLETED: 'Завершена',
   CANCELLED: 'Отменена',
 };
 
-const tabs: Array<{ label: string; value: '' | DelegatedTaskStatus | 'ACTIVE' | 'ATTENTION' }> = [
-  { label: 'Активные', value: 'ACTIVE' },
-  { label: 'Ожидаю исполнителя', value: 'SENT' },
-  { label: 'На проверке', value: 'WAITING_REVIEW' },
-  { label: 'Завершённые', value: 'COMPLETED' },
+type DelegatedQueue = 'ATTENTION' | 'WORKING' | 'OVERDUE' | 'DRAFT' | 'COMPLETED' | 'CANCELLED' | 'ALL';
+
+const queues: Array<{ label: string; value: DelegatedQueue; description: string }> = [
+  { label: 'Требуют внимания', value: 'ATTENTION', description: 'Вопросы и задачи на проверке' },
+  { label: 'В работе', value: 'WORKING', description: 'Ожидают исполнителя или выполняются' },
+  { label: 'Просроченные', value: 'OVERDUE', description: 'Срок уже прошёл, задача не закрыта' },
+  { label: 'Черновики', value: 'DRAFT', description: 'Ещё не отправлены' },
+  { label: 'Завершённые', value: 'COMPLETED', description: 'Приняты владельцем' },
+  { label: 'Отменённые', value: 'CANCELLED', description: 'Остановлены владельцем' },
+  { label: 'Все', value: 'ALL', description: 'Полный список без статуса' },
 ];
 
 export default function DelegatedPage() {
-  const [filters, setFilters] = useState({ status: 'ACTIVE', executorId: '' });
+  const [filters, setFilters] = useState<{ queue: DelegatedQueue; executorId: string }>({ queue: 'ATTENTION', executorId: '' });
   const executors = useQuery({ queryKey: ['executors'], queryFn: api.executors });
   const query = useMemo(() => {
     const params = new URLSearchParams();
     if (filters.executorId) params.set('executorId', filters.executorId);
-    if (filters.status && filters.status !== 'ACTIVE' && filters.status !== 'ATTENTION') {
-      params.set('status', filters.status);
-    }
     return params.toString() ? `?${params.toString()}` : '';
   }, [filters]);
   const tasks = useQuery({ queryKey: ['delegated-tasks', query], queryFn: () => api.delegatedTasks(query) });
 
   const visibleTasks = useMemo(() => {
     const data = tasks.data ?? [];
-    if (filters.status === 'ACTIVE') {
-      return data.filter((task) => !['COMPLETED', 'CANCELLED'].includes(task.status));
+    const now = Date.now();
+    if (filters.queue === 'ATTENTION') {
+      return data.filter((task) => ['QUESTION', 'WAITING_REVIEW'].includes(task.status));
     }
-    if (filters.status === 'ATTENTION') {
-      return data.filter((task) => ['QUESTION', 'WAITING_REVIEW', 'RETURNED'].includes(task.status));
+    if (filters.queue === 'WORKING') {
+      return data.filter((task) => ['SENT', 'ACCEPTED', 'IN_PROGRESS', 'RETURNED'].includes(task.status));
     }
-    return data;
-  }, [filters.status, tasks.data]);
+    if (filters.queue === 'OVERDUE') {
+      return data.filter((task) => isOverdue(task, now));
+    }
+    if (filters.queue === 'ALL') return data;
+    return data.filter((task) => task.status === filters.queue);
+  }, [filters.queue, tasks.data]);
 
-  const stats = useMemo(() => {
+  const counts = useMemo(() => {
     const data = tasks.data ?? [];
     const now = Date.now();
     return {
-      attention: data.filter((task) => ['QUESTION', 'WAITING_REVIEW', 'RETURNED'].includes(task.status)).length,
-      inProgress: data.filter((task) => ['ACCEPTED', 'IN_PROGRESS'].includes(task.status)).length,
-      review: data.filter((task) => task.status === 'WAITING_REVIEW').length,
-      overdue: data.filter((task) => task.dueAt && new Date(task.dueAt).getTime() < now && !['COMPLETED', 'CANCELLED'].includes(task.status)).length,
-    };
+      ATTENTION: data.filter((task) => ['QUESTION', 'WAITING_REVIEW'].includes(task.status)).length,
+      WORKING: data.filter((task) => ['SENT', 'ACCEPTED', 'IN_PROGRESS', 'RETURNED'].includes(task.status)).length,
+      OVERDUE: data.filter((task) => isOverdue(task, now)).length,
+      DRAFT: data.filter((task) => task.status === 'DRAFT').length,
+      COMPLETED: data.filter((task) => task.status === 'COMPLETED').length,
+      CANCELLED: data.filter((task) => task.status === 'CANCELLED').length,
+      ALL: data.length,
+    } satisfies Record<DelegatedQueue, number>;
   }, [tasks.data]);
+
+  const queueStats = useMemo(() => {
+    const data = tasks.data ?? [];
+    const now = Date.now();
+    return [
+      {
+        label: 'Требуют внимания',
+        value: data.filter((task) => ['QUESTION', 'WAITING_REVIEW'].includes(task.status)).length,
+        icon: <AlertCircle size={18} />,
+        tone: 'red',
+        queue: 'ATTENTION' as const,
+      },
+      {
+        label: 'В работе',
+        value: data.filter((task) => ['SENT', 'ACCEPTED', 'IN_PROGRESS', 'RETURNED'].includes(task.status)).length,
+        icon: <UserRoundCheck size={18} />,
+        tone: 'blue',
+        queue: 'WORKING' as const,
+      },
+      {
+        label: 'Просрочены',
+        value: data.filter((task) => isOverdue(task, now)).length,
+        icon: <Clock3 size={18} />,
+        tone: 'red',
+        queue: 'OVERDUE' as const,
+      },
+      {
+        label: 'Завершены',
+        value: data.filter((task) => task.status === 'COMPLETED').length,
+        icon: <CheckCircle2 size={18} />,
+        tone: 'green',
+        queue: 'COMPLETED' as const,
+      },
+    ];
+  }, [tasks.data]);
+
+  const selectedQueue = queues.find((item) => item.value === filters.queue);
 
   return (
     <Page
       title="Делегированные"
-      description="Отдельный поток задач для исполнителей: статус, активность, комментарии и файлы."
+      description="Отдельный поток задач для исполнителей: вопросы, проверка, работа, сроки и файлы."
     >
-      <MetricStrip
-        items={[
-          { label: 'Требуют внимания', value: stats.attention, icon: <AlertCircle size={18} />, tone: 'red' },
-          { label: 'В работе', value: stats.inProgress, icon: <UserRoundCheck size={18} />, tone: 'blue' },
-          { label: 'На проверке', value: stats.review, icon: <MessageSquare size={18} />, tone: 'orange' },
-          { label: 'Просрочены', value: stats.overdue, icon: <Clock3 size={18} />, tone: 'red' },
-        ]}
-      />
+      <div className="grid gap-3 md:grid-cols-4">
+        {queueStats.map((item) => (
+          <button
+            key={item.queue}
+            type="button"
+            onClick={() => setFilters((value) => ({ ...value, queue: item.queue }))}
+            className={`group rounded-3xl border bg-[var(--focus-surface,var(--panel))] p-4 text-left shadow-sm transition active:scale-[0.99] ${
+              filters.queue === item.queue
+                ? 'border-[var(--accent)] ring-2 ring-[var(--accent-soft)]'
+                : 'border-[var(--focus-border,var(--line))] hover:-translate-y-0.5 hover:border-[var(--accent)]'
+            }`}
+          >
+            <span className={`mb-3 flex h-10 w-10 items-center justify-center rounded-2xl ${metricTone(item.tone)}`}>
+              {item.icon}
+            </span>
+            <span className="block text-sm text-[var(--muted)]">{item.label}</span>
+            <span className="mt-1 block text-2xl font-semibold">{item.value}</span>
+          </button>
+        ))}
+      </div>
 
       <UiCard className="mt-5 overflow-hidden">
         <div className="border-b border-[var(--focus-border-soft,var(--line))] px-3 pt-3">
           <div className="flex gap-1 overflow-x-auto">
-            {tabs.map((tab) => (
+            {queues.map((queue) => (
               <button
-                key={tab.label}
+                key={queue.value}
                 type="button"
-                onClick={() => setFilters((value) => ({ ...value, status: tab.value }))}
+                onClick={() => setFilters((value) => ({ ...value, queue: queue.value }))}
                 className={`whitespace-nowrap rounded-t-2xl px-4 py-3 text-sm font-semibold ${
-                  filters.status === tab.value
+                  filters.queue === queue.value
                     ? 'border-b-2 border-[var(--accent)] text-[var(--accent)]'
                     : 'text-[var(--muted)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]'
                 }`}
               >
-                {tab.label}
+                {queue.label}
+                <span className="ml-2 rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs text-[var(--accent)]">
+                  {counts[queue.value]}
+                </span>
               </button>
             ))}
           </div>
         </div>
-        <div className="grid gap-3 p-3 md:grid-cols-[1fr_1fr]">
-          <select
-            value={filters.status}
-            onChange={(event) => setFilters((value) => ({ ...value, status: event.target.value }))}
-            className="h-10 rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm"
-          >
-            <option value="ACTIVE">Все активные</option>
-            <option value="ATTENTION">Требуют внимания</option>
-            {Object.entries(delegatedStatusLabel).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
+        <div className="grid gap-3 p-3 md:grid-cols-[1fr_auto] md:items-center">
+          <p className="text-sm text-[var(--muted)]">
+            {selectedQueue?.description ?? 'Фильтр делегированных задач'}
+          </p>
           <select
             value={filters.executorId}
             onChange={(event) => setFilters((value) => ({ ...value, executorId: event.target.value }))}
@@ -124,7 +178,7 @@ export default function DelegatedPage() {
         {tasks.isLoading ? <LoadingState text="Загружаю делегированные задачи…" /> : null}
         {tasks.error ? <ErrorState text={`Не удалось загрузить делегированные: ${tasks.error.message}`} /> : null}
         {!tasks.isLoading && !tasks.error && visibleTasks.length === 0 ? (
-          <EmptyPanel title="Делегированных задач нет" text="Создай делегированную задачу через общий «+ Создать»." />
+          <EmptyPanel title="В этой очереди задач нет" text="Можно сменить очередь или создать делегированную задачу через общий «+ Создать»." />
         ) : null}
         {visibleTasks.length ? (
           <UiCard className="overflow-hidden">
@@ -155,6 +209,16 @@ export default function DelegatedPage() {
 
     </Page>
   );
+}
+
+function isOverdue(task: DelegatedTask, now = Date.now()) {
+  return Boolean(task.dueAt && new Date(task.dueAt).getTime() < now && !['COMPLETED', 'CANCELLED'].includes(task.status));
+}
+
+function metricTone(tone: string) {
+  if (tone === 'red') return 'bg-red-50 text-red-600 dark:bg-red-950/35 dark:text-red-200';
+  if (tone === 'green') return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/35 dark:text-emerald-200';
+  return 'bg-blue-50 text-blue-700 dark:bg-blue-950/35 dark:text-blue-200';
 }
 
 function DelegatedRow({ task }: { task: DelegatedTask }) {
@@ -213,7 +277,7 @@ function DelegatedStatus({ status }: { status: DelegatedTaskStatus }) {
       ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/35 dark:text-emerald-200'
       : status === 'WAITING_REVIEW'
         ? 'bg-violet-50 text-violet-700 dark:bg-violet-950/35 dark:text-violet-200'
-        : status === 'QUESTION' || status === 'RETURNED'
+        : status === 'QUESTION'
           ? 'bg-orange-50 text-orange-700 dark:bg-orange-950/35 dark:text-orange-200'
           : status === 'CANCELLED'
             ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'

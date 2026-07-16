@@ -509,7 +509,7 @@ export class DelegatedTasksService {
       throw new BadRequestException('Task is not waiting for review.');
     }
     const text = message?.trim();
-    const status = action === 'accept' ? 'COMPLETED' : 'RETURNED';
+    const status = action === 'accept' ? 'COMPLETED' : 'IN_PROGRESS';
     await this.prisma.$transaction(async (tx) => {
       await tx.delegatedTask.update({
         where: { id: taskId },

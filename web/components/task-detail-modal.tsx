@@ -135,17 +135,18 @@ export function TaskDetailsModal({
                 {data ? taskKindLabel[data.kind ?? 'TASK'] : 'Задача'}
               </span>
               {data?.project ? (
-                <span className="inline-flex items-center gap-1">
+                <span className="inline-flex items-center gap-1 rounded-full border border-[var(--focus-border-soft,var(--line))] bg-[var(--focus-surface-secondary,var(--panel))] px-2.5 py-1 font-semibold text-[var(--foreground)]">
                   <FolderKanban size={13} />
                   {data.project.name}
                 </span>
               ) : (
-                <span>Без проекта</span>
+                <span className="rounded-full border border-[var(--focus-border-soft,var(--line))] bg-[var(--focus-surface-secondary,var(--panel))] px-2.5 py-1 font-medium text-[var(--muted)]">
+                  Без проекта
+                </span>
               )}
         </>
       }
       title={data?.title ?? 'Загружаю задачу…'}
-      subtitle="Детали задачи, редактирование, файлы и быстрые действия."
       actions={
             <Link
               href={`/tasks/${taskId}`}
