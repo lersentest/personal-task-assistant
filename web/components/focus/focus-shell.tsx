@@ -70,6 +70,7 @@ const sections = [
     items: [
       { href: '/unassigned', label: 'Без проекта', icon: Menu },
       { href: '/trash', label: 'Корзина', icon: Trash2 },
+      { href: '/ui-kit', label: 'UI Kit', icon: Sparkles },
     ],
   },
 ];
