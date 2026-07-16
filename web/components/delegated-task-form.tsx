@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '@/lib/api';
 import { TaskPriority } from '@/lib/types';
+import { ProjectCombobox } from './project-combobox';
 
 const emptyForm = {
   title: '',
@@ -97,18 +98,12 @@ export function DelegatedTaskForm({ onDone }: { onDone?: () => void }) {
       </label>
       <label className="grid gap-1.5">
         <span className="text-xs font-semibold text-[var(--muted)]">Проект</span>
-        <select
-          className="h-12 w-full rounded-2xl border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface-secondary,var(--background))] px-4 py-2 outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)]"
+        <ProjectCombobox
+          className="h-12"
+          projects={projects.data}
           value={form.projectId}
-          onChange={(event) => setForm({ ...form, projectId: event.target.value })}
-        >
-          <option value="">Без проекта</option>
-          {projects.data?.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </select>
+          onChange={(projectId) => setForm({ ...form, projectId })}
+        />
       </label>
       <label className="grid gap-1.5">
         <span className="text-xs font-semibold text-[var(--muted)]">Приоритет</span>

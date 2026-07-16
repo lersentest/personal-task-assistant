@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { invalidateTaskCaches } from '@/lib/cache';
 import { taskKindLabel } from '@/lib/labels';
 import { Task, TaskInput, TaskKind } from '@/lib/types';
+import { ProjectCombobox } from './project-combobox';
 
 const taskKinds: TaskKind[] = ['TASK', 'CALL', 'MEETING', 'IDEA', 'NOTE'];
 
@@ -123,18 +124,12 @@ export function TaskForm({
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-        <select
-          className="h-11 rounded-xl border border-[var(--line)] bg-transparent px-3"
+        <ProjectCombobox
+          className="h-11"
+          projects={projects.data}
           value={selectedProjectId}
-          onChange={(event) => setSelectedProjectId(event.target.value)}
-        >
-          <option value="">Без проекта</option>
-          {projects.data?.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </select>
+          onChange={setSelectedProjectId}
+        />
         <select
           className="h-11 rounded-xl border border-[var(--line)] bg-transparent px-3"
           value={status}
