@@ -280,6 +280,23 @@ select {
   background: var(--focus-primary-soft);
 }
 
+.result-row {
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid var(--focus-border-soft, var(--line));
+  border-radius: 1rem;
+  background: var(--focus-surface-secondary, var(--background));
+  padding: 0.875rem 1rem;
+  text-align: left;
+  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.result-row:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  transform: translateY(-1px);
+}
+
 @media (max-width: 767px) {
   [data-ui-mode="focus"] .focus-page {
     min-height: calc(100vh - 132px);

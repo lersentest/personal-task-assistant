@@ -11,6 +11,7 @@ import { SlidersHorizontal } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Page } from '@/components/page';
 import { TaskDetailsModal } from '@/components/task-detail-modal';
+import { ErrorState, LoadingState, UiCard } from '@/components/ui-kit';
 import { useUiMode } from '@/components/ui-mode-provider';
 import { api } from '@/lib/api';
 import { priorityLabel, taskKindLabel } from '@/lib/labels';
@@ -52,6 +53,8 @@ export default function CalendarPage() {
   if (!isFocus) {
     return (
       <Page title="Календарь" description="Задачи с установленным сроком.">
+        {tasks.isLoading ? <LoadingState text="Загружаю календарь…" /> : null}
+        {tasks.error ? <ErrorState text={`Не удалось загрузить календарь: ${tasks.error.message}`} /> : null}
         <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3 shadow-sm">
           <Calendar events={events} move={move.mutate} onOpenTask={setSelectedTaskId} />
         </div>
@@ -63,9 +66,11 @@ export default function CalendarPage() {
   return (
     <Page title="Календарь" description="Месяц, неделя, день и список с фильтрами Focus UI.">
       <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
-        <section className="rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-4 shadow-sm">
+        <UiCard className="p-4">
+          {tasks.isLoading ? <LoadingState text="Загружаю календарь…" /> : null}
+          {tasks.error ? <ErrorState text={`Не удалось загрузить календарь: ${tasks.error.message}`} /> : null}
           <Calendar events={events} move={move.mutate} focus onOpenTask={setSelectedTaskId} />
-        </section>
+        </UiCard>
         <aside className="grid content-start gap-4">
           <section className="rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-5 shadow-sm">
             <div className="mb-4 flex items-center gap-2">

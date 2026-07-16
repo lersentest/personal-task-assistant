@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { FileText } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { Attachment } from '@/lib/types';
@@ -134,7 +135,7 @@ export function AttachmentPanel({
   }
 
   return (
-    <section className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
+    <section className="rounded-3xl border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface,var(--panel))] p-5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-semibold">{title}</h2>
@@ -163,45 +164,64 @@ export function AttachmentPanel({
       ) : null}
       {error ? <p className="mt-3 text-sm text-red-500">{error}</p> : null}
 
-      <div className="mt-4 grid gap-2">
-        {(attachments.data ?? []).map((attachment) => {
-          const canPreview = Boolean(previewType(attachment.mimeType));
-          return (
-            <div
-              key={attachment.id}
-              className="interactive-card flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--line)] bg-[var(--background)] p-3 text-sm"
-            >
-              <div>
-                <p className="font-medium">{attachment.fileName}</p>
-                <p className="text-[var(--muted)]">
-                  {formatSize(attachment.sizeBytes)}
-                  {attachment.project ? ` · ${attachment.project.name}` : ''}
-                  {attachment.task ? ` · ${attachment.task.title}` : ''}
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <FileModalLink
-                  attachment={attachment}
-                  className="btn-base btn-secondary min-h-0 px-3 py-1"
-                >
-                  Просмотр
-                </FileModalLink>
-                <button
-                  onClick={() => downloadAttachment(attachment)}
-                  className="btn-base btn-secondary min-h-0 px-3 py-1"
-                >
-                  Скачать
-                </button>
-                <button
-                  onClick={() => remove.mutate(attachment.id)}
-                  className="btn-base btn-danger min-h-0 px-3 py-1"
-                >
-                  Удалить
-                </button>
-              </div>
+      <div className="mt-4">
+        {attachments.data?.length ? (
+          <>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="focus-table w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="p-3">Имя</th>
+                    <th className="p-3">Связь</th>
+                    <th className="p-3">Тип</th>
+                    <th className="p-3">Размер</th>
+                    <th className="p-3">Дата</th>
+                    <th className="p-3 text-right">Действия</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {attachments.data.map((attachment) => (
+                    <tr key={attachment.id} className="task-row">
+                      <td className="min-w-[240px] p-3">
+                        <FileModalLink attachment={attachment} className="inline-flex items-center gap-2 text-left font-semibold hover:text-[var(--accent)]">
+                          <FileText size={16} className="text-[var(--accent)]" />
+                          {attachment.fileName}
+                        </FileModalLink>
+                      </td>
+                      <td className="p-3 text-[var(--muted)]">
+                        {attachment.task?.title ?? attachment.delegatedTask?.title ?? attachment.project?.name ?? 'Без связи'}
+                      </td>
+                      <td className="p-3 text-[var(--muted)]">{attachment.mimeType}</td>
+                      <td className="whitespace-nowrap p-3 text-[var(--muted)]">{formatSize(attachment.sizeBytes)}</td>
+                      <td className="whitespace-nowrap p-3 text-[var(--muted)]">{new Date(attachment.createdAt).toLocaleDateString('ru-RU')}</td>
+                      <td className="p-3">
+                        <div className="flex justify-end gap-2">
+                          <FileModalLink attachment={attachment} className="btn-base btn-secondary min-h-0 px-3 py-1">Просмотр</FileModalLink>
+                          <button onClick={() => downloadAttachment(attachment)} className="btn-base btn-secondary min-h-0 px-3 py-1">Скачать</button>
+                          <button onClick={() => remove.mutate(attachment.id)} className="btn-base btn-danger min-h-0 px-3 py-1">Удалить</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          );
-        })}
+            <div className="grid gap-2 md:hidden">
+              {attachments.data.map((attachment) => (
+                <div key={attachment.id} className="rounded-2xl border border-[var(--focus-border-soft,var(--line))] bg-[var(--focus-surface-secondary,var(--background))] p-3 text-sm">
+                  <FileModalLink attachment={attachment} className="font-semibold hover:text-[var(--accent)]">{attachment.fileName}</FileModalLink>
+                  <p className="mt-1 text-xs text-[var(--muted)]">
+                    {formatSize(attachment.sizeBytes)} · {attachment.task?.title ?? attachment.delegatedTask?.title ?? attachment.project?.name ?? 'Без связи'}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button onClick={() => downloadAttachment(attachment)} className="btn-base btn-secondary min-h-0 px-3 py-1">Скачать</button>
+                    <button onClick={() => remove.mutate(attachment.id)} className="btn-base btn-danger min-h-0 px-3 py-1">Удалить</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : null}
         {attachments.data?.length === 0 ? (
           <p className="text-sm text-[var(--muted)]">Файлов пока нет.</p>
         ) : null}

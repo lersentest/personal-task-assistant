@@ -1,83 +1,150 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { Archive, CheckSquare, FolderKanban, Search, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { DelegatedTaskModalLink } from '@/components/delegated-task-detail-modal';
+import { FileModalLink } from '@/components/file-detail-modal';
 import { Page } from '@/components/page';
 import { ProjectModalLink } from '@/components/project-detail-modal';
 import { TaskModalLink } from '@/components/task-detail-modal';
-import { useUiMode } from '@/components/ui-mode-provider';
+import { EmptyPanel, ErrorState, LoadingState, UiCard } from '@/components/ui-kit';
 import { api } from '@/lib/api';
 
+function matches(parts: Array<string | null | undefined>, query: string) {
+  const value = parts.filter(Boolean).join(' ').toLowerCase();
+  return !query || value.includes(query);
+}
+
 export default function SearchPage() {
-  const { interfaceMode } = useUiMode();
-  const isFocus = interfaceMode === 'focus';
   const [query, setQuery] = useState('');
   const search = useQuery({ queryKey: ['search'], queryFn: () => api.search() });
-  const normalized = query.toLowerCase();
+  const normalized = query.trim().toLowerCase();
+
   const filteredTasks = useMemo(
-    () => (search.data?.tasks ?? []).filter((task) => task.title.toLowerCase().includes(normalized)),
+    () =>
+      (search.data?.tasks ?? []).filter((task) =>
+        matches([task.title, task.description, task.project?.name, task.status, task.priority], normalized),
+      ),
     [normalized, search.data],
   );
   const filteredDelegatedTasks = useMemo(
-    () => (search.data?.delegatedTasks ?? []).filter((task) => task.title.toLowerCase().includes(normalized)),
+    () =>
+      (search.data?.delegatedTasks ?? []).filter((task) =>
+        matches([task.title, task.description, task.executor.fullName, task.project?.name, task.status], normalized),
+      ),
     [normalized, search.data],
   );
   const filteredProjects = useMemo(
-    () => (search.data?.projects ?? []).filter((project) => project.name.toLowerCase().includes(normalized)),
+    () =>
+      (search.data?.projects ?? []).filter((project) =>
+        matches([project.name, project.description, project.status], normalized),
+      ),
+    [normalized, search.data],
+  );
+  const filteredFiles = useMemo(
+    () =>
+      (search.data?.files ?? []).filter((file) =>
+        matches([file.fileName, file.mimeType, file.task?.title, file.delegatedTask?.title, file.project?.name], normalized),
+      ),
     [normalized, search.data],
   );
 
-  const sectionClass = isFocus
-    ? 'rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-5 shadow-sm'
-    : 'grid content-start gap-3';
+  const total =
+    filteredTasks.length + filteredDelegatedTasks.length + filteredProjects.length + filteredFiles.length;
 
   return (
-    <Page title="Поиск" description="Личные задачи, делегированные задачи, проекты и файлы отдельными группами.">
-      <input
-        className={isFocus ? 'mb-6 h-14 w-full rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] px-5 shadow-sm outline-none focus:border-[var(--focus-primary)]' : 'mb-6 h-12 w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 outline-none focus:border-[var(--accent)]'}
-        placeholder="Введите запрос..."
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        autoFocus
-      />
-      <div className="grid gap-6 lg:grid-cols-3">
-        <section className={sectionClass}>
-          <h2 className="mb-3 font-semibold">Личные задачи</h2>
-          <div className="grid gap-3">
+    <Page title="Поиск" description="Единый поиск по задачам, делегированным задачам, проектам и файлам.">
+      <UiCard className="mb-5 p-3">
+        <label className="flex h-12 items-center gap-3 rounded-2xl border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface-secondary,var(--background))] px-4">
+          <Search size={18} className="text-[var(--muted)]" />
+          <input
+            className="min-w-0 flex-1 bg-transparent outline-none"
+            placeholder="Введите запрос..."
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            autoFocus
+          />
+          <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--accent)]">
+            {total}
+          </span>
+        </label>
+      </UiCard>
+
+      {search.isLoading ? <LoadingState text="Загружаю индекс поиска…" /> : null}
+      {search.error ? <ErrorState text={`Поиск недоступен: ${search.error.message}`} /> : null}
+      {!search.isLoading && !search.error && total === 0 ? (
+        <EmptyPanel title="Ничего не найдено" text="Попробуй другое слово или очисти запрос." />
+      ) : null}
+
+      {total ? (
+        <div className="grid gap-5 xl:grid-cols-2">
+          <SearchSection icon={<CheckSquare size={18} />} title="Личные задачи" count={filteredTasks.length}>
             {filteredTasks.map((task) => (
-              <TaskModalLink
-                key={task.id}
-                task={task}
-                className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-left hover:border-[var(--accent)]"
-              >
-                {task.title}
+              <TaskModalLink key={task.id} task={task} className="result-row">
+                <span className="font-semibold">{task.title}</span>
+                <span className="text-sm text-[var(--muted)]">{task.project?.name ?? 'Без проекта'} · {task.status}</span>
               </TaskModalLink>
             ))}
-          </div>
-        </section>
-        <section className={sectionClass}>
-          <h2 className="mb-3 font-semibold">Делегированные</h2>
-          <div className="grid gap-3">
+          </SearchSection>
+
+          <SearchSection icon={<Users size={18} />} title="Делегированные" count={filteredDelegatedTasks.length}>
             {filteredDelegatedTasks.map((task) => (
-              <DelegatedTaskModalLink key={task.id} task={task} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-left hover:border-[var(--accent)]">
-                <span className="block font-medium">{task.title}</span>
+              <DelegatedTaskModalLink key={task.id} task={task} className="result-row">
+                <span className="font-semibold">{task.title}</span>
                 <span className="text-sm text-[var(--muted)]">{task.executor.fullName} · {task.status}</span>
               </DelegatedTaskModalLink>
             ))}
-          </div>
-        </section>
-        <section className={sectionClass}>
-          <h2 className="mb-3 font-semibold">Проекты</h2>
-          <div className="grid gap-3">
+          </SearchSection>
+
+          <SearchSection icon={<FolderKanban size={18} />} title="Проекты" count={filteredProjects.length}>
             {filteredProjects.map((project) => (
-              <ProjectModalLink key={project.id} project={project} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-left hover:border-[var(--accent)]">
-                {project.name}
+              <ProjectModalLink key={project.id} project={project} className="result-row">
+                <span className="font-semibold">{project.name}</span>
+                <span className="text-sm text-[var(--muted)]">{project.description ?? project.status}</span>
               </ProjectModalLink>
             ))}
-          </div>
-        </section>
-      </div>
+          </SearchSection>
+
+          <SearchSection icon={<Archive size={18} />} title="Файлы" count={filteredFiles.length}>
+            {filteredFiles.map((file) => (
+              <FileModalLink key={file.id} attachment={file} className="result-row">
+                <span className="font-semibold">{file.fileName}</span>
+                <span className="text-sm text-[var(--muted)]">
+                  {file.task?.title ?? file.delegatedTask?.title ?? file.project?.name ?? file.mimeType}
+                </span>
+              </FileModalLink>
+            ))}
+          </SearchSection>
+        </div>
+      ) : null}
     </Page>
+  );
+}
+
+function SearchSection({
+  icon,
+  title,
+  count,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <UiCard className="p-5">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 font-semibold">
+          <span className="text-[var(--accent)]">{icon}</span>
+          {title}
+        </h2>
+        <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--accent)]">{count}</span>
+      </div>
+      <div className="grid gap-2">
+        {count ? children : <p className="text-sm text-[var(--muted)]">Нет результатов.</p>}
+      </div>
+    </UiCard>
   );
 }
