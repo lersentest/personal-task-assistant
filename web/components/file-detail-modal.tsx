@@ -5,6 +5,7 @@ import { Download, Eye, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { Attachment } from '@/lib/types';
+import { EntityDrawer } from './ui-kit';
 
 function formatSize(size: number) {
   if (size < 1024) return `${size} B`;
@@ -113,31 +114,23 @@ export function FileDetailsModal({
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-[10000] flex items-stretch justify-center bg-slate-950/65 p-0 backdrop-blur-sm sm:items-center sm:p-6"
-      onMouseDown={onClose}
-    >
-      <div
-        className="flex h-full w-full max-w-5xl flex-col overflow-hidden border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface,var(--panel))] text-[var(--foreground)] shadow-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-3xl"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <div className="grid gap-3 border-b border-[var(--focus-border-soft,var(--line))] p-4 sm:flex sm:items-start sm:justify-between sm:p-5">
-          <div className="min-w-0">
-            <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
+    <EntityDrawer
+      open={open}
+      onClose={onClose}
+      width="max-w-5xl"
+      eyebrow={
+        <>
               <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-1 font-medium text-[var(--accent)]">
                 Файл
               </span>
               <span>{attachment.mimeType}</span>
               <span>{formatSize(attachment.sizeBytes)}</span>
-            </div>
-            <h2 className="truncate text-2xl font-semibold">{attachment.fileName}</h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              {attachment.task?.title ?? attachment.delegatedTask?.title ?? attachment.project?.name ?? 'Без связи'}
-            </p>
-          </div>
-          <div className="grid grid-cols-3 gap-2 sm:flex">
+        </>
+      }
+      title={attachment.fileName}
+      subtitle={attachment.task?.title ?? attachment.delegatedTask?.title ?? attachment.project?.name ?? 'Без связи'}
+      actions={
+        <>
             <button onClick={downloadAttachment} className="btn-base btn-secondary">
               <Download size={16} />
               Скачать
@@ -146,18 +139,10 @@ export function FileDetailsModal({
               <Trash2 size={16} />
               Удалить
             </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl border border-[var(--line)] p-2 text-[var(--muted)] hover:bg-[var(--background)]"
-              aria-label="Закрыть"
-            >
-              <X size={20} />
-            </button>
-          </div>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-auto bg-black/5 p-3">
+        </>
+      }
+    >
+        <div className="-m-4 min-h-[calc(100vh-160px)] overflow-auto bg-black/5 p-3 sm:-m-6">
           {error ? (
             <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
           ) : null}
@@ -186,7 +171,6 @@ export function FileDetailsModal({
             />
           )}
         </div>
-      </div>
-    </div>
+    </EntityDrawer>
   );
 }

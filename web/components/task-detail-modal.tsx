@@ -19,6 +19,7 @@ import { formatDate, priorityLabel, statusLabel, taskKindLabel } from '@/lib/lab
 import { Task } from '@/lib/types';
 import { AttachmentPanel } from './attachment-panel';
 import { TaskForm } from './task-form';
+import { EntityDrawer } from './ui-kit';
 
 export function TaskModalLink({
   task,
@@ -115,19 +116,12 @@ export function TaskDetailsModal({
   const data = task.data;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-[10000] flex items-stretch justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-6"
-      onMouseDown={onClose}
-    >
-      <div
-        className="flex h-full w-full max-w-5xl flex-col overflow-hidden border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface,var(--panel))] text-[var(--foreground)] shadow-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-3xl"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-4 border-b border-[var(--focus-border-soft,var(--line))] p-4 sm:p-6">
-          <div className="min-w-0">
-            <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
+    <EntityDrawer
+      open={open}
+      onClose={onClose}
+      width="max-w-5xl"
+      eyebrow={
+        <>
               <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-1 font-medium text-[var(--accent)]">
                 {data ? taskKindLabel[data.kind ?? 'TASK'] : 'Задача'}
               </span>
@@ -139,15 +133,11 @@ export function TaskDetailsModal({
               ) : (
                 <span>Без проекта</span>
               )}
-            </div>
-            <h2 className="text-xl font-semibold tracking-[-0.03em] text-[var(--foreground)] sm:text-2xl">
-              {data?.title ?? 'Загружаю задачу…'}
-            </h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              Детали задачи, редактирование, файлы и быстрые действия.
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
+        </>
+      }
+      title={data?.title ?? 'Загружаю задачу…'}
+      subtitle="Детали задачи, редактирование, файлы и быстрые действия."
+      actions={
             <Link
               href={`/tasks/${taskId}`}
               className="btn-base btn-secondary hidden sm:inline-flex"
@@ -155,18 +145,8 @@ export function TaskDetailsModal({
               <ExternalLink size={16} />
               Страница
             </Link>
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-base btn-ghost h-10 w-10 p-0"
-              title="Закрыть"
-            >
-              <X size={20} />
-            </button>
-          </div>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+      }
+    >
           {task.isLoading && !data ? (
             <div className="rounded-2xl border border-dashed border-[var(--line)] p-8 text-center text-[var(--muted)]">
               Загружаю задачу…
@@ -276,9 +256,7 @@ export function TaskDetailsModal({
               </aside>
             </div>
           ) : null}
-        </div>
-      </div>
-    </div>
+    </EntityDrawer>
   );
 }
 

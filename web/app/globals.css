@@ -38,6 +38,12 @@
   --focus-danger: #ef4444;
   --focus-warning: #f59e0b;
   --focus-shadow: 0 18px 60px rgba(15, 23, 42, 0.08);
+  --ui-radius-sm: 0.5rem;
+  --ui-radius-md: 0.75rem;
+  --ui-radius-lg: 1rem;
+  --ui-radius-xl: 1.5rem;
+  --ui-field-height: 2.5rem;
+  --ui-page-gap: 1.5rem;
   --background: var(--focus-bg);
   --foreground: var(--focus-text);
   --muted: var(--focus-text-secondary);
@@ -123,7 +129,7 @@ select {
   justify-content: center;
   gap: 0.5rem;
   min-height: 2.5rem;
-  border-radius: 0.75rem;
+  border-radius: var(--ui-radius-md, 0.75rem);
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 600;
@@ -241,7 +247,48 @@ select {
 [data-ui-mode="focus"] input,
 [data-ui-mode="focus"] textarea,
 [data-ui-mode="focus"] select {
-  border-radius: 0.875rem;
+  min-height: var(--ui-field-height);
+  border-radius: var(--ui-radius-md);
+  border-color: var(--focus-border);
+  background-color: var(--focus-surface);
+}
+
+[data-ui-mode="focus"] input:focus,
+[data-ui-mode="focus"] textarea:focus,
+[data-ui-mode="focus"] select:focus {
+  border-color: var(--focus-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-primary) 14%, transparent);
+}
+
+[data-ui-mode="focus"] .focus-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+[data-ui-mode="focus"] .focus-table th {
+  color: var(--focus-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+[data-ui-mode="focus"] .focus-table td {
+  border-top: 1px solid var(--focus-border-soft);
+}
+
+[data-ui-mode="focus"] .task-row:hover td {
+  background: var(--focus-primary-soft);
+}
+
+@media (max-width: 767px) {
+  [data-ui-mode="focus"] .focus-page {
+    min-height: calc(100vh - 132px);
+  }
+
+  [data-ui-mode="focus"] .mobile-stack {
+    display: grid;
+    gap: 0.75rem;
+  }
 }
 
 [data-ui-mode="focus"] form,
