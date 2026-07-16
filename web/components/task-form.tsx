@@ -8,6 +8,7 @@ import { invalidateTaskCaches } from '@/lib/cache';
 import { priorityLabel, taskKindLabel } from '@/lib/labels';
 import { Task, TaskInput, TaskKind } from '@/lib/types';
 import { ProjectCombobox } from './project-combobox';
+import { TimeStepSelect } from './time-step-select';
 
 type DueMode = 'NONE' | 'ON_DATE' | 'BEFORE_DATE' | 'EXACT_TIME';
 
@@ -283,12 +284,10 @@ export function TaskForm({
                 <span className="text-xs font-semibold text-[var(--muted)]">
                   {dueMode === 'BEFORE_DATE' ? 'Время, если нужно' : 'Время'}
                 </span>
-                <input
-                  className="h-11 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)]"
-                  type="time"
-                  step={300}
+                <TimeStepSelect
                   value={dueTime}
-                  onChange={(event) => setDueTime(event.target.value)}
+                  onChange={setDueTime}
+                  allowEmpty={dueMode === 'BEFORE_DATE'}
                 />
               </label>
             ) : null}

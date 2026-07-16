@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { TaskModalLink } from '@/components/task-detail-modal';
+import { TimeStepSelect } from '@/components/time-step-select';
 import { MetricStrip } from '@/components/ui-kit';
 import { useUiMode } from '@/components/ui-mode-provider';
 import { api } from '@/lib/api';
@@ -215,12 +216,9 @@ function PlanItemCard({
       ) : editingTime ? (
         <>
       <div className="mt-3 grid gap-2 rounded-xl border border-[var(--focus-border-soft,var(--line))] bg-[var(--focus-surface-secondary,var(--background))] p-2 sm:grid-cols-[1fr_1fr_auto_auto]">
-        <input
-          type="time"
-          step={300}
-          className="h-9 rounded-md border border-[var(--line)] bg-transparent px-2 text-sm"
+        <TimeStepSelect
           value={time}
-          onChange={(event) => setTime(event.target.value)}
+          onChange={setTime}
         />
         <select
           className="h-9 rounded-md border border-[var(--line)] bg-transparent px-2 text-sm"
