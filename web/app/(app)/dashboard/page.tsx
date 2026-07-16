@@ -12,6 +12,7 @@ import {
   Plus,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { Page } from '@/components/page';
 import { TaskCard } from '@/components/task-card';
 import { TaskForm } from '@/components/task-form';
@@ -19,14 +20,102 @@ import { useUiMode } from '@/components/ui-mode-provider';
 import { api } from '@/lib/api';
 import { ActivityEvent, Project } from '@/lib/types';
 
+type GreetingPeriod = 'morning' | 'day' | 'evening' | 'night';
+
+interface DashboardGreeting {
+  title: string;
+  description: string;
+}
+
+const defaultGreeting: DashboardGreeting = {
+  title: 'Доброе утро, Вадим 👋',
+  description: 'Фокус на сегодня: задачи, риски, проекты и последние изменения.',
+};
+
+const greetings: Record<GreetingPeriod, DashboardGreeting[]> = {
+  morning: [
+    {
+      title: 'Доброе утро, Вадим ☕',
+      description: 'Пора делать вид, что мы всё контролируем. Спойлер: почти получается.',
+    },
+    {
+      title: 'Утро доброе. Задачи уже проснулись',
+      description: 'К сожалению, они не умеют спать до обеда. Зато мы умеем их закрывать.',
+    },
+    {
+      title: 'Доброе утро 👋 Сегодня победим хаос красиво',
+      description: 'Начнём с пары важных задач, а дальше будем импровизировать с достоинством.',
+    },
+    {
+      title: 'Утро началось, Вадим',
+      description: 'Главное — не открывать список задач без кофе и моральной подготовки.',
+    },
+  ],
+  day: [
+    {
+      title: 'Добрый день, Вадим',
+      description: 'Рабочий режим включён, отступать уже поздно. И это даже немного бодрит.',
+    },
+    {
+      title: 'День в разгаре. Геройствовать можно начинать',
+      description: 'Закроем хотя бы пару задач — и сделаем вид, что так и было запланировано.',
+    },
+    {
+      title: 'Добрый день ☀️ Задачи смотрят на нас',
+      description: 'Мы смотрим в ответ. У кого первого дрогнет дедлайн?',
+    },
+    {
+      title: 'Полдень пережили — уже достижение',
+      description: 'Теперь аккуратно добираем важное и не кормим хаос новыми задачами без причины.',
+    },
+  ],
+  evening: [
+    {
+      title: 'Добрый вечер, Вадим',
+      description: 'Сейчас бы закрыть хвосты, а не торжественно открыть новые. Но кто мы такие, чтобы судить.',
+    },
+    {
+      title: 'Вечер пришёл. Задачи делают вид, что они “на 5 минут”',
+      description: 'Держим оборону: только важное, только без героизма на пустом месте.',
+    },
+    {
+      title: 'Добрый вечер 🌙 Система делает вид, что рабочий день ещё идёт',
+      description: 'Можно спокойно добить пару дел и красиво выйти из режима “ну ещё чуть-чуть”.',
+    },
+    {
+      title: 'Вечерний режим: спокойно, без паники',
+      description: 'Но с лёгким чувством вины — оно, говорят, повышает конверсию в завершённые задачи.',
+    },
+  ],
+  night: [
+    {
+      title: 'Опять работаешь по ночам?.. Трудоголик detected',
+      description: 'Ладно, раз уж мы здесь — делаем быстро и без сомнительных продуктовых решений.',
+    },
+    {
+      title: 'Ночь на дворе, Вадим',
+      description: 'Задачи подождут. Хотя мы оба знаем, что ты сейчас проверишь ещё одну.',
+    },
+    {
+      title: 'Доброй ночи… или это стратегическая сессия в тишине?',
+      description: 'План такой: минимум хаоса, максимум пользы, потом всё-таки спать.',
+    },
+    {
+      title: 'Ночной режим включён 🌚',
+      description: 'Сейчас особенно легко придумать задачу, которая утром спросит: “зачем я?”.',
+    },
+  ],
+};
+
 export default function DashboardPage() {
   const { interfaceMode } = useUiMode();
   const isFocus = interfaceMode === 'focus';
+  const greeting = useDashboardGreeting();
   const dashboard = useQuery({ queryKey: ['dashboard'], queryFn: api.dashboard });
 
   if (!isFocus) {
     return (
-      <Page title="Доброе утро, Вадим" description="Главное на сегодня и ближайшие дни.">
+      <Page title={greeting.title} description={greeting.description}>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard icon={<CalendarDays size={20} />} label="Сегодня" value={dashboard.data?.summary.today ?? 0} href="/today" />
           <MetricCard icon={<AlertCircle size={20} />} label="Просрочено" value={dashboard.data?.summary.overdue ?? 0} href="/today" danger />
@@ -45,7 +134,7 @@ export default function DashboardPage() {
   const projects = dashboard.data?.activeProjects ?? [];
 
   return (
-    <Page title="Доброе утро, Вадим 👋" description="Фокус на сегодня: задачи, риски, проекты и последние изменения.">
+    <Page title={greeting.title} description={greeting.description}>
       <section className="mb-5 rounded-3xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-4 shadow-sm">
         <div className="flex items-center gap-3 rounded-2xl border border-[var(--focus-border-soft)] bg-[var(--focus-surface-secondary)] px-4 py-3">
           <Plus size={18} className="text-[var(--focus-primary)]" />
@@ -112,6 +201,43 @@ export default function DashboardPage() {
       </div>
     </Page>
   );
+}
+
+function useDashboardGreeting() {
+  const [greeting, setGreeting] = useState<DashboardGreeting>(defaultGreeting);
+
+  useEffect(() => {
+    setGreeting(selectDashboardGreeting(new Date()));
+  }, []);
+
+  return greeting;
+}
+
+function selectDashboardGreeting(now: Date): DashboardGreeting {
+  const period = getGreetingPeriod(now.getHours());
+  const storageKey = `dashboard-greeting:${now.toISOString().slice(0, 10)}:${period}`;
+  const variants = greetings[period];
+
+  try {
+    const savedIndex = window.sessionStorage.getItem(storageKey);
+    if (savedIndex !== null) {
+      const index = Number(savedIndex);
+      if (Number.isInteger(index) && variants[index]) return variants[index];
+    }
+
+    const index = Math.floor(Math.random() * variants.length);
+    window.sessionStorage.setItem(storageKey, String(index));
+    return variants[index];
+  } catch {
+    return variants[0] ?? defaultGreeting;
+  }
+}
+
+function getGreetingPeriod(hour: number): GreetingPeriod {
+  if (hour >= 5 && hour < 12) return 'morning';
+  if (hour >= 12 && hour < 18) return 'day';
+  if (hour >= 18 && hour < 23) return 'evening';
+  return 'night';
 }
 
 function MetricCard({
