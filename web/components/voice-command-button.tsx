@@ -274,7 +274,7 @@ export function VoiceCommandButton({ variant = 'floating' }: { variant?: 'floati
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4">
+        <div className="fixed inset-0 z-[10030] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4">
           <section className="max-h-[92vh] w-full overflow-auto rounded-t-2xl border border-[var(--line)] bg-[var(--background)] p-5 shadow-2xl sm:max-w-xl sm:rounded-2xl">
             <div className="flex items-start justify-between gap-3">
               <div>

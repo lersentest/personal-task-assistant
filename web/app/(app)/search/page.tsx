@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { Archive, CheckSquare, FolderKanban, Search, Users } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DelegatedTaskModalLink } from '@/components/delegated-task-detail-modal';
 import { FileModalLink } from '@/components/file-detail-modal';
 import { Page } from '@/components/page';
@@ -18,8 +18,21 @@ function matches(parts: Array<string | null | undefined>, query: string) {
 
 export default function SearchPage() {
   const [query, setQuery] = useState('');
-  const search = useQuery({ queryKey: ['search'], queryFn: () => api.search() });
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const normalized = query.trim().toLowerCase();
+  const apiQuery = debouncedQuery ? `?q=${encodeURIComponent(debouncedQuery)}` : '';
+  const search = useQuery({
+    queryKey: ['search', debouncedQuery],
+    queryFn: () => api.search(apiQuery),
+    staleTime: 30_000,
+  });
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setDebouncedQuery(normalized);
+    }, 250);
+    return () => window.clearTimeout(handle);
+  }, [normalized]);
 
   const filteredTasks = useMemo(
     () =>

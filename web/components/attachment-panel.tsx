@@ -231,7 +231,7 @@ export function AttachmentPanel({
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-stretch justify-center bg-black/70 p-0 sm:items-center sm:p-6"
+          className="fixed inset-0 z-[10030] flex items-stretch justify-center bg-black/70 p-0 sm:items-center sm:p-6"
           onClick={closePreview}
         >
           <div

@@ -143,11 +143,11 @@ export function EntityDrawer({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[10000] bg-slate-950/45 backdrop-blur-sm"
+      className="fixed inset-0 z-[10000] flex items-stretch justify-center bg-slate-950/45 p-0 backdrop-blur-sm sm:items-center sm:p-6"
       onMouseDown={onClose}
     >
       <aside
-        className={`ml-auto flex h-full w-full ${width} flex-col overflow-hidden border-l border-[var(--focus-border,var(--line))] bg-[var(--focus-surface,var(--panel))] text-[var(--foreground)] shadow-2xl transition sm:rounded-l-[2rem]`}
+        className={`flex h-full w-full ${width} flex-col overflow-hidden border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface,var(--panel))] text-[var(--foreground)] shadow-2xl transition sm:h-auto sm:max-h-[92vh] sm:rounded-3xl`}
         onMouseDown={(event) => event.stopPropagation()}
       >
         <header className="flex items-start justify-between gap-4 border-b border-[var(--focus-border-soft,var(--line))] p-4 sm:p-6">

@@ -147,21 +147,26 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
   const [createModal, setCreateModal] = useState<CreateEntityState | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [selectedDelegatedTaskId, setSelectedDelegatedTaskId] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<Attachment | null>(null);
 
-  const globalSearch = useQuery({
-    queryKey: ['global-search'],
-    queryFn: () => api.search(),
-    enabled: paletteOpen,
-    staleTime: 30_000,
-  });
-
   const searchQuery = commandQuery.trim().toLowerCase();
   const hasSearchQuery = searchQuery.length >= 2;
+  const searchQueryParam = useMemo(
+    () => (debouncedSearchQuery ? `?q=${encodeURIComponent(debouncedSearchQuery)}` : ''),
+    [debouncedSearchQuery],
+  );
+
+  const globalSearch = useQuery({
+    queryKey: ['global-search', debouncedSearchQuery],
+    queryFn: () => api.search(searchQueryParam),
+    enabled: paletteOpen && debouncedSearchQuery.length >= 2,
+    staleTime: 30_000,
+  });
 
   const filteredCommands = useMemo(() => {
     const value = searchQuery;
@@ -213,6 +218,19 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
 
   const resultCount =
     taskResults.length + delegatedTaskResults.length + projectResults.length + fileResults.length;
+  const searchPending =
+    hasSearchQuery && (debouncedSearchQuery !== searchQuery || globalSearch.isFetching);
+
+  useEffect(() => {
+    if (!paletteOpen || searchQuery.length < 2) {
+      setDebouncedSearchQuery('');
+      return;
+    }
+    const handle = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 250);
+    return () => window.clearTimeout(handle);
+  }, [paletteOpen, searchQuery]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -667,7 +685,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-start justify-center bg-slate-950/45 p-4 pt-[12vh] backdrop-blur-sm"
+          className="fixed inset-0 z-[10030] flex items-start justify-center bg-slate-950/45 p-4 pt-[12vh] backdrop-blur-sm"
           onClick={() => setPaletteOpen(false)}
         >
           <div
@@ -688,7 +706,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
             <div className="max-h-[420px] overflow-y-auto p-2">
               {hasSearchQuery ? (
                 <div className="mb-2 grid gap-2">
-                  {globalSearch.isLoading ? (
+                  {searchPending ? (
                     <p className="rounded-2xl bg-[var(--focus-surface-secondary)] px-3 py-4 text-sm text-[var(--focus-text-muted)]">
                       Ищу по задачам, проектам и файлам...
                     </p>
@@ -800,7 +818,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
                     </section>
                   ) : null}
 
-                  {!globalSearch.isLoading && resultCount === 0 ? (
+                  {!searchPending && resultCount === 0 ? (
                     <p className="rounded-2xl bg-[var(--focus-surface-secondary)] px-3 py-5 text-center text-sm text-[var(--focus-text-muted)]">
                       По задачам, проектам и файлам ничего не найдено.
                     </p>
