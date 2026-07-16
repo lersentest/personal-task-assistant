@@ -14,13 +14,17 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import { TaskModalLink } from '@/components/task-detail-modal';
 import { TimeStepSelect } from '@/components/time-step-select';
-import { MetricStrip } from '@/components/ui-kit';
+import { MetricStrip, PriorityBadge } from '@/components/ui-kit';
 import { useUiMode } from '@/components/ui-mode-provider';
 import { api } from '@/lib/api';
-import { dueModeLabel, formatDueDate, priorityLabel, statusLabel, taskKindLabel } from '@/lib/labels';
+import { formatDueDate, taskKindLabel } from '@/lib/labels';
 import { DailyPlanItem, MyDayData, Task, TaskPriority } from '@/lib/types';
 
 const durationOptions = [15, 30, 45, 60, 90, 120, 180, 240];
+const timelineStartHour = 7;
+const timelineEndHour = 20;
+const timelineHourHeight = 72;
+const timelineStepMinutes = 15;
 
 function todayLocalDate() {
   const date = new Date();
@@ -50,12 +54,6 @@ function formatTime(value: string | null) {
   });
 }
 
-function hourSlot(value: string | null) {
-  if (!value) return '';
-  const date = new Date(value);
-  return `${String(date.getHours()).padStart(2, '0')}:00`;
-}
-
 function dateTimeFor(date: string, time: string) {
   return new Date(`${date}T${time}:00`).toISOString();
 }
@@ -64,15 +62,58 @@ function addMinutes(dateIso: string, minutes: number) {
   return new Date(new Date(dateIso).getTime() + minutes * 60_000).toISOString();
 }
 
-function taskMeta(task: Task) {
-  return [
-    taskKindLabel[task.kind ?? 'TASK'],
-    dueModeLabel(task.dueDateType),
-    priorityLabel[task.priority],
-    statusLabel[task.status],
-    task.estimatedDurationMinutes ? formatMinutes(task.estimatedDurationMinutes) : 'без оценки',
-    task.project?.name ?? 'без проекта',
-  ];
+function minutesOfDay(value: string | null) {
+  if (!value) return 0;
+  const date = new Date(value);
+  return date.getHours() * 60 + date.getMinutes();
+}
+
+function roundToStep(minutes: number, step = timelineStepMinutes) {
+  return Math.max(
+    timelineStartHour * 60,
+    Math.min((timelineEndHour * 60) - step, Math.round(minutes / step) * step),
+  );
+}
+
+function timeFromMinutes(minutes: number) {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return `${String(hours).padStart(2, '0')}:${String(rest).padStart(2, '0')}`;
+}
+
+function taskKindTone(kind: Task['kind']) {
+  if (kind === 'CALL') return 'bg-sky-50 text-sky-700 dark:bg-sky-950/35 dark:text-sky-200';
+  if (kind === 'MEETING') return 'bg-purple-50 text-purple-700 dark:bg-purple-950/35 dark:text-purple-200';
+  if (kind === 'IDEA') return 'bg-amber-50 text-amber-700 dark:bg-amber-950/35 dark:text-amber-200';
+  if (kind === 'NOTE') return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200';
+  return 'bg-blue-50 text-blue-700 dark:bg-blue-950/35 dark:text-blue-200';
+}
+
+function TaskKindBadge({ kind }: { kind: Task['kind'] }) {
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${taskKindTone(kind)}`}>
+      {taskKindLabel[kind ?? 'TASK']}
+    </span>
+  );
+}
+
+function compactTaskMeta(task: Task, duration?: number) {
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      <TaskKindBadge kind={task.kind ?? 'TASK'} />
+      <PriorityBadge priority={task.priority} />
+      {duration ? (
+        <span className="rounded-full bg-[var(--focus-surface-secondary,var(--background))] px-2.5 py-1 text-xs font-medium text-[var(--muted)]">
+          {formatMinutes(duration)}
+        </span>
+      ) : null}
+      {task.project ? (
+        <span className="rounded-full bg-[var(--focus-surface-secondary,var(--background))] px-2.5 py-1 text-xs font-medium text-[var(--muted)]">
+          {task.project.name}
+        </span>
+      ) : null}
+    </div>
+  );
 }
 
 function TaskPill({
@@ -97,12 +138,8 @@ function TaskPill({
           <TaskModalLink task={task} className={isFocus ? 'text-left text-sm font-semibold hover:text-[var(--focus-primary)]' : 'text-left font-medium hover:text-[var(--accent)]'}>
             {task.title}
           </TaskModalLink>
-          <div className={isFocus ? 'mt-2 flex flex-wrap gap-1.5 text-[11px] text-[var(--focus-text-muted)]' : 'mt-2 flex flex-wrap gap-2 text-xs text-[var(--muted)]'}>
-            <span>{formatDueDate(task.dueAt, task.dueDateType)}</span>
-            {taskMeta(task).map((item) => (
-              <span key={item} className={isFocus ? 'rounded-full bg-[var(--focus-surface-secondary)] px-2 py-0.5' : ''}>{item}</span>
-            ))}
-          </div>
+          <div className="mt-1 text-xs text-[var(--muted)]">{formatDueDate(task.dueAt, task.dueDateType)}</div>
+          {compactTaskMeta(task, task.estimatedDurationMinutes ?? undefined)}
         </div>
         {action ? (
           <button
@@ -126,6 +163,7 @@ function PlanItemCard({
   onSchedule,
   onDuration,
   compact = false,
+  timeline = false,
 }: {
   item: DailyPlanItem;
   date: string;
@@ -135,6 +173,7 @@ function PlanItemCard({
   onSchedule: (start: string, duration: number) => void;
   onDuration: (duration: number) => void;
   compact?: boolean;
+  timeline?: boolean;
 }) {
   const { interfaceMode } = useUiMode();
   const isFocus = interfaceMode === 'focus';
@@ -151,16 +190,16 @@ function PlanItemCard({
     <article
       draggable
       onDragStart={(event) => event.dataTransfer.setData('text/plain', `item:${item.id}`)}
-      className={`group min-w-0 overflow-hidden border ${
+      className={`group min-w-0 overflow-hidden border ${timeline ? 'h-full' : ''} ${
         isFocus
-          ? `rounded-xl px-3 py-2.5 shadow-none ${
+          ? `rounded-xl ${timeline ? 'px-3 py-2' : 'px-3 py-2.5'} shadow-none ${
               done
                 ? 'border-emerald-200 bg-emerald-50 text-emerald-950 dark:bg-emerald-950/25 dark:text-emerald-100'
                 : item.scheduledStartAt
                   ? 'border-blue-200 bg-blue-50 dark:bg-blue-950/25'
                   : 'border-[var(--focus-border-soft)] bg-[var(--focus-surface)]'
             }`
-          : `rounded-lg p-3 shadow-sm ${
+          : `rounded-lg ${timeline ? 'p-2' : 'p-3'} shadow-sm ${
               done
                 ? 'border-emerald-300 bg-emerald-50 text-emerald-950 dark:bg-emerald-950/25 dark:text-emerald-100'
                 : item.scheduledStartAt
@@ -181,13 +220,10 @@ function PlanItemCard({
                 {formatTime(item.scheduledStartAt)}–{formatTime(item.scheduledEndAt)}
               </span>
             ) : (
-              <span>гибкая задача</span>
+              <span>Без времени</span>
             )}
-            <span>{priorityLabel[item.task.priority]}</span>
-            <span>{taskKindLabel[item.task.kind ?? 'TASK']}</span>
-            <span>{formatMinutes(duration)}</span>
-            {item.task.project ? <span>{item.task.project.name}</span> : null}
           </div>
+          {!timeline || duration >= 30 ? compactTaskMeta(item.task, duration) : null}
         </div>
         <div className="flex shrink-0 gap-1">
           {!done ? (
@@ -207,18 +243,13 @@ function PlanItemCard({
           </button>
         </div>
       </div>
-      {compact && !editingTime ? (
-        <div className="mt-3 grid gap-2">
-          <p className="text-xs text-[var(--muted)]">
-            Нажми «Время», чтобы назначить или изменить слот.
-          </p>
-        </div>
-      ) : editingTime ? (
+      {editingTime ? (
         <>
       <div className="mt-3 grid gap-2 rounded-xl border border-[var(--focus-border-soft,var(--line))] bg-[var(--focus-surface-secondary,var(--background))] p-2 sm:grid-cols-[1fr_1fr_auto_auto]">
         <TimeStepSelect
           value={time}
           onChange={setTime}
+          minuteStep={15}
         />
         <select
           className="h-9 rounded-md border border-[var(--line)] bg-transparent px-2 text-sm"
@@ -248,12 +279,163 @@ function PlanItemCard({
         </button>
       </div>
         </>
-      ) : (
-        <p className="mt-2 text-xs text-[var(--muted)]">
-          Нажми «Время», чтобы изменить слот. Drag-and-drop тоже работает.
-        </p>
-      )}
+      ) : null}
     </article>
+  );
+}
+
+type TimelineLayout = {
+  item: DailyPlanItem;
+  top: number;
+  height: number;
+  left: number;
+  width: number;
+};
+
+function buildTimelineLayout(items: DailyPlanItem[]): TimelineLayout[] {
+  const positioned = items
+    .filter((item) => item.scheduledStartAt && item.scheduledEndAt)
+    .map((item) => {
+      const start = Math.max(minutesOfDay(item.scheduledStartAt), timelineStartHour * 60);
+      const end = Math.min(minutesOfDay(item.scheduledEndAt), timelineEndHour * 60);
+      return { item, start, end: Math.max(end, start + 15) };
+    })
+    .sort((a, b) => a.start - b.start || a.end - b.end);
+
+  const result: TimelineLayout[] = [];
+  let group: typeof positioned = [];
+  let groupEnd = 0;
+
+  function flushGroup() {
+    if (!group.length) return;
+    const columnsEnd: number[] = [];
+    const assignments = group.map((entry) => {
+      const column = columnsEnd.findIndex((end) => end <= entry.start);
+      const nextColumn = column === -1 ? columnsEnd.length : column;
+      columnsEnd[nextColumn] = entry.end;
+      return { ...entry, column: nextColumn };
+    });
+    const columns = Math.max(1, columnsEnd.length);
+    assignments.forEach((entry) => {
+      result.push({
+        item: entry.item,
+        top: ((entry.start - timelineStartHour * 60) / 60) * timelineHourHeight,
+        height: Math.max(44, ((entry.end - entry.start) / 60) * timelineHourHeight),
+        left: (entry.column / columns) * 100,
+        width: 100 / columns,
+      });
+    });
+    group = [];
+    groupEnd = 0;
+  }
+
+  positioned.forEach((entry) => {
+    if (!group.length || entry.start < groupEnd) {
+      group.push(entry);
+      groupEnd = Math.max(groupEnd, entry.end);
+    } else {
+      flushGroup();
+      group.push(entry);
+      groupEnd = entry.end;
+    }
+  });
+  flushGroup();
+  return result;
+}
+
+function TimelineBoard({
+  items,
+  date,
+  onComplete,
+  onRemove,
+  onUnschedule,
+  onSchedule,
+  onDuration,
+  onDropAt,
+}: {
+  items: DailyPlanItem[];
+  date: string;
+  onComplete: (id: string) => void;
+  onRemove: (id: string) => void;
+  onUnschedule: (id: string) => void;
+  onSchedule: (item: DailyPlanItem, time: string, duration: number) => void;
+  onDuration: (item: DailyPlanItem, duration: number) => void;
+  onDropAt: (event: React.DragEvent, time: string) => void;
+}) {
+  const layout = buildTimelineLayout(items);
+  const totalHeight = (timelineEndHour - timelineStartHour) * timelineHourHeight;
+  const hours = Array.from(
+    { length: timelineEndHour - timelineStartHour + 1 },
+    (_, index) => timelineStartHour + index,
+  );
+
+  function handleDrop(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const rect = event.currentTarget.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+    const minutes = roundToStep(timelineStartHour * 60 + ratio * (timelineEndHour - timelineStartHour) * 60);
+    onDropAt(event, timeFromMinutes(minutes));
+  }
+
+  return (
+    <div className="rounded-2xl border border-[var(--focus-border-soft,var(--line))] bg-[var(--background)]/35 p-3">
+      <div className="relative" style={{ height: totalHeight }}>
+        {hours.map((hour) => {
+          const top = ((hour - timelineStartHour) * timelineHourHeight);
+          return (
+            <div key={hour} className="absolute left-0 right-0" style={{ top }}>
+              <div className="grid grid-cols-[54px_1fr] gap-3">
+                <div className="-translate-y-2 text-xs font-medium text-[var(--muted)]">
+                  {String(hour).padStart(2, '0')}:00
+                </div>
+                <div className="border-t border-[var(--focus-border-soft,var(--line))]" />
+              </div>
+            </div>
+          );
+        })}
+        <div
+          className="absolute bottom-0 left-[66px] right-0 top-0"
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={handleDrop}
+        >
+          {Array.from({ length: (timelineEndHour - timelineStartHour) * 4 }, (_, index) => (
+            <div
+              key={index}
+              className="absolute left-0 right-0 border-t border-dashed border-[var(--focus-border-soft,var(--line))]/60"
+              style={{ top: (index * timelineHourHeight) / 4 }}
+            />
+          ))}
+          {layout.map(({ item, top, height, left, width }) => (
+            <div
+              key={item.id}
+              className="absolute pr-1"
+              style={{
+                top,
+                height,
+                left: `${left}%`,
+                width: `${width}%`,
+              }}
+            >
+              <PlanItemCard
+                item={item}
+                date={date}
+                onComplete={() => onComplete(item.id)}
+                onRemove={() => onRemove(item.id)}
+                onUnschedule={() => onUnschedule(item.id)}
+                onSchedule={(start, duration) => onSchedule(item, start, duration)}
+                onDuration={(duration) => onDuration(item, duration)}
+                timeline
+              />
+            </div>
+          ))}
+          {!layout.length ? (
+            <div className="absolute inset-x-0 top-8 rounded-2xl border border-dashed border-[var(--line)] p-4 text-sm text-[var(--muted)]">
+              Перетащи задачу на сетку — время округлится до ближайших 15 минут.
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -557,14 +739,6 @@ export default function MyDayPage() {
   const incompleteItems = planItems.filter(
     (item) => item.task.status !== 'COMPLETED' && !item.completedInPlanAt,
   );
-  const timelineSlots = useMemo(() => {
-    const slots: string[] = [];
-    for (let hour = 7; hour < 20; hour += 1) {
-      slots.push(`${String(hour).padStart(2, '0')}:00`);
-    }
-    return slots;
-  }, []);
-
   function addTaskToDay(taskId: string) {
     addItem.mutate({ taskId, date });
   }
@@ -704,7 +878,7 @@ export default function MyDayPage() {
         ))}
       </div>
 
-      <div className={isFocus ? 'grid gap-4 lg:grid-cols-[minmax(620px,1fr)_minmax(270px,330px)]' : 'grid gap-4 lg:grid-cols-[minmax(420px,1fr)_minmax(280px,380px)]'}>
+      <div className={isFocus ? 'grid gap-4 lg:grid-cols-[320px_minmax(520px,1fr)_320px]' : 'grid gap-4 lg:grid-cols-[340px_minmax(560px,1fr)_340px]'}>
         <section className={`${mobileTab === 'plan' ? 'block' : 'hidden'} lg:block`}>
           <Panel title="Обязательно сегодня">
             {day.data?.unresolvedPreviousDays.length ? (
@@ -740,60 +914,35 @@ export default function MyDayPage() {
           </Panel>
         </section>
 
-        <section className={`${mobileTab === 'schedule' ? 'block' : 'hidden'} lg:block lg:col-start-1`}>
+        <section className={`${mobileTab === 'schedule' ? 'block' : 'hidden'} lg:block lg:col-start-2 lg:row-start-1`}>
           <Panel title="План дня и временная шкала">
             <div
               onDragOver={(event) => event.preventDefault()}
               onDrop={handleDropOnPlan}
-              className="mb-4 rounded-lg border border-dashed border-[var(--line)] p-3 text-sm text-[var(--muted)]"
+              className="mb-4 rounded-2xl border border-dashed border-[var(--line)] p-3 text-sm text-[var(--muted)]"
             >
               Перетащи сюда задачу, чтобы добавить её в день без времени.
             </div>
 
-            <div className="grid gap-2">
-              {timelineSlots.map((time) => {
-                const slotItems = scheduledItems.filter((item) => hourSlot(item.scheduledStartAt) === time);
-                return (
-                  <div
-                    key={time}
-                    onDragOver={(event) => event.preventDefault()}
-                    onDrop={(event) => handleDropOnSlot(event, time)}
-                    className={isFocus ? 'grid min-h-14 grid-cols-[64px_1fr] gap-3 border-b border-[var(--focus-border-soft)] py-2' : 'grid min-h-16 grid-cols-[64px_1fr] gap-3 rounded-lg border border-[var(--line)] bg-[var(--background)] p-2'}
-                  >
-                    <div className="pt-2 text-xs font-medium text-[var(--muted)]">{time}</div>
-                    <div className="grid gap-2">
-                      {slotItems.length ? (
-                        slotItems.map((item) => (
-                          <PlanItemCard
-                            key={item.id}
-                            item={item}
-                            date={date}
-                            onComplete={() => completeItem.mutate(item.id)}
-                            onRemove={() => removeItem.mutate(item.id)}
-                            onUnschedule={() => unscheduleItem.mutate(item.id)}
-                            onSchedule={(start, duration) => scheduleExistingItem(item, start, duration)}
-                            onDuration={(duration) =>
-                              updateItem.mutate({
-                                id: item.id,
-                                input: { estimatedDurationMinutes: duration },
-                              })
-                            }
-                          />
-                        ))
-                      ) : (
-                        <div className="my-day-free-slot rounded-md border border-dashed border-[var(--line)] p-3 text-xs text-[var(--muted)]">
-                          {isFocus ? '' : 'Свободный слот'}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <TimelineBoard
+              items={scheduledItems}
+              date={date}
+              onComplete={(id) => completeItem.mutate(id)}
+              onRemove={(id) => removeItem.mutate(id)}
+              onUnschedule={(id) => unscheduleItem.mutate(id)}
+              onSchedule={scheduleExistingItem}
+              onDuration={(item, duration) =>
+                updateItem.mutate({
+                  id: item.id,
+                  input: { estimatedDurationMinutes: duration },
+                })
+              }
+              onDropAt={handleDropOnSlot}
+            />
           </Panel>
         </section>
 
-        <section className={`${mobileTab === 'add' ? 'block' : 'hidden'} lg:row-span-2 lg:block lg:col-start-2 lg:row-start-1`}>
+        <section className={`${mobileTab === 'add' ? 'block' : 'hidden'} lg:block lg:col-start-3 lg:row-start-1`}>
           <Panel title="Можно добавить">
             <div className="mb-3 grid gap-2">
               <label className="flex items-center gap-2 rounded-lg border border-[var(--line)] px-3">

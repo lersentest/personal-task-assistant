@@ -1,22 +1,31 @@
 'use client';
 
 const hours = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, '0'));
-const minutes = Array.from({ length: 12 }, (_, index) => String(index * 5).padStart(2, '0'));
-
 export function TimeStepSelect({
   value,
   onChange,
   allowEmpty = false,
+  minuteStep = 5,
   className = '',
 }: {
   value: string;
   onChange: (value: string) => void;
   allowEmpty?: boolean;
+  minuteStep?: 5 | 15;
   className?: string;
 }) {
+  const minutes = Array.from({ length: 60 / minuteStep }, (_, index) =>
+    String(index * minuteStep).padStart(2, '0'),
+  );
   const [rawHour, rawMinute] = value.split(':');
   const hour = rawHour || (allowEmpty ? '' : '09');
-  const minute = minutes.includes(rawMinute) ? rawMinute : '00';
+  const parsedMinute = Number(rawMinute);
+  const roundedMinute = Number.isFinite(parsedMinute)
+    ? Math.min(60 - minuteStep, Math.round(parsedMinute / minuteStep) * minuteStep)
+    : 0;
+  const minute = minutes.includes(rawMinute)
+    ? rawMinute
+    : String(roundedMinute).padStart(2, '0');
 
   return (
     <div className={`grid grid-cols-2 gap-2 ${className}`}>
