@@ -183,35 +183,19 @@ function PlanItemCard({
             {item.task.project ? <span>{item.task.project.name}</span> : null}
           </div>
         </div>
-        <div className="flex gap-1">
+        <div className="flex shrink-0 gap-1">
           {!done ? (
-            <button onClick={onComplete} className="rounded-md p-2 hover:bg-[var(--background)]" title="Выполнить">
-              <CheckCircle2 size={17} />
+            <button onClick={onComplete} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-transparent text-emerald-600 transition hover:border-emerald-200 hover:bg-emerald-50 active:scale-95" title="Выполнить" aria-label="Выполнить">
+              <CheckCircle2 size={18} />
             </button>
           ) : null}
-          <button onClick={onRemove} className="rounded-md p-2 hover:bg-[var(--background)]" title="Убрать из дня">
-            <Trash2 size={17} />
+          <button onClick={onRemove} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-transparent text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 active:scale-95" title="Убрать из дня" aria-label="Убрать из дня">
+            <Trash2 size={18} />
           </button>
         </div>
       </div>
       {compact ? (
         <div className="mt-3 grid gap-2">
-          <div className="flex flex-wrap gap-2">
-            {!done ? (
-              <button
-                onClick={onComplete}
-                className="rounded-md border border-[var(--line)] px-3 py-2 text-sm hover:bg-[var(--background)]"
-              >
-                Выполнить
-              </button>
-            ) : null}
-            <button
-              onClick={onRemove}
-              className="rounded-md border border-[var(--line)] px-3 py-2 text-sm hover:bg-[var(--background)]"
-            >
-              Убрать
-            </button>
-          </div>
           <p className="text-xs text-[var(--muted)]">
             Чтобы назначить время, перетащи задачу на слот в центральной шкале.
           </p>

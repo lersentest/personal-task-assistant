@@ -135,7 +135,7 @@ export function AttachmentPanel({
   }
 
   return (
-    <section className="rounded-3xl border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface,var(--panel))] p-5 shadow-sm">
+    <section className="min-w-0 overflow-hidden rounded-3xl border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface,var(--panel))] p-5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-semibold">{title}</h2>
@@ -167,38 +167,38 @@ export function AttachmentPanel({
       <div className="mt-4">
         {attachments.data?.length ? (
           <>
-            <div className="hidden overflow-x-auto md:block">
-              <table className="focus-table w-full text-sm">
+            <div className="hidden min-w-0 overflow-hidden md:block">
+              <table className="focus-table w-full table-fixed text-sm">
                 <thead>
                   <tr>
-                    <th className="p-3">Имя</th>
-                    <th className="p-3">Связь</th>
-                    <th className="p-3">Тип</th>
-                    <th className="p-3">Размер</th>
-                    <th className="p-3">Дата</th>
-                    <th className="p-3 text-right">Действия</th>
+                    <th className="w-[28%] p-3">Имя</th>
+                    <th className="w-[18%] p-3">Связь</th>
+                    <th className="w-[12%] p-3">Тип</th>
+                    <th className="w-[10%] p-3">Размер</th>
+                    <th className="w-[10%] p-3">Дата</th>
+                    <th className="w-[22%] p-3 text-right">Действия</th>
                   </tr>
                 </thead>
                 <tbody>
                   {attachments.data.map((attachment) => (
                     <tr key={attachment.id} className="task-row">
-                      <td className="min-w-[240px] p-3">
-                        <FileModalLink attachment={attachment} className="inline-flex items-center gap-2 text-left font-semibold hover:text-[var(--accent)]">
-                          <FileText size={16} className="text-[var(--accent)]" />
-                          {attachment.fileName}
+                      <td className="min-w-0 p-3">
+                        <FileModalLink attachment={attachment} className="flex min-w-0 items-center gap-2 text-left font-semibold hover:text-[var(--accent)]">
+                          <FileText size={16} className="shrink-0 text-[var(--accent)]" />
+                          <span className="truncate">{attachment.fileName}</span>
                         </FileModalLink>
                       </td>
-                      <td className="p-3 text-[var(--muted)]">
-                        {attachment.task?.title ?? attachment.delegatedTask?.title ?? attachment.project?.name ?? 'Без связи'}
+                      <td className="min-w-0 p-3 text-[var(--muted)]">
+                        <span className="block truncate">{attachment.task?.title ?? attachment.delegatedTask?.title ?? attachment.project?.name ?? 'Без связи'}</span>
                       </td>
-                      <td className="p-3 text-[var(--muted)]">{attachment.mimeType}</td>
+                      <td className="min-w-0 p-3 text-[var(--muted)]"><span className="block truncate">{attachment.mimeType}</span></td>
                       <td className="whitespace-nowrap p-3 text-[var(--muted)]">{formatSize(attachment.sizeBytes)}</td>
                       <td className="whitespace-nowrap p-3 text-[var(--muted)]">{new Date(attachment.createdAt).toLocaleDateString('ru-RU')}</td>
                       <td className="p-3">
-                        <div className="flex justify-end gap-2">
-                          <FileModalLink attachment={attachment} className="btn-base btn-secondary min-h-0 px-3 py-1">Просмотр</FileModalLink>
-                          <button onClick={() => downloadAttachment(attachment)} className="btn-base btn-secondary min-h-0 px-3 py-1">Скачать</button>
-                          <button onClick={() => remove.mutate(attachment.id)} className="btn-base btn-danger min-h-0 px-3 py-1">Удалить</button>
+                        <div className="flex justify-end gap-1">
+                          <FileModalLink attachment={attachment} className="btn-base btn-secondary min-h-0 px-2 py-1">Просмотр</FileModalLink>
+                          <button onClick={() => downloadAttachment(attachment)} className="btn-base btn-secondary min-h-0 px-2 py-1">Скачать</button>
+                          <button onClick={() => remove.mutate(attachment.id)} className="btn-base btn-danger min-h-0 px-2 py-1">Удалить</button>
                         </div>
                       </td>
                     </tr>

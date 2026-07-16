@@ -8,6 +8,7 @@ import {
   ExternalLink,
   FolderKanban,
   Pencil,
+  RotateCcw,
   Tag,
   Trash2,
   X,
@@ -82,6 +83,13 @@ export function TaskDetailsModal({
 
   const complete = useMutation({
     mutationFn: () => api.completeTask(taskId),
+    onSuccess: () => {
+      void invalidateTaskCaches(queryClient, taskId);
+    },
+  });
+
+  const reopen = useMutation({
+    mutationFn: () => api.updateTask(taskId, { status: 'IN_PROGRESS' }),
     onSuccess: () => {
       void invalidateTaskCaches(queryClient, taskId);
     },
@@ -171,8 +179,8 @@ export function TaskDetailsModal({
           ) : null}
 
           {data && !editing ? (
-            <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
-              <section className="grid gap-5">
+            <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+              <section className="grid min-w-0 gap-5">
                 <div className="rounded-2xl border border-[var(--line)] bg-[var(--background)]/45 p-5">
                   <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
                     Описание
@@ -185,7 +193,7 @@ export function TaskDetailsModal({
                 <AttachmentPanel taskId={taskId} title="Файлы задачи" />
               </section>
 
-              <aside className="grid content-start gap-4">
+              <aside className="grid min-w-0 content-start gap-4">
                 <div className="rounded-2xl border border-[var(--line)] bg-[var(--background)]/45 p-4">
                   <h3 className="mb-3 font-semibold">Сводка</h3>
                   <div className="grid gap-2">
@@ -228,6 +236,17 @@ export function TaskDetailsModal({
                         Завершить
                       </button>
                     ) : null}
+                    {data.status === 'COMPLETED' && !data.deletedAt ? (
+                      <button
+                        type="button"
+                        onClick={() => reopen.mutate()}
+                        disabled={reopen.isPending}
+                        className="btn-base btn-secondary h-11"
+                      >
+                        <RotateCcw size={17} />
+                        Вернуть в работу
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       onClick={() => setEditing(true)}
@@ -248,9 +267,9 @@ export function TaskDetailsModal({
                       </button>
                     ) : null}
                   </div>
-                  {(complete.error || remove.error) ? (
+                  {(complete.error || reopen.error || remove.error) ? (
                     <p className="mt-3 text-sm text-red-500">
-                      {(complete.error || remove.error)?.message}
+                      {(complete.error || reopen.error || remove.error)?.message}
                     </p>
                   ) : null}
                 </div>
