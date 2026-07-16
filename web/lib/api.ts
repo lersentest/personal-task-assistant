@@ -28,8 +28,27 @@ if (!apiUrl) {
 }
 
 let cachedAccessToken: { token: string; expiresAtMs: number } | null = null;
+let authCacheSubscriptionStarted = false;
+
+function ensureAuthCacheSubscription() {
+  if (authCacheSubscriptionStarted || typeof window === 'undefined') return;
+  authCacheSubscriptionStarted = true;
+  supabase.auth.onAuthStateChange((_event, session) => {
+    if (!session?.access_token) {
+      cachedAccessToken = null;
+      return;
+    }
+    cachedAccessToken = {
+      token: session.access_token,
+      expiresAtMs: session.expires_at
+        ? session.expires_at * 1000
+        : Date.now() + 60_000,
+    };
+  });
+}
 
 async function getAccessToken() {
+  ensureAuthCacheSubscription();
   const now = Date.now();
   if (cachedAccessToken && cachedAccessToken.expiresAtMs > now + 30_000) {
     markPerformance('auth-ready', true);
