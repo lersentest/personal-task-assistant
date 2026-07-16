@@ -25,11 +25,14 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { CreateEntityModal, CreateEntityState } from '@/components/create-entity-modal';
-import { TaskKind } from '@/lib/types';
+import { TaskDetailsModal } from '@/components/task-detail-modal';
+import { api } from '@/lib/api';
+import type { Attachment, DelegatedTask, Project, Task, TaskKind } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import { useUiMode } from '../ui-mode-provider';
 import { VoiceCommandButton } from '../voice-command-button';
@@ -91,6 +94,48 @@ const commands = [
   { label: 'Открыть файлы', href: '/files', hint: 'Вложения и документы' },
 ];
 
+function matchesQuery(parts: Array<string | null | undefined>, query: string) {
+  return parts.filter(Boolean).join(' ').toLowerCase().includes(query);
+}
+
+function taskSearchParts(task: Task) {
+  return [
+    task.title,
+    task.description,
+    task.status,
+    task.priority,
+    task.kind,
+    task.project?.name,
+    ...(task.tags ?? []).map((link) => link.tag.name),
+  ];
+}
+
+function delegatedTaskSearchParts(task: DelegatedTask) {
+  return [
+    task.title,
+    task.description,
+    task.resultText,
+    task.status,
+    task.priority,
+    task.executor?.fullName,
+    task.project?.name,
+  ];
+}
+
+function projectSearchParts(project: Project) {
+  return [project.name, project.description, project.status];
+}
+
+function fileSearchParts(file: Attachment) {
+  return [
+    file.fileName,
+    file.mimeType,
+    file.task?.title,
+    file.project?.name,
+    file.delegatedTask?.title,
+  ];
+}
+
 export function FocusShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -100,14 +145,68 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+
+  const globalSearch = useQuery({
+    queryKey: ['global-search'],
+    queryFn: () => api.search(),
+    enabled: paletteOpen,
+    staleTime: 30_000,
+  });
+
+  const searchQuery = commandQuery.trim().toLowerCase();
+  const hasSearchQuery = searchQuery.length >= 2;
 
   const filteredCommands = useMemo(() => {
-    const value = commandQuery.trim().toLowerCase();
+    const value = searchQuery;
     if (!value) return commands;
     return commands.filter((command) =>
       `${command.label} ${command.hint}`.toLowerCase().includes(value),
     );
-  }, [commandQuery]);
+  }, [searchQuery]);
+
+  const taskResults = useMemo(
+    () =>
+      hasSearchQuery
+        ? (globalSearch.data?.tasks ?? [])
+            .filter((task) => matchesQuery(taskSearchParts(task), searchQuery))
+            .slice(0, 6)
+        : [],
+    [globalSearch.data?.tasks, hasSearchQuery, searchQuery],
+  );
+
+  const delegatedTaskResults = useMemo(
+    () =>
+      hasSearchQuery
+        ? (globalSearch.data?.delegatedTasks ?? [])
+            .filter((task) => matchesQuery(delegatedTaskSearchParts(task), searchQuery))
+            .slice(0, 5)
+        : [],
+    [globalSearch.data?.delegatedTasks, hasSearchQuery, searchQuery],
+  );
+
+  const projectResults = useMemo(
+    () =>
+      hasSearchQuery
+        ? (globalSearch.data?.projects ?? [])
+            .filter((project) => matchesQuery(projectSearchParts(project), searchQuery))
+            .slice(0, 4)
+        : [],
+    [globalSearch.data?.projects, hasSearchQuery, searchQuery],
+  );
+
+  const fileResults = useMemo(
+    () =>
+      hasSearchQuery
+        ? (globalSearch.data?.files ?? [])
+            .filter((file) => matchesQuery(fileSearchParts(file), searchQuery))
+            .slice(0, 4)
+        : [],
+    [globalSearch.data?.files, hasSearchQuery, searchQuery],
+  );
+
+  const resultCount =
+    taskResults.length + delegatedTaskResults.length + projectResults.length + fileResults.length;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -172,6 +271,14 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
     setMobileMenuOpen(false);
     setCommandQuery('');
     router.push(href);
+  }
+
+  function openTaskFromSearch(taskId: string) {
+    setPaletteOpen(false);
+    setCreateOpen(false);
+    setMobileMenuOpen(false);
+    setCommandQuery('');
+    setSelectedTaskId(taskId);
   }
 
   function openCreate(state: CreateEntityState) {
@@ -545,29 +652,157 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
                 value={commandQuery}
                 onChange={(event) => setCommandQuery(event.target.value)}
                 autoFocus
-                placeholder="Команда или переход..."
+                placeholder="Поиск по задачам, проектам, файлам или команда..."
                 className="h-14 flex-1 bg-transparent outline-none"
               />
               <span className="rounded-lg bg-[var(--focus-surface-secondary)] px-2 py-1 text-xs text-[var(--focus-text-muted)]">Esc</span>
             </div>
             <div className="max-h-[420px] overflow-y-auto p-2">
-              {filteredCommands.map((command) => (
-                <button
-                  key={command.href}
-                  onClick={() => command.create ? openCreate(command.create as CreateEntityState) : go(command.href)}
-                  className="flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left hover:bg-[var(--focus-primary-soft)]"
-                >
-                  <span>
-                    <span className="block font-medium">{command.label}</span>
-                    <span className="text-sm text-[var(--focus-text-muted)]">{command.hint}</span>
-                  </span>
-                  <Command size={16} className="text-[var(--focus-text-muted)]" />
-                </button>
-              ))}
-              {filteredCommands.length === 0 ? (
-                <p className="px-3 py-8 text-center text-sm text-[var(--focus-text-muted)]">
-                  Ничего не найдено. Попробуй другое слово.
+              {hasSearchQuery ? (
+                <div className="mb-2 grid gap-2">
+                  {globalSearch.isLoading ? (
+                    <p className="rounded-2xl bg-[var(--focus-surface-secondary)] px-3 py-4 text-sm text-[var(--focus-text-muted)]">
+                      Ищу по задачам, проектам и файлам...
+                    </p>
+                  ) : null}
+
+                  {globalSearch.isError ? (
+                    <p className="rounded-2xl bg-red-50 px-3 py-4 text-sm text-red-600">
+                      Не удалось загрузить результаты поиска. Попробуй ещё раз.
+                    </p>
+                  ) : null}
+
+                  {taskResults.length > 0 ? (
+                    <section>
+                      <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--focus-text-muted)]">
+                        Задачи
+                      </p>
+                      {taskResults.map((task) => (
+                        <button
+                          key={task.id}
+                          onClick={() => openTaskFromSearch(task.id)}
+                          className="flex w-full items-start gap-3 rounded-2xl px-3 py-3 text-left transition hover:bg-[var(--focus-primary-soft)]"
+                        >
+                          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--focus-primary-soft)] text-[var(--focus-primary)]">
+                            <CheckSquare size={17} />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium">{task.title}</span>
+                            <span className="mt-0.5 block truncate text-sm text-[var(--focus-text-muted)]">
+                              {task.project?.name ?? 'Без проекта'} · {task.priority} · {task.status}
+                            </span>
+                          </span>
+                        </button>
+                      ))}
+                    </section>
+                  ) : null}
+
+                  {delegatedTaskResults.length > 0 ? (
+                    <section>
+                      <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--focus-text-muted)]">
+                        Делегированные
+                      </p>
+                      {delegatedTaskResults.map((task) => (
+                        <button
+                          key={task.id}
+                          onClick={() => go('/delegated')}
+                          className="flex w-full items-start gap-3 rounded-2xl px-3 py-3 text-left transition hover:bg-[var(--focus-primary-soft)]"
+                        >
+                          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--focus-surface-secondary)] text-[var(--focus-primary)]">
+                            <Users size={17} />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium">{task.title}</span>
+                            <span className="mt-0.5 block truncate text-sm text-[var(--focus-text-muted)]">
+                              {task.executor?.fullName ?? 'Исполнитель'} · {task.project?.name ?? 'Без проекта'} · {task.status}
+                            </span>
+                          </span>
+                        </button>
+                      ))}
+                    </section>
+                  ) : null}
+
+                  {projectResults.length > 0 ? (
+                    <section>
+                      <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--focus-text-muted)]">
+                        Проекты
+                      </p>
+                      {projectResults.map((project) => (
+                        <button
+                          key={project.id}
+                          onClick={() => go(`/projects/${project.id}`)}
+                          className="flex w-full items-start gap-3 rounded-2xl px-3 py-3 text-left transition hover:bg-[var(--focus-primary-soft)]"
+                        >
+                          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--focus-surface-secondary)] text-[var(--focus-primary)]">
+                            <FolderKanban size={17} />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium">{project.name}</span>
+                            <span className="mt-0.5 block truncate text-sm text-[var(--focus-text-muted)]">
+                              {project.description ?? project.status}
+                            </span>
+                          </span>
+                        </button>
+                      ))}
+                    </section>
+                  ) : null}
+
+                  {fileResults.length > 0 ? (
+                    <section>
+                      <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--focus-text-muted)]">
+                        Файлы
+                      </p>
+                      {fileResults.map((file) => (
+                        <button
+                          key={file.id}
+                          onClick={() => go('/files')}
+                          className="flex w-full items-start gap-3 rounded-2xl px-3 py-3 text-left transition hover:bg-[var(--focus-primary-soft)]"
+                        >
+                          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--focus-surface-secondary)] text-[var(--focus-primary)]">
+                            <Archive size={17} />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium">{file.fileName}</span>
+                            <span className="mt-0.5 block truncate text-sm text-[var(--focus-text-muted)]">
+                              {file.task?.title ?? file.delegatedTask?.title ?? file.project?.name ?? file.mimeType}
+                            </span>
+                          </span>
+                        </button>
+                      ))}
+                    </section>
+                  ) : null}
+
+                  {!globalSearch.isLoading && resultCount === 0 ? (
+                    <p className="rounded-2xl bg-[var(--focus-surface-secondary)] px-3 py-5 text-center text-sm text-[var(--focus-text-muted)]">
+                      По задачам, проектам и файлам ничего не найдено.
+                    </p>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="px-3 py-3 text-sm text-[var(--focus-text-muted)]">
+                  Введите минимум 2 символа, чтобы найти задачу, проект или файл.
                 </p>
+              )}
+
+              {filteredCommands.length > 0 ? (
+                <section className={hasSearchQuery ? 'mt-3 border-t border-[var(--focus-border-soft)] pt-2' : ''}>
+                  <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--focus-text-muted)]">
+                    Быстрые команды
+                  </p>
+                  {filteredCommands.map((command) => (
+                    <button
+                      key={`${command.href}-${command.label}`}
+                      onClick={() => command.create ? openCreate(command.create as CreateEntityState) : go(command.href)}
+                      className="flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left hover:bg-[var(--focus-primary-soft)]"
+                    >
+                      <span>
+                        <span className="block font-medium">{command.label}</span>
+                        <span className="text-sm text-[var(--focus-text-muted)]">{command.hint}</span>
+                      </span>
+                      <Command size={16} className="text-[var(--focus-text-muted)]" />
+                    </button>
+                  ))}
+                </section>
               ) : null}
             </div>
             <div className="flex items-center gap-2 border-t border-[var(--focus-border-soft)] bg-[var(--focus-surface-secondary)] px-4 py-3 text-xs text-[var(--focus-text-muted)]">
@@ -582,6 +817,13 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
         state={createModal ?? { entity: 'task', kind: 'TASK' }}
         onClose={() => setCreateModal(null)}
       />
+      {selectedTaskId ? (
+        <TaskDetailsModal
+          taskId={selectedTaskId}
+          open={Boolean(selectedTaskId)}
+          onClose={() => setSelectedTaskId(null)}
+        />
+      ) : null}
     </div>
   );
 }
