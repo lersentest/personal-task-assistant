@@ -1,5 +1,5 @@
 import { CheckCircle2, Clock, FolderKanban } from 'lucide-react';
-import { formatDate, priorityLabel, statusLabel, taskKindLabel } from '@/lib/labels';
+import { formatDueDate, priorityLabel, statusLabel, taskKindLabel } from '@/lib/labels';
 import { Task } from '@/lib/types';
 import { TaskModalLink } from './task-detail-modal';
 import { useUiMode } from './ui-mode-provider';
@@ -44,7 +44,7 @@ export function TaskCard({
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--focus-text-muted)]">
               <span className="inline-flex items-center gap-1 rounded-full bg-[var(--focus-surface-secondary)] px-2 py-1">
                 <Clock size={13} />
-                {formatDate(task.dueAt)}
+                {formatDueDate(task.dueAt, task.dueDateType)}
               </span>
               <span className={`rounded-full px-2 py-1 ${priorityTone}`}>
                 {priorityLabel[task.priority]}
@@ -96,7 +96,7 @@ export function TaskCard({
             {task.title}
           </TaskModalLink>
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-[var(--muted)]">
-            <span className="inline-flex items-center gap-1"><Clock size={13} />{formatDate(task.dueAt)}</span>
+            <span className="inline-flex items-center gap-1"><Clock size={13} />{formatDueDate(task.dueAt, task.dueDateType)}</span>
             <span>{statusLabel[task.status]}</span>
             <span>{priorityLabel[task.priority]}</span>
             <span>{taskKindLabel[task.kind ?? 'TASK']}</span>

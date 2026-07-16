@@ -10,7 +10,7 @@ import { TaskModalLink } from '@/components/task-detail-modal';
 import { EmptyPanel, ErrorState, LoadingState, PriorityBadge, StatusBadge, UiCard } from '@/components/ui-kit';
 import { api } from '@/lib/api';
 import { invalidateTaskCaches } from '@/lib/cache';
-import { formatDate } from '@/lib/labels';
+import { formatDueDate } from '@/lib/labels';
 import { Task, TaskKind, TaskPriority, TaskStatus } from '@/lib/types';
 
 const quickTabs = [
@@ -305,7 +305,7 @@ function TaskTableRow({
       <td className={`${compact ? 'p-3' : 'p-4'} whitespace-nowrap text-[var(--muted)]`}>
         <span className="inline-flex items-center gap-1.5">
           <Clock3 size={14} />
-          {formatDate(task.dueAt)}
+          {formatDueDate(task.dueAt, task.dueDateType)}
         </span>
       </td>
       <td className={`${compact ? 'p-3' : 'p-4'}`}><PriorityBadge priority={task.priority} /></td>
@@ -340,7 +340,7 @@ function TaskMobileRow({
             {task.title}
           </TaskModalLink>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            {task.project?.name ?? 'Без проекта'} · {formatDate(task.dueAt)} · {formatMinutes(task.estimatedDurationMinutes)}
+            {task.project?.name ?? 'Без проекта'} · {formatDueDate(task.dueAt, task.dueDateType)} · {formatMinutes(task.estimatedDurationMinutes)}
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             <PriorityBadge priority={task.priority} />

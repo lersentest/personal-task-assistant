@@ -17,7 +17,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { invalidateTaskCaches } from '@/lib/cache';
-import { formatDate, priorityLabel, statusLabel, taskKindLabel } from '@/lib/labels';
+import { dueModeLabel, formatDate, formatDueDate, priorityLabel, statusLabel, taskKindLabel } from '@/lib/labels';
 import { Task } from '@/lib/types';
 import { AttachmentPanel } from './attachment-panel';
 import { TaskForm } from './task-form';
@@ -200,9 +200,9 @@ export function TaskDetailsModal({
                   <div className="grid gap-2">
                     <InfoRow icon={<CheckCircle2 size={16} />} label="Статус" value={statusLabel[data.status]} />
                     <InfoRow label="Приоритет" value={priorityLabel[data.priority]} tone={priorityTone(data.priority)} />
-                    <InfoRow icon={<CalendarClock size={16} />} label="Срок" value={formatDate(data.dueAt)} />
+                    <InfoRow icon={<CalendarClock size={16} />} label="Срок" value={formatDueDate(data.dueAt, data.dueDateType)} />
                     <InfoRow icon={<Clock3 size={16} />} label="Оценка" value={data.estimatedDurationMinutes ? `${data.estimatedDurationMinutes} мин` : 'Без оценки'} />
-                    <InfoRow label="Планирование" value={data.isFlexible ? 'Гибкая задача' : 'Фиксированное время'} />
+                    <InfoRow label="Режим срока" value={dueModeLabel(data.dueDateType)} />
                     <InfoRow label="Создана" value={formatDate(data.createdAt)} />
                   </div>
                 </div>

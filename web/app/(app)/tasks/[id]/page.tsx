@@ -8,7 +8,7 @@ import { Page } from '@/components/page';
 import { TaskForm } from '@/components/task-form';
 import { api } from '@/lib/api';
 import { invalidateTaskCaches } from '@/lib/cache';
-import { formatDate, priorityLabel, statusLabel } from '@/lib/labels';
+import { formatDate, formatDueDate, priorityLabel, statusLabel } from '@/lib/labels';
 
 export default function TaskDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -32,7 +32,7 @@ export default function TaskDetailsPage() {
           <div className="grid gap-3 text-sm text-[var(--muted)] sm:grid-cols-2 lg:grid-cols-4">
             <Info label="Статус" value={statusLabel[task.data.status]} />
             <Info label="Приоритет" value={priorityLabel[task.data.priority]} />
-            <Info label="Срок" value={formatDate(task.data.dueAt)} />
+            <Info label="Срок" value={formatDueDate(task.data.dueAt, task.data.dueDateType)} />
             <Info label="Создана" value={formatDate(task.data.createdAt)} />
           </div>
           <p className="whitespace-pre-wrap text-[var(--foreground)]">{task.data.description ?? 'Описание не указано.'}</p>

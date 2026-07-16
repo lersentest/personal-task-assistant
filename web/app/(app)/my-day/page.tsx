@@ -16,7 +16,7 @@ import { TaskModalLink } from '@/components/task-detail-modal';
 import { MetricStrip } from '@/components/ui-kit';
 import { useUiMode } from '@/components/ui-mode-provider';
 import { api } from '@/lib/api';
-import { formatDate, priorityLabel, statusLabel, taskKindLabel } from '@/lib/labels';
+import { dueModeLabel, formatDueDate, priorityLabel, statusLabel, taskKindLabel } from '@/lib/labels';
 import { DailyPlanItem, MyDayData, Task, TaskPriority } from '@/lib/types';
 
 const durationOptions = [15, 30, 45, 60, 90, 120, 180, 240];
@@ -66,7 +66,7 @@ function addMinutes(dateIso: string, minutes: number) {
 function taskMeta(task: Task) {
   return [
     taskKindLabel[task.kind ?? 'TASK'],
-    task.isFlexible ? 'Гибкая' : 'Фиксированная',
+    dueModeLabel(task.dueDateType),
     priorityLabel[task.priority],
     statusLabel[task.status],
     task.estimatedDurationMinutes ? formatMinutes(task.estimatedDurationMinutes) : 'без оценки',
@@ -97,7 +97,7 @@ function TaskPill({
             {task.title}
           </TaskModalLink>
           <div className={isFocus ? 'mt-2 flex flex-wrap gap-1.5 text-[11px] text-[var(--focus-text-muted)]' : 'mt-2 flex flex-wrap gap-2 text-xs text-[var(--muted)]'}>
-            <span>{formatDate(task.dueAt)}</span>
+            <span>{formatDueDate(task.dueAt, task.dueDateType)}</span>
             {taskMeta(task).map((item) => (
               <span key={item} className={isFocus ? 'rounded-full bg-[var(--focus-surface-secondary)] px-2 py-0.5' : ''}>{item}</span>
             ))}
