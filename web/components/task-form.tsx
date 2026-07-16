@@ -286,6 +286,7 @@ export function TaskForm({
                 <input
                   className="h-11 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)]"
                   type="time"
+                  step={300}
                   value={dueTime}
                   onChange={(event) => setDueTime(event.target.value)}
                 />

@@ -138,8 +138,13 @@ function PlanItemCard({
   const { interfaceMode } = useUiMode();
   const isFocus = interfaceMode === 'focus';
   const [time, setTime] = useState(formatTime(item.scheduledStartAt) || '09:00');
+  const [editingTime, setEditingTime] = useState(false);
   const duration = item.task.estimatedDurationMinutes ?? 30;
   const done = item.completedInPlanAt || item.task.status === 'COMPLETED';
+
+  useEffect(() => {
+    setTime(formatTime(item.scheduledStartAt) || '09:00');
+  }, [item.scheduledStartAt]);
 
   return (
     <article
@@ -189,22 +194,30 @@ function PlanItemCard({
               <CheckCircle2 size={18} />
             </button>
           ) : null}
+          <button
+            type="button"
+            onClick={() => setEditingTime((value) => !value)}
+            className="inline-flex h-9 items-center justify-center rounded-xl border border-transparent px-2 text-xs font-medium text-blue-600 transition hover:border-blue-200 hover:bg-blue-50 active:scale-95"
+          >
+            Время
+          </button>
           <button onClick={onRemove} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-transparent text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 active:scale-95" title="Убрать из дня" aria-label="Убрать из дня">
             <Trash2 size={18} />
           </button>
         </div>
       </div>
-      {compact ? (
+      {compact && !editingTime ? (
         <div className="mt-3 grid gap-2">
           <p className="text-xs text-[var(--muted)]">
-            Чтобы назначить время, перетащи задачу на слот в центральной шкале.
+            Нажми «Время», чтобы назначить или изменить слот.
           </p>
         </div>
-      ) : (
+      ) : editingTime ? (
         <>
-      <div className={isFocus ? 'mt-2 hidden gap-2 rounded-xl border border-[var(--focus-border-soft)] bg-[var(--focus-surface)]/80 p-2 group-hover:grid sm:grid-cols-[1fr_1fr_auto_auto]' : 'mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto]'}>
+      <div className="mt-3 grid gap-2 rounded-xl border border-[var(--focus-border-soft,var(--line))] bg-[var(--focus-surface-secondary,var(--background))] p-2 sm:grid-cols-[1fr_1fr_auto_auto]">
         <input
           type="time"
+          step={300}
           className="h-9 rounded-md border border-[var(--line)] bg-transparent px-2 text-sm"
           value={time}
           onChange={(event) => setTime(event.target.value)}
@@ -221,7 +234,10 @@ function PlanItemCard({
           ))}
         </select>
         <button
-          onClick={() => onSchedule(time, duration)}
+          onClick={() => {
+            onSchedule(time, duration);
+            setEditingTime(false);
+          }}
           className="rounded-md bg-[var(--foreground)] px-3 py-2 text-sm text-[var(--background)]"
         >
           Назначить
@@ -233,12 +249,11 @@ function PlanItemCard({
           Без времени
         </button>
       </div>
-      {!isFocus ? (
-        <p className="mt-2 text-xs text-[var(--muted)]">
-          Drag-and-drop: можно перетащить задачу на слот временной шкалы.
-        </p>
-      ) : null}
         </>
+      ) : (
+        <p className="mt-2 text-xs text-[var(--muted)]">
+          Нажми «Время», чтобы изменить слот. Drag-and-drop тоже работает.
+        </p>
       )}
     </article>
   );

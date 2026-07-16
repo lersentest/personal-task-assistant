@@ -69,6 +69,13 @@ export class TasksService {
         dueDateType: input.dueDateType ?? null,
         remindAt: input.remindAt ?? null,
       });
+      await this.syncExactTimeDailyPlan(tx, {
+        ownerId: input.ownerId,
+        taskId: task.id,
+        dueAt: input.dueAt ?? null,
+        dueDateType: input.dueDateType ?? null,
+        estimatedDurationMinutes: input.estimatedDurationMinutes ?? null,
+      });
 
       await tx.activityEvent.create({
         data: {
@@ -161,6 +168,28 @@ export class TasksService {
           select: { dueAt: true, dueDateType: true, remindAt: true },
         });
         await this.syncReminders(tx, taskId, taskForReminders);
+      }
+
+      if (
+        input.dueAt !== undefined ||
+        input.dueDateType !== undefined ||
+        input.estimatedDurationMinutes !== undefined
+      ) {
+        const taskForPlan = await tx.task.findUniqueOrThrow({
+          where: { id: taskId },
+          select: {
+            dueAt: true,
+            dueDateType: true,
+            estimatedDurationMinutes: true,
+          },
+        });
+        await this.syncExactTimeDailyPlan(tx, {
+          ownerId,
+          taskId,
+          dueAt: taskForPlan.dueAt,
+          dueDateType: taskForPlan.dueDateType,
+          estimatedDurationMinutes: taskForPlan.estimatedDurationMinutes,
+        });
       }
 
       if (input.status === 'COMPLETED' || input.status === 'CANCELLED') {
@@ -469,6 +498,67 @@ export class TasksService {
     return [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))]
       .slice(0, 10)
       .map((tag) => tag.slice(0, 80));
+  }
+
+  private async syncExactTimeDailyPlan(
+    tx: Prisma.TransactionClient,
+    input: {
+      ownerId: string;
+      taskId: string;
+      dueAt: Date | null;
+      dueDateType: 'ON_DATE' | 'BEFORE_DATE' | 'EXACT_TIME' | null;
+      estimatedDurationMinutes: number | null;
+    },
+  ): Promise<void> {
+    if (input.dueDateType !== 'EXACT_TIME' || !input.dueAt) return;
+
+    const owner = await tx.user.findUnique({
+      where: { id: input.ownerId },
+      select: { timezone: true },
+    });
+    const timezone = owner?.timezone ?? 'Europe/Zurich';
+    const localDate = DateTime.fromJSDate(input.dueAt)
+      .setZone(timezone)
+      .toISODate();
+    if (!localDate) return;
+
+    const date = new Date(`${localDate}T00:00:00.000Z`);
+    const duration = input.estimatedDurationMinutes ?? 30;
+    const scheduledEndAt = new Date(input.dueAt.getTime() + duration * 60_000);
+    const existing = await tx.dailyPlanItem.findFirst({
+      where: { userId: input.ownerId, taskId: input.taskId, removedAt: null },
+      select: { id: true },
+    });
+
+    if (existing) {
+      await tx.dailyPlanItem.update({
+        where: { id: existing.id },
+        data: {
+          date,
+          scheduledStartAt: input.dueAt,
+          scheduledEndAt,
+          scheduleType: 'FIXED',
+        },
+      });
+      return;
+    }
+
+    const last = await tx.dailyPlanItem.findFirst({
+      where: { userId: input.ownerId, date, removedAt: null },
+      orderBy: { order: 'desc' },
+      select: { order: true },
+    });
+    await tx.dailyPlanItem.create({
+      data: {
+        userId: input.ownerId,
+        taskId: input.taskId,
+        date,
+        order: (last?.order ?? -1) + 1,
+        scheduledStartAt: input.dueAt,
+        scheduledEndAt,
+        scheduleType: 'FIXED',
+      },
+    });
   }
 
   private async syncReminders(
