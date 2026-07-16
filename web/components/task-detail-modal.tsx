@@ -15,6 +15,7 @@ import {
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { invalidateTaskCaches } from '@/lib/cache';
 import { formatDate, priorityLabel, statusLabel, taskKindLabel } from '@/lib/labels';
 import { Task } from '@/lib/types';
 import { AttachmentPanel } from './attachment-panel';
@@ -82,14 +83,14 @@ export function TaskDetailsModal({
   const complete = useMutation({
     mutationFn: () => api.completeTask(taskId),
     onSuccess: () => {
-      queryClient.invalidateQueries();
+      void invalidateTaskCaches(queryClient, taskId);
     },
   });
 
   const remove = useMutation({
     mutationFn: () => api.deleteTask(taskId),
     onSuccess: () => {
-      queryClient.invalidateQueries();
+      void invalidateTaskCaches(queryClient, taskId);
       onClose();
     },
   });

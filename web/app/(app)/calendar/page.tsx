@@ -14,6 +14,7 @@ import { TaskDetailsModal } from '@/components/task-detail-modal';
 import { ErrorState, LoadingState, UiCard } from '@/components/ui-kit';
 import { useUiMode } from '@/components/ui-mode-provider';
 import { api } from '@/lib/api';
+import { invalidateTaskCaches } from '@/lib/cache';
 import { priorityLabel, taskKindLabel } from '@/lib/labels';
 import { Task, TaskKind, TaskPriority } from '@/lib/types';
 
@@ -28,7 +29,7 @@ export default function CalendarPage() {
   const tasks = useQuery({ queryKey: ['calendar'], queryFn: api.calendar });
   const move = useMutation({
     mutationFn: ({ id, dueAt }: { id: string; dueAt: string }) => api.updateTask(id, { dueAt }),
-    onSuccess: () => queryClient.invalidateQueries(),
+    onSuccess: (task) => void invalidateTaskCaches(queryClient, task.id),
   });
 
   const visibleTasks = useMemo(() => {

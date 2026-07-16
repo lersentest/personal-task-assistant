@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Page } from '@/components/page';
 import { TaskCard } from '@/components/task-card';
 import { api } from '@/lib/api';
+import { invalidateTaskCaches } from '@/lib/cache';
 import { Task } from '@/lib/types';
 
 export default function TodayPage() {
@@ -13,7 +14,7 @@ export default function TodayPage() {
   const upcoming = useQuery({ queryKey: ['tasks', 'upcoming'], queryFn: () => api.tasks('?view=UPCOMING') });
   const complete = useMutation({
     mutationFn: api.completeTask,
-    onSuccess: () => queryClient.invalidateQueries(),
+    onSuccess: (task) => void invalidateTaskCaches(queryClient, task.id),
   });
 
   return (

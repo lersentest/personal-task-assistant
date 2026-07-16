@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Mic, Square, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
+import { invalidateTaskCaches } from '@/lib/cache';
 import { VoiceDraft } from '@/lib/types';
 
 type VoiceState =
@@ -187,7 +188,7 @@ export function VoiceCommandButton({ variant = 'floating' }: { variant?: 'floati
     try {
       setState('confirming');
       await api.confirmVoiceDraft(draft.draftId);
-      queryClient.invalidateQueries();
+      await invalidateTaskCaches(queryClient);
       closeModal();
     } catch (err) {
       setState('ready');

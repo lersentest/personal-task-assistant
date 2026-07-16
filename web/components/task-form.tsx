@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '@/lib/api';
+import { invalidateTaskCaches } from '@/lib/cache';
 import { taskKindLabel } from '@/lib/labels';
 import { Task, TaskInput, TaskKind } from '@/lib/types';
 
@@ -53,8 +54,8 @@ export function TaskForm({
       };
       return task ? api.updateTask(task.id, input) : api.createTask(input);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries();
+    onSuccess: async (savedTask) => {
+      await invalidateTaskCaches(queryClient, savedTask.id);
       if (!task) {
         setTitle('');
         setDescription('');

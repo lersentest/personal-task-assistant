@@ -9,6 +9,7 @@ import { Page } from '@/components/page';
 import { TaskModalLink } from '@/components/task-detail-modal';
 import { EmptyPanel, ErrorState, LoadingState, PriorityBadge, StatusBadge, UiCard } from '@/components/ui-kit';
 import { api } from '@/lib/api';
+import { invalidateTaskCaches } from '@/lib/cache';
 import { formatDate } from '@/lib/labels';
 import { Task, TaskKind, TaskPriority, TaskStatus } from '@/lib/types';
 
@@ -67,13 +68,13 @@ export default function TasksPage() {
   const tasks = useQuery({ queryKey: ['tasks', query], queryFn: () => api.tasks(query) });
   const complete = useMutation({
     mutationFn: api.completeTask,
-    onSuccess: () => queryClient.invalidateQueries(),
+    onSuccess: (task) => void invalidateTaskCaches(queryClient, task.id),
   });
   const remove = useMutation({
     mutationFn: api.deleteTask,
-    onSuccess: () => {
+    onSuccess: (_, taskId) => {
       setSelected([]);
-      queryClient.invalidateQueries();
+      void invalidateTaskCaches(queryClient, taskId);
     },
   });
 

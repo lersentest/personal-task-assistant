@@ -7,6 +7,7 @@ import { AttachmentPanel } from '@/components/attachment-panel';
 import { Page } from '@/components/page';
 import { TaskForm } from '@/components/task-form';
 import { api } from '@/lib/api';
+import { invalidateTaskCaches } from '@/lib/cache';
 import { formatDate, priorityLabel, statusLabel } from '@/lib/labels';
 
 export default function TaskDetailsPage() {
@@ -18,7 +19,7 @@ export default function TaskDetailsPage() {
   const remove = useMutation({
     mutationFn: () => api.deleteTask(id),
     onSuccess: () => {
-      queryClient.invalidateQueries();
+      void invalidateTaskCaches(queryClient, id);
       router.push('/trash');
     },
   });
