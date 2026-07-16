@@ -15,12 +15,14 @@ export function TaskForm({
   onDone,
   compact = false,
   initialKind = 'TASK',
+  showKindSelector = true,
 }: {
   task?: Task;
   projectId?: string;
   onDone?: () => void;
   compact?: boolean;
   initialKind?: TaskKind;
+  showKindSelector?: boolean;
 }) {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState(task?.title ?? '');
@@ -81,22 +83,24 @@ export function TaskForm({
         required
       />
 
-      <div className="flex flex-wrap gap-2">
-        {taskKinds.map((value) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setKind(value)}
-            className={`rounded-full border px-3 py-1.5 text-sm transition ${
-              kind === value
-                ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]'
-                : 'border-[var(--line)] text-[var(--muted)] hover:border-[var(--accent)]'
-            }`}
-          >
-            {taskKindLabel[value]}
-          </button>
-        ))}
-      </div>
+      {showKindSelector ? (
+        <div className="flex flex-wrap gap-2">
+          {taskKinds.map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setKind(value)}
+              className={`rounded-full border px-3 py-1.5 text-sm transition ${
+                kind === value
+                  ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]'
+                  : 'border-[var(--line)] text-[var(--muted)] hover:border-[var(--accent)]'
+              }`}
+            >
+              {taskKindLabel[value]}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {!compact ? (
         <textarea

@@ -44,29 +44,29 @@ export function DelegatedTaskForm({ onDone }: { onDone?: () => void }) {
           dueAt: form.dueAt ? new Date(form.dueAt).toISOString() : null,
         });
       }}
-      className="grid gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm sm:p-5"
+      className="grid gap-4 rounded-3xl border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface,var(--panel))] p-5 shadow-sm sm:grid-cols-2 sm:p-6"
     >
-      <div>
+      <div className="sm:col-span-2">
         <h2 className="text-lg font-semibold">Новая делегированная задача</h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
           Выбери исполнителя и опиши результат, который нужно получить.
         </p>
       </div>
       <input
-        className="h-11 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 py-2 outline-none focus:border-[var(--accent)]"
+        className="h-12 w-full rounded-2xl border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface-secondary,var(--background))] px-4 py-2 outline-none transition focus:border-[var(--accent)] sm:col-span-2"
         placeholder="Название *"
         value={form.title}
         onChange={(event) => setForm({ ...form, title: event.target.value })}
         required
       />
       <textarea
-        className="min-h-28 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 py-2 outline-none focus:border-[var(--accent)]"
+        className="min-h-28 w-full rounded-2xl border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface-secondary,var(--background))] px-4 py-3 outline-none transition focus:border-[var(--accent)] sm:col-span-2"
         placeholder="Описание"
         value={form.description}
         onChange={(event) => setForm({ ...form, description: event.target.value })}
       />
       <select
-        className="h-11 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 py-2"
+        className="h-12 w-full rounded-2xl border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface-secondary,var(--background))] px-4 py-2"
         value={form.executorId}
         onChange={(event) => setForm({ ...form, executorId: event.target.value })}
         required
@@ -79,7 +79,7 @@ export function DelegatedTaskForm({ onDone }: { onDone?: () => void }) {
         ))}
       </select>
       <select
-        className="h-11 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 py-2"
+        className="h-12 w-full rounded-2xl border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface-secondary,var(--background))] px-4 py-2"
         value={form.projectId}
         onChange={(event) => setForm({ ...form, projectId: event.target.value })}
       >
@@ -91,7 +91,7 @@ export function DelegatedTaskForm({ onDone }: { onDone?: () => void }) {
         ))}
       </select>
       <select
-        className="h-11 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 py-2"
+        className="h-12 w-full rounded-2xl border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface-secondary,var(--background))] px-4 py-2"
         value={form.priority}
         onChange={(event) => setForm({ ...form, priority: event.target.value as TaskPriority })}
       >
@@ -102,18 +102,18 @@ export function DelegatedTaskForm({ onDone }: { onDone?: () => void }) {
       </select>
       <input
         type="datetime-local"
-        className="h-11 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 py-2"
+        className="h-12 w-full rounded-2xl border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface-secondary,var(--background))] px-4 py-2"
         value={form.dueAt}
         onChange={(event) => setForm({ ...form, dueAt: event.target.value })}
       />
       <button
         disabled={create.isPending || !form.executorId || !form.title.trim()}
-        className="btn-base btn-primary w-full"
+        className="btn-base btn-primary h-12 w-full sm:col-span-2"
       >
         {create.isPending ? 'Создаю...' : 'Создать задачу'}
       </button>
       {create.error ? (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 sm:col-span-2">
           {create.error.message}
         </p>
       ) : null}

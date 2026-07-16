@@ -9,13 +9,11 @@ import {
   Clock3,
   FolderKanban,
   Lightbulb,
-  Plus,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Page } from '@/components/page';
 import { TaskCard } from '@/components/task-card';
-import { TaskForm } from '@/components/task-form';
 import { useUiMode } from '@/components/ui-mode-provider';
 import { api } from '@/lib/api';
 import { ActivityEvent, Project } from '@/lib/types';
@@ -122,9 +120,6 @@ export default function DashboardPage() {
           <MetricCard icon={<Clock3 size={20} />} label="На 7 дней" value={dashboard.data?.summary.upcoming ?? 0} href="/tasks?view=UPCOMING" />
           <MetricCard icon={<CheckCircle2 size={20} />} label="Срочные" value={dashboard.data?.summary.urgent ?? 0} href="/tasks?priority=URGENT" warning />
         </div>
-        <div className="mt-6">
-          <TaskForm />
-        </div>
       </Page>
     );
   }
@@ -135,19 +130,6 @@ export default function DashboardPage() {
 
   return (
     <Page title={greeting.title} description={greeting.description}>
-      <section className="mb-5 rounded-3xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-4 shadow-sm">
-        <div className="flex items-center gap-3 rounded-2xl border border-[var(--focus-border-soft)] bg-[var(--focus-surface-secondary)] px-4 py-3">
-          <Plus size={18} className="text-[var(--focus-primary)]" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-[var(--focus-text)]">Что нужно сделать?</p>
-            <p className="text-xs text-[var(--focus-text-muted)]">Быстро добавь задачу, звонок, встречу, идею или заметку.</p>
-          </div>
-        </div>
-        <div className="mt-4">
-          <TaskForm compact />
-        </div>
-      </section>
-
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard icon={<CalendarDays size={20} />} label="Сегодня" value={dashboard.data?.summary.today ?? 0} href="/today" />
         <MetricCard icon={<AlertCircle size={20} />} label="Просрочено" value={dashboard.data?.summary.overdue ?? 0} href="/today" danger />

@@ -483,6 +483,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
                 Команды
               </button>
               <button
+                hidden
                 onClick={() => openCreate({ entity: 'task', kind: 'TASK' })}
                 className="hidden h-11 items-center gap-2 rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] px-4 text-sm font-semibold shadow-sm transition hover:bg-[var(--focus-surface-secondary)] sm:flex"
               >
@@ -685,25 +686,25 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-[10030] flex items-start justify-center bg-slate-950/45 p-4 pt-[12vh] backdrop-blur-sm"
+          className="fixed inset-0 z-[10030] flex items-start justify-center bg-slate-950/45 p-4 pt-[8vh] backdrop-blur-sm sm:pt-[10vh]"
           onClick={() => setPaletteOpen(false)}
         >
           <div
-            className="w-full max-w-2xl overflow-hidden rounded-3xl border border-[var(--focus-border)] bg-[var(--focus-surface)] shadow-[var(--focus-shadow)]"
+            className="w-full max-w-2xl overflow-hidden rounded-[2rem] border border-[var(--focus-border)] bg-[var(--focus-surface)] shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-center gap-3 border-b border-[var(--focus-border-soft)] px-4">
+            <div className="flex items-center gap-3 border-b border-[var(--focus-border-soft)] px-4 py-2">
               <Search size={18} className="text-[var(--focus-text-muted)]" />
               <input
                 value={commandQuery}
                 onChange={(event) => setCommandQuery(event.target.value)}
                 autoFocus
                 placeholder="Поиск по задачам, проектам, файлам или команда..."
-                className="h-14 flex-1 bg-transparent outline-none"
+                className="h-12 flex-1 bg-transparent outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
               />
               <span className="rounded-lg bg-[var(--focus-surface-secondary)] px-2 py-1 text-xs text-[var(--focus-text-muted)]">Esc</span>
             </div>
-            <div className="max-h-[420px] overflow-y-auto p-2">
+            <div className="max-h-[56vh] overflow-y-auto p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {hasSearchQuery ? (
                 <div className="mb-2 grid gap-2">
                   {searchPending ? (
@@ -839,7 +840,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
                     <button
                       key={`${command.href}-${command.label}`}
                       onClick={() => command.create ? openCreate(command.create as CreateEntityState) : go(command.href)}
-                      className="flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left hover:bg-[var(--focus-primary-soft)]"
+                      className="flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left transition hover:bg-[var(--focus-primary-soft)] active:scale-[0.99]"
                     >
                       <span>
                         <span className="block font-medium">{command.label}</span>
@@ -851,7 +852,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
                 </section>
               ) : null}
             </div>
-            <div className="flex items-center gap-2 border-t border-[var(--focus-border-soft)] bg-[var(--focus-surface-secondary)] px-4 py-3 text-xs text-[var(--focus-text-muted)]">
+            <div className="flex items-center gap-2 border-t border-[var(--focus-border-soft)] bg-[var(--focus-surface-secondary)] px-4 py-2.5 text-xs text-[var(--focus-text-muted)]">
               <Mic size={14} />
               Голосовую команду можно запустить кнопкой микрофона или Alt+V.
             </div>

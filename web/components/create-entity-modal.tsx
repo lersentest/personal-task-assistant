@@ -173,7 +173,7 @@ export function CreateEntityModal({
                   );
                 })}
               </div>
-              <TaskForm key={selectedKind} initialKind={selectedKind} onDone={onClose} />
+              <TaskForm key={selectedKind} initialKind={selectedKind} showKindSelector={false} onDone={onClose} />
             </div>
           )}
         </div>
