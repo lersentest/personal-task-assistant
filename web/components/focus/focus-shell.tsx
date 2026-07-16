@@ -30,6 +30,9 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { CreateEntityModal, CreateEntityState } from '@/components/create-entity-modal';
+import { DelegatedTaskDetailsModal } from '@/components/delegated-task-detail-modal';
+import { FileDetailsModal } from '@/components/file-detail-modal';
+import { ProjectDetailsModal } from '@/components/project-detail-modal';
 import { TaskDetailsModal } from '@/components/task-detail-modal';
 import { api } from '@/lib/api';
 import type { Attachment, DelegatedTask, Project, Task, TaskKind } from '@/lib/types';
@@ -146,6 +149,9 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
   const [commandQuery, setCommandQuery] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [selectedDelegatedTaskId, setSelectedDelegatedTaskId] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<Attachment | null>(null);
 
   const globalSearch = useQuery({
     queryKey: ['global-search'],
@@ -279,6 +285,30 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
     setMobileMenuOpen(false);
     setCommandQuery('');
     setSelectedTaskId(taskId);
+  }
+
+  function openDelegatedTaskFromSearch(taskId: string) {
+    setPaletteOpen(false);
+    setCreateOpen(false);
+    setMobileMenuOpen(false);
+    setCommandQuery('');
+    setSelectedDelegatedTaskId(taskId);
+  }
+
+  function openProjectFromSearch(projectId: string) {
+    setPaletteOpen(false);
+    setCreateOpen(false);
+    setMobileMenuOpen(false);
+    setCommandQuery('');
+    setSelectedProjectId(projectId);
+  }
+
+  function openFileFromSearch(file: Attachment) {
+    setPaletteOpen(false);
+    setCreateOpen(false);
+    setMobileMenuOpen(false);
+    setCommandQuery('');
+    setSelectedFile(file);
   }
 
   function openCreate(state: CreateEntityState) {
@@ -705,7 +735,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
                       {delegatedTaskResults.map((task) => (
                         <button
                           key={task.id}
-                          onClick={() => go('/delegated')}
+                          onClick={() => openDelegatedTaskFromSearch(task.id)}
                           className="flex w-full items-start gap-3 rounded-2xl px-3 py-3 text-left transition hover:bg-[var(--focus-primary-soft)]"
                         >
                           <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--focus-surface-secondary)] text-[var(--focus-primary)]">
@@ -730,7 +760,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
                       {projectResults.map((project) => (
                         <button
                           key={project.id}
-                          onClick={() => go(`/projects/${project.id}`)}
+                          onClick={() => openProjectFromSearch(project.id)}
                           className="flex w-full items-start gap-3 rounded-2xl px-3 py-3 text-left transition hover:bg-[var(--focus-primary-soft)]"
                         >
                           <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--focus-surface-secondary)] text-[var(--focus-primary)]">
@@ -755,7 +785,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
                       {fileResults.map((file) => (
                         <button
                           key={file.id}
-                          onClick={() => go('/files')}
+                          onClick={() => openFileFromSearch(file)}
                           className="flex w-full items-start gap-3 rounded-2xl px-3 py-3 text-left transition hover:bg-[var(--focus-primary-soft)]"
                         >
                           <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--focus-surface-secondary)] text-[var(--focus-primary)]">
@@ -822,6 +852,27 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
           taskId={selectedTaskId}
           open={Boolean(selectedTaskId)}
           onClose={() => setSelectedTaskId(null)}
+        />
+      ) : null}
+      {selectedDelegatedTaskId ? (
+        <DelegatedTaskDetailsModal
+          taskId={selectedDelegatedTaskId}
+          open={Boolean(selectedDelegatedTaskId)}
+          onClose={() => setSelectedDelegatedTaskId(null)}
+        />
+      ) : null}
+      {selectedProjectId ? (
+        <ProjectDetailsModal
+          projectId={selectedProjectId}
+          open={Boolean(selectedProjectId)}
+          onClose={() => setSelectedProjectId(null)}
+        />
+      ) : null}
+      {selectedFile ? (
+        <FileDetailsModal
+          attachment={selectedFile}
+          open={Boolean(selectedFile)}
+          onClose={() => setSelectedFile(null)}
         />
       ) : null}
     </div>

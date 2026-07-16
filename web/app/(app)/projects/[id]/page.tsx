@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { AttachmentPanel } from '@/components/attachment-panel';
+import { DelegatedTaskModalLink } from '@/components/delegated-task-detail-modal';
 import { Page } from '@/components/page';
 import { ProjectForm } from '@/components/project-form';
 import { TaskCard } from '@/components/task-card';
@@ -59,10 +60,10 @@ export default function ProjectDetailsPage() {
         </p>
         <div className="mt-4 grid gap-3">
           {delegatedTasks.data?.length ? delegatedTasks.data.map((task) => (
-            <div key={task.id} className="rounded-xl border border-[var(--line)] bg-[var(--background)] p-4">
+            <DelegatedTaskModalLink key={task.id} task={task} className="rounded-xl border border-[var(--line)] bg-[var(--background)] p-4 text-left">
               <p className="font-medium">{task.title}</p>
               <p className="mt-1 text-sm text-[var(--muted)]">{task.executor.fullName} · {task.status}</p>
-            </div>
+            </DelegatedTaskModalLink>
           )) : <p className="text-sm text-[var(--muted)]">Делегированных задач по проекту пока нет.</p>}
         </div>
       </section>

@@ -1,9 +1,10 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { DelegatedTaskModalLink } from '@/components/delegated-task-detail-modal';
 import { Page } from '@/components/page';
+import { ProjectModalLink } from '@/components/project-detail-modal';
 import { TaskModalLink } from '@/components/task-detail-modal';
 import { useUiMode } from '@/components/ui-mode-provider';
 import { api } from '@/lib/api';
@@ -59,10 +60,10 @@ export default function SearchPage() {
           <h2 className="mb-3 font-semibold">Делегированные</h2>
           <div className="grid gap-3">
             {filteredDelegatedTasks.map((task) => (
-              <Link key={task.id} href="/delegated" className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 hover:border-[var(--accent)]">
+              <DelegatedTaskModalLink key={task.id} task={task} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-left hover:border-[var(--accent)]">
                 <span className="block font-medium">{task.title}</span>
                 <span className="text-sm text-[var(--muted)]">{task.executor.fullName} · {task.status}</span>
-              </Link>
+              </DelegatedTaskModalLink>
             ))}
           </div>
         </section>
@@ -70,9 +71,9 @@ export default function SearchPage() {
           <h2 className="mb-3 font-semibold">Проекты</h2>
           <div className="grid gap-3">
             {filteredProjects.map((project) => (
-              <Link key={project.id} href={`/projects/${project.id}`} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 hover:border-[var(--accent)]">
+              <ProjectModalLink key={project.id} project={project} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-left hover:border-[var(--accent)]">
                 {project.name}
-              </Link>
+              </ProjectModalLink>
             ))}
           </div>
         </section>

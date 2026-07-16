@@ -1,11 +1,11 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { CreateEntityModal, CreateEntityState } from '@/components/create-entity-modal';
 import { Page } from '@/components/page';
+import { ProjectModalLink } from '@/components/project-detail-modal';
 import { useUiMode } from '@/components/ui-mode-provider';
 import { api } from '@/lib/api';
 import { projectStatusLabel } from '@/lib/labels';
@@ -38,9 +38,9 @@ export default function ProjectsPage() {
           const count = project._count?.tasks ?? 0;
           const progress = project.status === 'COMPLETED' ? 100 : Math.min(95, Math.max(12, count * 8));
           return (
-            <Link
+            <ProjectModalLink
               key={project.id}
-              href={`/projects/${project.id}`}
+              project={project}
               className={isFocus ? 'interactive-card rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-5 shadow-sm' : 'interactive-card rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm'}
             >
               <div className="flex items-start justify-between gap-3">
@@ -72,7 +72,7 @@ export default function ProjectsPage() {
               ) : (
                 <p className="mt-4 text-sm text-[var(--muted)]">Активных задач: {count}</p>
               )}
-            </Link>
+            </ProjectModalLink>
           );
         })}
       </div>

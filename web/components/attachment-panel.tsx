@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { Attachment } from '@/lib/types';
+import { FileModalLink } from './file-detail-modal';
 
 interface PreviewState {
   attachment: Attachment;
@@ -38,10 +39,12 @@ function previewType(mimeType: string): PreviewState['type'] | null {
 export function AttachmentPanel({
   taskId,
   projectId,
+  delegatedTaskId,
   title = 'Файлы',
 }: {
   taskId?: string;
   projectId?: string;
+  delegatedTaskId?: string;
   title?: string;
 }) {
   const queryClient = useQueryClient();
@@ -52,10 +55,12 @@ export function AttachmentPanel({
     ? `?taskId=${taskId}`
     : projectId
       ? `?projectId=${projectId}`
-      : '';
+      : delegatedTaskId
+        ? `?delegatedTaskId=${delegatedTaskId}`
+        : '';
 
   const attachments = useQuery({
-    queryKey: ['attachments', taskId ?? null, projectId ?? null],
+    queryKey: ['attachments', taskId ?? null, projectId ?? null, delegatedTaskId ?? null],
     queryFn: () => api.attachments(query),
   });
 
@@ -67,6 +72,7 @@ export function AttachmentPanel({
       return api.createAttachment({
         taskId: taskId ?? null,
         projectId: projectId ?? null,
+        delegatedTaskId: delegatedTaskId ?? null,
         fileName: file.name,
         mimeType: file.type || 'application/octet-stream',
         dataBase64: await fileToBase64(file),
@@ -136,7 +142,7 @@ export function AttachmentPanel({
             PDF, документы, изображения и другие вложения до 10 МБ.
           </p>
         </div>
-        {taskId || projectId ? (
+        {taskId || projectId || delegatedTaskId ? (
           <label className="btn-base btn-primary cursor-pointer">
             Загрузить
             <input
@@ -174,18 +180,12 @@ export function AttachmentPanel({
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <button
-                  disabled={!canPreview}
-                  onClick={() => openPreview(attachment)}
-                  className="btn-base btn-secondary min-h-0 px-3 py-1 disabled:cursor-not-allowed disabled:opacity-45"
-                  title={
-                    canPreview
-                      ? 'Открыть предпросмотр'
-                      : 'Предпросмотр доступен только для изображений и PDF'
-                  }
+                <FileModalLink
+                  attachment={attachment}
+                  className="btn-base btn-secondary min-h-0 px-3 py-1"
                 >
                   Просмотр
-                </button>
+                </FileModalLink>
                 <button
                   onClick={() => downloadAttachment(attachment)}
                   className="btn-base btn-secondary min-h-0 px-3 py-1"
