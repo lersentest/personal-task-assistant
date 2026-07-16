@@ -12,6 +12,8 @@ import {
   JsonWebKey as CryptoJsonWebKey,
   timingSafeEqual,
 } from 'crypto';
+import { performance } from 'node:perf_hooks';
+import { addRequestTiming, setRequestUserId } from '../../observability/request-context';
 import { AuthenticatedRequest, CurrentUser } from '../current-user';
 import { UsersService } from '../../users/users.service';
 
@@ -46,32 +48,38 @@ export class SupabaseAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    const startedAt = performance.now();
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const token = this.extractToken(request.headers.authorization);
-    const payload = await this.verifyToken(token);
-    if (!payload.sub) throw new UnauthorizedException('Invalid session');
+    try {
+      const token = this.extractToken(request.headers.authorization);
+      const payload = await this.verifyToken(token);
+      if (!payload.sub) throw new UnauthorizedException('Invalid session');
 
-    const telegramOwnerId = this.config.getOrThrow<string>(
-      'ALLOWED_TELEGRAM_USER_ID',
-    );
-    const user = await this.users.linkAuthUserToTelegramOwner(
-      payload.sub,
-      telegramOwnerId,
-    );
-    if (!user) {
-      throw new UnauthorizedException(
-        'Telegram owner must start the bot before web login can be used',
+      const telegramOwnerId = this.config.getOrThrow<string>(
+        'ALLOWED_TELEGRAM_USER_ID',
       );
-    }
+      const user = await this.users.linkAuthUserToTelegramOwner(
+        payload.sub,
+        telegramOwnerId,
+      );
+      if (!user) {
+        throw new UnauthorizedException(
+          'Telegram owner must start the bot before web login can be used',
+        );
+      }
 
-    const currentUser: CurrentUser = {
-      id: user.id,
-      authUserId: payload.sub,
-      email: payload.email ?? null,
-      timezone: user.timezone,
-    };
-    request.user = currentUser;
-    return true;
+      const currentUser: CurrentUser = {
+        id: user.id,
+        authUserId: payload.sub,
+        email: payload.email ?? null,
+        timezone: user.timezone,
+      };
+      request.user = currentUser;
+      setRequestUserId(currentUser.id);
+      return true;
+    } finally {
+      addRequestTiming('auth', performance.now() - startedAt);
+    }
   }
 
   private extractToken(header: string | undefined): string {

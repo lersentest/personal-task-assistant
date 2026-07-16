@@ -15,6 +15,11 @@ import {
   TaskInput,
   VoiceInterpretation,
 } from './types';
+import {
+  createRequestId,
+  markPerformance,
+  measurePerformance,
+} from './performance';
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
@@ -22,9 +27,32 @@ if (!apiUrl) {
   throw new Error('NEXT_PUBLIC_API_URL is required');
 }
 
-async function authHeaders() {
+let cachedAccessToken: { token: string; expiresAtMs: number } | null = null;
+
+async function getAccessToken() {
+  const now = Date.now();
+  if (cachedAccessToken && cachedAccessToken.expiresAtMs > now + 30_000) {
+    markPerformance('auth-ready', true);
+    return cachedAccessToken.token;
+  }
+
   const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
+  const session = data.session;
+  const token = session?.access_token;
+  if (!token) throw new Error('Сессия истекла');
+
+  cachedAccessToken = {
+    token,
+    expiresAtMs: session.expires_at
+      ? session.expires_at * 1000
+      : now + 60_000,
+  };
+  markPerformance('auth-ready', true);
+  return token;
+}
+
+async function authHeaders() {
+  const token = await getAccessToken();
   if (!token) throw new Error('Сессия истекла');
   return {
     Authorization: `Bearer ${token}`,
@@ -33,34 +61,47 @@ async function authHeaders() {
 }
 
 async function bearerHeader() {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
+  const token = await getAccessToken();
   if (!token) throw new Error('Сессия истекла');
-  return { Authorization: `Bearer ${token}` };
+  return { Authorization: `Bearer ${token}`, 'X-Request-Id': createRequestId() };
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const requestId = createRequestId();
+  const method = init.method ?? 'GET';
+  const markPrefix = `api:${method}:${path}:${requestId}`;
+  markPerformance('initial-data-request-start', true);
+  markPerformance(`${markPrefix}:start`);
   const headers = await authHeaders();
-  const response = await fetch(`${apiUrl}${path}`, {
-    ...init,
-    headers: {
-      ...headers,
-      ...(init.headers ?? {}),
-    },
-  });
+  try {
+    const response = await fetch(`${apiUrl}${path}`, {
+      ...init,
+      headers: {
+        ...headers,
+        'X-Request-Id': requestId,
+        ...(init.headers ?? {}),
+      },
+    });
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(extractErrorMessage(text));
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(extractErrorMessage(text));
+    }
+    return response.json() as Promise<T>;
+  } finally {
+    markPerformance(`${markPrefix}:end`);
+    markPerformance('initial-data-request-end', true);
+    measurePerformance(`api ${method} ${path}`, `${markPrefix}:start`, `${markPrefix}:end`);
   }
-  return response.json() as Promise<T>;
 }
 
 async function publicRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const requestId = createRequestId();
   const response = await fetch(`${apiUrl}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
+      'X-Request-Id': requestId,
       ...(init.headers ?? {}),
     },
   });
@@ -74,7 +115,9 @@ async function publicRequest<T>(path: string, init: RequestInit = {}): Promise<T
 
 async function download(path: string): Promise<Blob> {
   const headers = await authHeaders();
-  const response = await fetch(`${apiUrl}${path}`, { headers });
+  const response = await fetch(`${apiUrl}${path}`, {
+    headers: { ...headers, 'X-Request-Id': createRequestId() },
+  });
   if (!response.ok) {
     const text = await response.text();
     throw new Error(extractErrorMessage(text, 'Не удалось скачать файл'));
@@ -83,7 +126,9 @@ async function download(path: string): Promise<Blob> {
 }
 
 async function publicDownload(path: string): Promise<Blob> {
-  const response = await fetch(`${apiUrl}${path}`);
+  const response = await fetch(`${apiUrl}${path}`, {
+    headers: { 'X-Request-Id': createRequestId() },
+  });
   if (!response.ok) {
     const text = await response.text();
     throw new Error(extractErrorMessage(text, 'Не удалось скачать файл'));
@@ -95,7 +140,7 @@ async function formRequest<T>(path: string, formData: FormData): Promise<T> {
   const headers = await bearerHeader();
   const response = await fetch(`${apiUrl}${path}`, {
     method: 'POST',
-    headers,
+    headers: { ...headers, 'X-Request-Id': createRequestId() },
     body: formData,
   });
   if (!response.ok) {
