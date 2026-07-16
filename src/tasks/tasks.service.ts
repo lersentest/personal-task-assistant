@@ -389,34 +389,61 @@ export class TasksService {
   }
 
   async summary(ownerId: string, timezone: string) {
+    const now = DateTime.now().setZone(timezone);
+    const startToday = now.startOf('day').toUTC().toJSDate();
+    const startTomorrow = now.plus({ days: 1 }).startOf('day').toUTC().toJSDate();
+    const endUpcoming = now.plus({ days: 8 }).startOf('day').toUTC().toJSDate();
+    const activeWhere = {
+      ownerId,
+      deletedAt: null,
+      status: { in: [...ACTIVE_STATUSES] },
+    } satisfies Prisma.TaskWhereInput;
+
     const [today, overdue, upcoming, urgent] = await Promise.all([
-      this.list(ownerId, { view: 'TODAY', timezone, limit: 100 }),
-      this.list(ownerId, { view: 'OVERDUE', timezone, limit: 100 }),
-      this.list(ownerId, { view: 'UPCOMING', timezone, limit: 100 }),
       this.prisma.task.count({
         where: {
-          ownerId,
-          deletedAt: null,
-          status: { in: [...ACTIVE_STATUSES] },
+          ...activeWhere,
+          dueAt: { gte: startToday, lt: startTomorrow },
+        },
+      }),
+      this.prisma.task.count({
+        where: {
+          ...activeWhere,
+          dueAt: { lt: new Date() },
+        },
+      }),
+      this.prisma.task.count({
+        where: {
+          ...activeWhere,
+          dueAt: { gte: startTomorrow, lt: endUpcoming },
+        },
+      }),
+      this.prisma.task.count({
+        where: {
+          ...activeWhere,
           priority: 'URGENT',
         },
       }),
     ]);
     return {
-      today: today.length,
-      overdue: overdue.length,
-      upcoming: upcoming.length,
+      today,
+      overdue,
+      upcoming,
       urgent,
     };
   }
 
-  calendar(ownerId: string, timezone: string) {
-    return this.list(ownerId, {
-      view: 'ALL',
-      timezone,
-      limit: 100,
-      sort: 'dueAt',
-    }).then((tasks) => tasks.filter((task) => task.dueAt));
+  calendar(ownerId: string, _timezone: string) {
+    return this.prisma.task.findMany({
+      where: {
+        ownerId,
+        deletedAt: null,
+        dueAt: { not: null },
+      },
+      include: taskInclude,
+      orderBy: [{ dueAt: 'asc' }, { createdAt: 'desc' }],
+      take: 100,
+    });
   }
 
   private async replaceTags(
