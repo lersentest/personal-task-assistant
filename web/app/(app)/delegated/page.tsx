@@ -1,9 +1,8 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, Clock3, MessageSquare, Plus, Send, UserRoundCheck } from 'lucide-react';
+import { AlertCircle, Clock3, MessageSquare, Send, UserRoundCheck } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { CreateEntityModal, CreateEntityState } from '@/components/create-entity-modal';
 import { DelegatedTaskModalLink } from '@/components/delegated-task-detail-modal';
 import { Page } from '@/components/page';
 import { EmptyPanel, ErrorState, LoadingState, MetricStrip, UiCard } from '@/components/ui-kit';
@@ -32,7 +31,6 @@ const tabs: Array<{ label: string; value: '' | DelegatedTaskStatus | 'ACTIVE' | 
 
 export default function DelegatedPage() {
   const [filters, setFilters] = useState({ status: 'ACTIVE', executorId: '' });
-  const [createModal, setCreateModal] = useState<CreateEntityState | null>(null);
   const executors = useQuery({ queryKey: ['executors'], queryFn: api.executors });
   const query = useMemo(() => {
     const params = new URLSearchParams();
@@ -70,12 +68,6 @@ export default function DelegatedPage() {
     <Page
       title="Делегированные"
       description="Отдельный поток задач для исполнителей: статус, активность, комментарии и файлы."
-      actions={
-        <button type="button" onClick={() => setCreateModal({ entity: 'delegated' })} className="btn-base btn-primary">
-          <Plus size={17} />
-          Делегировать
-        </button>
-      }
     >
       <MetricStrip
         items={[
@@ -132,7 +124,7 @@ export default function DelegatedPage() {
         {tasks.isLoading ? <LoadingState text="Загружаю делегированные задачи…" /> : null}
         {tasks.error ? <ErrorState text={`Не удалось загрузить делегированные: ${tasks.error.message}`} /> : null}
         {!tasks.isLoading && !tasks.error && visibleTasks.length === 0 ? (
-          <EmptyPanel title="Делегированных задач нет" text="Создай задачу через кнопку «Делегировать»." />
+          <EmptyPanel title="Делегированных задач нет" text="Создай делегированную задачу через общий «+ Создать»." />
         ) : null}
         {visibleTasks.length ? (
           <UiCard className="overflow-hidden">
@@ -161,11 +153,6 @@ export default function DelegatedPage() {
         ) : null}
       </div>
 
-      <CreateEntityModal
-        open={Boolean(createModal)}
-        state={createModal ?? { entity: 'delegated' }}
-        onClose={() => setCreateModal(null)}
-      />
     </Page>
   );
 }

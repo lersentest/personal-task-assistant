@@ -33,9 +33,11 @@ export function TaskForm({
   const [kind, setKind] = useState<TaskKind>(task?.kind ?? initialKind);
   const [isFlexible, setIsFlexible] = useState(task?.isFlexible ?? true);
   const [dueAt, setDueAt] = useState(task?.dueAt ? task.dueAt.slice(0, 16) : '');
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [estimatedDurationMinutes, setEstimatedDurationMinutes] = useState(
     task?.estimatedDurationMinutes?.toString() ?? '',
   );
+  const titleError = submitAttempted && !title.trim();
 
   const projects = useQuery({ queryKey: ['projects'], queryFn: api.projects });
   const mutation = useMutation({
@@ -69,19 +71,28 @@ export function TaskForm({
 
   return (
     <form
+      noValidate
       className={`grid gap-4 rounded-2xl border border-[var(--line)] bg-[var(--panel)] ${compact ? 'p-3 shadow-none' : 'p-4 shadow-sm'}`}
       onSubmit={(event) => {
         event.preventDefault();
+        setSubmitAttempted(true);
         if (title.trim()) mutation.mutate();
       }}
     >
-      <input
-        className="h-11 rounded-xl border border-[var(--line)] bg-transparent px-3 outline-none focus:border-[var(--accent)]"
-        placeholder="Название задачи"
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
-        required
-      />
+      <label className="grid gap-1.5">
+        <span className="text-xs font-semibold text-[var(--muted)]">Название *</span>
+        <input
+          className={`h-11 rounded-xl border bg-transparent px-3 outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)] ${titleError ? 'border-red-300' : 'border-[var(--line)]'}`}
+          placeholder="Название задачи"
+          value={title}
+          onChange={(event) => {
+            setTitle(event.target.value);
+            if (submitAttempted) setSubmitAttempted(false);
+          }}
+          aria-invalid={titleError}
+        />
+        {titleError ? <span className="text-xs text-red-600">Укажи название задачи.</span> : null}
+      </label>
 
       {showKindSelector ? (
         <div className="flex flex-wrap gap-2">
@@ -171,13 +182,7 @@ export function TaskForm({
       </div>
 
       {mutation.error ? <p className="text-sm text-red-500">{mutation.error.message}</p> : null}
-      <div className="flex flex-wrap gap-2">
-        <button
-          className="btn-base btn-primary h-10"
-          disabled={mutation.isPending}
-        >
-          {mutation.isPending ? 'Сохраняю...' : task ? 'Сохранить' : 'Создать'}
-        </button>
+      <div className="flex flex-wrap justify-end gap-2 border-t border-[var(--line)] pt-4">
         {onDone ? (
           <button
             type="button"
@@ -187,6 +192,12 @@ export function TaskForm({
             Отмена
           </button>
         ) : null}
+        <button
+          className="btn-base btn-primary h-10 px-5"
+          disabled={mutation.isPending}
+        >
+          {mutation.isPending ? 'Сохраняю...' : task ? 'Сохранить' : 'Создать'}
+        </button>
       </div>
     </form>
   );
