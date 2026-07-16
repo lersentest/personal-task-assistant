@@ -1,24 +1,9 @@
 'use client';
 
-import { Appearance, InterfaceMode } from '@/lib/ui-preferences';
+import { ExternalLink } from 'lucide-react';
+import Link from 'next/link';
+import { Appearance } from '@/lib/ui-preferences';
 import { useUiMode } from './ui-mode-provider';
-
-const interfaceOptions: Array<{
-  value: InterfaceMode;
-  title: string;
-  description: string;
-}> = [
-  {
-    value: 'focus',
-    title: 'Focus',
-    description: 'Современный интерфейс с новым layout, sidebar и topbar.',
-  },
-  {
-    value: 'classic',
-    title: 'Classic',
-    description: 'Исходный интерфейс без визуальных изменений.',
-  },
-];
 
 const appearanceOptions: Array<{
   value: Appearance;
@@ -27,47 +12,13 @@ const appearanceOptions: Array<{
 }> = [
   { value: 'light', title: 'Светлая', description: 'Всегда светлая тема.' },
   { value: 'dark', title: 'Тёмная', description: 'Всегда тёмная тема.' },
-  { value: 'system', title: 'Системная', description: 'Следовать настройке устройства.' },
 ];
 
 export function InterfaceSettings() {
-  const {
-    interfaceMode,
-    appearance,
-    resolvedAppearance,
-    setInterfaceMode,
-    setAppearance,
-  } = useUiMode();
+  const { appearance, resolvedAppearance, setAppearance } = useUiMode();
 
   return (
     <div className="grid gap-6">
-      <section className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold">Интерфейс</h2>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Focus и Classic переключают структуру интерфейса. Тема настраивается отдельно.
-          </p>
-        </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          {interfaceOptions.map((option) => (
-            <button
-              key={option.value}
-              onClick={() => setInterfaceMode(option.value)}
-              className={`rounded-xl border p-4 text-left transition ${
-                interfaceMode === option.value
-                  ? 'border-[var(--accent)] bg-[var(--accent-soft)]'
-                  : 'border-[var(--line)] hover:bg-[var(--background)]'
-              }`}
-            >
-              <span className="font-semibold">{option.title}</span>
-              <span className="mt-1 block text-sm text-[var(--muted)]">
-                {option.description}
-              </span>
-            </button>
-          ))}
-        </div>
-      </section>
-
       <section className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5">
         <div className="mb-4">
           <h2 className="text-lg font-semibold">Тема</h2>
@@ -75,7 +26,7 @@ export function InterfaceSettings() {
             Сейчас применяется: {resolvedAppearance === 'dark' ? 'тёмная' : 'светлая'}.
           </p>
         </div>
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2">
           {appearanceOptions.map((option) => (
             <button
               key={option.value}
@@ -94,7 +45,21 @@ export function InterfaceSettings() {
           ))}
         </div>
       </section>
+
+      <section className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">UI Kit</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Служебная страница с эталонными элементами дизайн-системы.
+            </p>
+          </div>
+          <Link href="/ui-kit" className="btn-base btn-secondary">
+            Открыть
+            <ExternalLink size={16} />
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }
-

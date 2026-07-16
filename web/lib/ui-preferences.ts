@@ -1,5 +1,5 @@
 export type InterfaceMode = 'classic' | 'focus';
-export type Appearance = 'light' | 'dark' | 'system';
+export type Appearance = 'light' | 'dark';
 
 export interface UiPreferences {
   interfaceMode: InterfaceMode;
@@ -11,8 +11,8 @@ export const APPEARANCE_STORAGE_KEY = 'personal-tasks.appearance';
 export const LEGACY_THEME_STORAGE_KEY = 'theme';
 
 export const DEFAULT_UI_PREFERENCES: UiPreferences = {
-  interfaceMode: 'classic',
-  appearance: 'system',
+  interfaceMode: 'focus',
+  appearance: 'light',
 };
 
 export function isInterfaceMode(value: unknown): value is InterfaceMode {
@@ -20,14 +20,12 @@ export function isInterfaceMode(value: unknown): value is InterfaceMode {
 }
 
 export function isAppearance(value: unknown): value is Appearance {
-  return value === 'light' || value === 'dark' || value === 'system';
+  return value === 'light' || value === 'dark';
 }
 
 export function resolveAppearance(
   appearance: Appearance,
   prefersDark: boolean,
 ): 'light' | 'dark' {
-  if (appearance === 'system') return prefersDark ? 'dark' : 'light';
   return appearance;
 }
-

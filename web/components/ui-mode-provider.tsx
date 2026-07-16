@@ -48,13 +48,10 @@ export function UiModeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
-    const storedMode = localStorage.getItem(UI_MODE_STORAGE_KEY);
     const storedAppearance = localStorage.getItem(APPEARANCE_STORAGE_KEY);
     const legacyTheme = localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
     const next: UiPreferences = {
-      interfaceMode: isInterfaceMode(storedMode)
-        ? storedMode
-        : DEFAULT_UI_PREFERENCES.interfaceMode,
+      interfaceMode: DEFAULT_UI_PREFERENCES.interfaceMode,
       appearance: isAppearance(storedAppearance)
         ? storedAppearance
         : isAppearance(legacyTheme)
@@ -96,11 +93,7 @@ export function UiModeProvider({ children }: { children: React.ReactNode }) {
       setPreferences((current) => {
         const next = { ...current, appearance };
         localStorage.setItem(APPEARANCE_STORAGE_KEY, appearance);
-        if (appearance === 'light' || appearance === 'dark') {
-          localStorage.setItem(LEGACY_THEME_STORAGE_KEY, appearance);
-        } else {
-          localStorage.removeItem(LEGACY_THEME_STORAGE_KEY);
-        }
+        localStorage.setItem(LEGACY_THEME_STORAGE_KEY, appearance);
         applyPreferences(next);
         return next;
       });
@@ -128,4 +121,3 @@ export function useUiMode() {
   if (!value) throw new Error('useUiMode must be used within UiModeProvider');
   return value;
 }
-

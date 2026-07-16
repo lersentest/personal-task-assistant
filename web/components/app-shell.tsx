@@ -12,7 +12,6 @@ import {
   Plus,
   Search,
   Settings,
-  Sparkles,
   Sun,
   Trash2,
   User,
@@ -41,7 +40,6 @@ const nav = [
   { href: '/search', label: 'Поиск', icon: Search },
   { href: '/files', label: 'Файлы', icon: FolderKanban },
   { href: '/trash', label: 'Корзина', icon: Trash2 },
-  { href: '/ui-kit', label: 'UI Kit', icon: Sparkles },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {

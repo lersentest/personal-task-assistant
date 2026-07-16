@@ -17,15 +17,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html: `
               (function () {
                 try {
-                  var mode = localStorage.getItem('personal-tasks.interfaceMode') || 'classic';
-                  var appearance = localStorage.getItem('personal-tasks.appearance') || localStorage.getItem('theme') || 'system';
-                  var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                  var resolved = appearance === 'system' ? (prefersDark ? 'dark' : 'light') : appearance;
-                  document.documentElement.dataset.uiMode = mode === 'focus' ? 'focus' : 'classic';
+                  var storedAppearance = localStorage.getItem('personal-tasks.appearance') || localStorage.getItem('theme') || 'light';
+                  var appearance = storedAppearance === 'dark' ? 'dark' : 'light';
+                  document.documentElement.dataset.uiMode = 'focus';
                   document.documentElement.dataset.appearance = appearance;
-                  document.documentElement.classList.toggle('dark', resolved === 'dark');
+                  document.documentElement.classList.toggle('dark', appearance === 'dark');
                 } catch (error) {
-                  document.documentElement.dataset.uiMode = 'classic';
+                  document.documentElement.dataset.uiMode = 'focus';
                 }
               })();
             `,

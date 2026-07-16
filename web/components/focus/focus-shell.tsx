@@ -70,7 +70,6 @@ const sections = [
     items: [
       { href: '/unassigned', label: 'Без проекта', icon: Menu },
       { href: '/trash', label: 'Корзина', icon: Trash2 },
-      { href: '/ui-kit', label: 'UI Kit', icon: Sparkles },
     ],
   },
 ];
@@ -267,9 +266,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
   }
 
   function cycleAppearance() {
-    setAppearance(
-      appearance === 'light' ? 'dark' : appearance === 'dark' ? 'system' : 'light',
-    );
+    setAppearance(appearance === 'dark' ? 'light' : 'dark');
   }
 
   function go(href: string) {
@@ -422,7 +419,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
             className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left hover:bg-[var(--focus-surface-secondary)]"
           >
             {appearance === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
-            {appearance === 'system' ? 'Системная тема' : appearance === 'dark' ? 'Тёмная тема' : 'Светлая тема'}
+            {appearance === 'dark' ? 'Тёмная тема' : 'Светлая тема'}
           </button>
           <Link href="/settings" className="flex items-center gap-3 rounded-2xl px-3 py-2.5 hover:bg-[var(--focus-surface-secondary)]">
             <Settings size={18} /> Настройки
@@ -651,7 +648,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
                 className="flex items-center gap-3 rounded-2xl px-3 py-3 text-left hover:bg-[var(--focus-surface-secondary)]"
               >
                 {appearance === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
-                {appearance === 'system' ? 'Системная тема' : appearance === 'dark' ? 'Тёмная тема' : 'Светлая тема'}
+                {appearance === 'dark' ? 'Тёмная тема' : 'Светлая тема'}
               </button>
               <Link href="/settings" className="flex items-center gap-3 rounded-2xl px-3 py-3 hover:bg-[var(--focus-surface-secondary)]">
                 <Settings size={18} /> Настройки
