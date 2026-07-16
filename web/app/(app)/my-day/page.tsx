@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { TaskModalLink } from '@/components/task-detail-modal';
+import { MetricStrip } from '@/components/ui-kit';
 import { useUiMode } from '@/components/ui-mode-provider';
 import { api } from '@/lib/api';
 import { formatDate, priorityLabel, statusLabel, taskKindLabel } from '@/lib/labels';
@@ -617,11 +618,11 @@ export default function MyDayPage() {
 
   return (
     <div className={isFocus ? 'mx-auto max-w-[1500px] overflow-hidden' : 'mx-auto max-w-[1800px] p-4 sm:p-6'}>
-      <header className={isFocus ? 'mb-5 rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-5 shadow-sm' : 'mb-5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm'}>
+      <header className={isFocus ? 'mb-5' : 'mb-5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm'}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm text-[var(--muted)]">Ежедневное планирование</p>
-            <h1 className="text-2xl font-semibold">Мой день</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Ежедневное планирование</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em]">Мой день</h1>
             <p className="mt-1 text-sm text-[var(--muted)]">
               {new Date(`${date}T12:00:00`).toLocaleDateString('ru-RU', {
                 weekday: 'long',
@@ -634,13 +635,13 @@ export default function MyDayPage() {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setDate(shiftDate(date, -1))}
-              className="rounded-lg border border-[var(--line)] p-2"
+              className="btn-base btn-secondary h-10 w-10 p-0"
             >
               <ChevronLeft size={18} />
             </button>
             <button
               onClick={() => setDate(todayLocalDate())}
-              className="rounded-lg border border-[var(--line)] px-3 py-2 text-sm"
+              className="btn-base btn-secondary h-10 px-4"
             >
               Сегодня
             </button>
@@ -652,19 +653,23 @@ export default function MyDayPage() {
             />
             <button
               onClick={() => setDate(shiftDate(date, 1))}
-              className="rounded-lg border border-[var(--line)] p-2"
+              className="btn-base btn-secondary h-10 w-10 p-0"
             >
               <ChevronRight size={18} />
             </button>
           </div>
         </div>
 
-        <div className={isFocus ? 'mt-4 grid gap-3 md:grid-cols-5' : 'mt-4 grid gap-3 md:grid-cols-5'}>
-          <Stat label="Всего задач" value={day.data?.summary.totalTasks ?? 0} />
-          <Stat label="Выполнено" value={day.data?.summary.completedTasks ?? 0} />
-          <Stat label="Осталось" value={day.data?.summary.remainingTasks ?? 0} />
-          <Stat label="Оценка дня" value={formatMinutes(day.data?.summary.estimatedMinutes ?? 0)} />
-          <Stat label="Выполнено по времени" value={formatMinutes(day.data?.summary.completedMinutes ?? 0)} />
+        <div className="mt-5">
+          <MetricStrip
+            items={[
+              { label: 'Запланировано', value: formatMinutes(day.data?.summary.estimatedMinutes ?? 0), icon: <Clock size={18} />, tone: 'blue' },
+              { label: 'Свободно', value: formatMinutes(Math.max(0, (day.data?.settings.capacityMinutes ?? 480) - (day.data?.summary.estimatedMinutes ?? 0))), icon: <Clock size={18} />, tone: 'green' },
+              { label: 'Просрочено', value: day.data?.mandatory.overdue.length ?? 0, icon: <AlertTriangle size={18} />, tone: 'red' },
+              { label: 'Выполнено', value: `${day.data?.summary.completedTasks ?? 0} из ${day.data?.summary.totalTasks ?? 0}`, icon: <CheckCircle2 size={18} />, tone: 'green' },
+              { label: 'Всего задач', value: day.data?.summary.totalTasks ?? 0, icon: <CalendarDays size={18} />, tone: 'gray' },
+            ]}
+          />
         </div>
         {day.data?.summary.overloaded || day.data?.summary.conflicts ? (
           <div className="mt-3 flex flex-wrap gap-2 text-sm">
@@ -702,7 +707,7 @@ export default function MyDayPage() {
         ))}
       </div>
 
-      <div className={isFocus ? 'grid gap-4 lg:grid-cols-[minmax(250px,330px)_minmax(520px,1fr)_minmax(250px,330px)]' : 'grid gap-4 lg:grid-cols-[minmax(260px,360px)_minmax(420px,1fr)_minmax(280px,380px)]'}>
+      <div className={isFocus ? 'grid gap-4 lg:grid-cols-[minmax(620px,1fr)_minmax(270px,330px)]' : 'grid gap-4 lg:grid-cols-[minmax(420px,1fr)_minmax(280px,380px)]'}>
         <section className={`${mobileTab === 'plan' ? 'block' : 'hidden'} lg:block`}>
           <Panel title="Обязательно сегодня">
             {day.data?.unresolvedPreviousDays.length ? (
@@ -738,7 +743,7 @@ export default function MyDayPage() {
           </Panel>
         </section>
 
-        <section className={`${mobileTab === 'schedule' ? 'block' : 'hidden'} lg:block`}>
+        <section className={`${mobileTab === 'schedule' ? 'block' : 'hidden'} lg:block lg:col-start-1`}>
           <Panel title="План дня и временная шкала">
             <div
               onDragOver={(event) => event.preventDefault()}
@@ -791,8 +796,8 @@ export default function MyDayPage() {
           </Panel>
         </section>
 
-        <section className={`${mobileTab === 'add' ? 'block' : 'hidden'} lg:block`}>
-          <Panel title="Возможные задачи">
+        <section className={`${mobileTab === 'add' ? 'block' : 'hidden'} lg:row-span-2 lg:block lg:col-start-2 lg:row-start-1`}>
+          <Panel title="Можно добавить">
             <div className="mb-3 grid gap-2">
               <label className="flex items-center gap-2 rounded-lg border border-[var(--line)] px-3">
                 <Search size={16} className="text-[var(--muted)]" />
@@ -829,6 +834,25 @@ export default function MyDayPage() {
                 <p className="text-sm text-[var(--muted)]">Подходящих задач нет.</p>
               ) : null}
             </div>
+
+            {day.data?.unresolvedPreviousDays.length ? (
+              <div className="mt-4 rounded-2xl border border-[var(--focus-border-soft,var(--line))] bg-[var(--focus-surface-secondary,var(--background))] p-4">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <h3 className="font-semibold">Неразобранное</h3>
+                  <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--accent)]">
+                    {day.data.unresolvedPreviousDays.length}
+                  </span>
+                </div>
+                <div className="grid gap-2">
+                  {day.data.unresolvedPreviousDays.slice(0, 3).map((item) => (
+                    <div key={item.id} className="rounded-xl bg-[var(--panel)] p-3 text-sm">
+                      <p className="font-medium">{item.task.title}</p>
+                      <p className="mt-1 text-xs text-[var(--muted)]">Осталось с предыдущих дней</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             <div className="mt-4 rounded-lg border border-[var(--line)] bg-[var(--background)] p-3">
               <h3 className="font-medium">Завершить день</h3>
@@ -883,7 +907,7 @@ export default function MyDayPage() {
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-lg border border-[var(--line)] bg-[var(--background)] p-3">
+    <div className="rounded-2xl border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface,var(--background))] p-3">
       <p className="text-xs text-[var(--muted)]">{label}</p>
       <p className="mt-1 text-lg font-semibold">{value}</p>
     </div>
@@ -892,8 +916,8 @@ function Stat({ label, value }: { label: string; value: string | number }) {
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm">
-      <h2 className="mb-3 flex items-center gap-2 font-semibold">
+    <section className="rounded-3xl border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface,var(--panel))] p-4 shadow-sm sm:p-5">
+      <h2 className="mb-4 flex items-center gap-2 font-semibold tracking-[-0.02em]">
         <CalendarDays size={18} />
         {title}
       </h2>

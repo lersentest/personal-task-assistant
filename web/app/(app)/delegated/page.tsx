@@ -1,13 +1,17 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronRight, Download, FileUp, Link as LinkIcon, Send, UploadCloud } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { AlertCircle, Clock3, MessageSquare, Plus, Send, UserRoundCheck } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { EmptyState, Page } from '@/components/page';
+import { CreateEntityModal, CreateEntityState } from '@/components/create-entity-modal';
+import { DelegatedTaskModalLink } from '@/components/delegated-task-detail-modal';
+import { Page } from '@/components/page';
+import { EmptyPanel, ErrorState, LoadingState, MetricStrip, UiCard } from '@/components/ui-kit';
 import { api } from '@/lib/api';
-import { DelegatedTask, DelegatedTaskStatus, TaskPriority } from '@/lib/types';
+import { formatDate } from '@/lib/labels';
+import type { DelegatedTask, DelegatedTaskStatus } from '@/lib/types';
 
-const statusLabel: Record<DelegatedTaskStatus, string> = {
+const delegatedStatusLabel: Record<DelegatedTaskStatus, string> = {
   DRAFT: 'Черновик',
   SENT: 'Отправлена',
   ACCEPTED: 'Принята',
@@ -19,415 +23,213 @@ const statusLabel: Record<DelegatedTaskStatus, string> = {
   CANCELLED: 'Отменена',
 };
 
-const emptyForm = {
-  title: '',
-  description: '',
-  executorId: '',
-  projectId: '',
-  priority: 'NORMAL' as TaskPriority,
-  dueAt: '',
-};
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(reader.error);
-    reader.onload = () => {
-      const value = String(reader.result ?? '');
-      resolve(value.includes(',') ? value.split(',')[1] : value);
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-function formatSize(size: number) {
-  if (size < 1024) return `${size} B`;
-  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
-  return `${(size / 1024 / 1024).toFixed(1)} MB`;
-}
+const tabs: Array<{ label: string; value: '' | DelegatedTaskStatus | 'ACTIVE' | 'ATTENTION' }> = [
+  { label: 'Активные', value: 'ACTIVE' },
+  { label: 'Ожидаю исполнителя', value: 'SENT' },
+  { label: 'На проверке', value: 'WAITING_REVIEW' },
+  { label: 'Завершённые', value: 'COMPLETED' },
+];
 
 export default function DelegatedPage() {
-  const queryClient = useQueryClient();
-  const [filters, setFilters] = useState({ status: '', executorId: '' });
-  const [form, setForm] = useState(emptyForm);
-  const [reviewMessage, setReviewMessage] = useState('');
-  const [message, setMessage] = useState<string | null>(null);
+  const [filters, setFilters] = useState({ status: 'ACTIVE', executorId: '' });
+  const [createModal, setCreateModal] = useState<CreateEntityState | null>(null);
   const executors = useQuery({ queryKey: ['executors'], queryFn: api.executors });
-  const projects = useQuery({ queryKey: ['projects'], queryFn: api.projects });
   const query = useMemo(() => {
     const params = new URLSearchParams();
-    if (filters.status) params.set('status', filters.status);
     if (filters.executorId) params.set('executorId', filters.executorId);
+    if (filters.status && filters.status !== 'ACTIVE' && filters.status !== 'ATTENTION') {
+      params.set('status', filters.status);
+    }
     return params.toString() ? `?${params.toString()}` : '';
   }, [filters]);
   const tasks = useQuery({ queryKey: ['delegated-tasks', query], queryFn: () => api.delegatedTasks(query) });
 
-  const refresh = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['delegated-tasks'] });
-  };
+  const visibleTasks = useMemo(() => {
+    const data = tasks.data ?? [];
+    if (filters.status === 'ACTIVE') {
+      return data.filter((task) => !['COMPLETED', 'CANCELLED'].includes(task.status));
+    }
+    if (filters.status === 'ATTENTION') {
+      return data.filter((task) => ['QUESTION', 'WAITING_REVIEW', 'RETURNED'].includes(task.status));
+    }
+    return data;
+  }, [filters.status, tasks.data]);
 
-  const create = useMutation({
-    mutationFn: api.createDelegatedTask,
-    onMutate: () => setMessage(null),
-    onSuccess: async () => {
-      setForm(emptyForm);
-      setMessage('Делегированная задача создана.');
-      await refresh();
-    },
-  });
-  const send = useMutation({
-    mutationFn: api.sendDelegatedTask,
-    onSuccess: async () => {
-      setMessage('Задача отправлена исполнителю.');
-      await refresh();
-    },
-  });
-  const remind = useMutation({
-    mutationFn: api.remindDelegatedTask,
-    onSuccess: async () => {
-      setMessage('Напоминание отправлено.');
-      await refresh();
-    },
-  });
-  const cancel = useMutation({
-    mutationFn: api.cancelDelegatedTask,
-    onSuccess: async () => {
-      setMessage('Задача отменена.');
-      await refresh();
-    },
-  });
-  const accept = useMutation({
-    mutationFn: (id: string) => api.acceptDelegatedTask(id, reviewMessage || undefined),
-    onSuccess: async () => {
-      setMessage('Результат принят.');
-      await refresh();
-    },
-  });
-  const returnTask = useMutation({
-    mutationFn: (id: string) => api.returnDelegatedTask(id, reviewMessage || 'Нужно доработать.'),
-    onSuccess: async () => {
-      setMessage('Задача возвращена в работу.');
-      await refresh();
-    },
-  });
-
-  const actionError =
-    create.error || send.error || remind.error || cancel.error || accept.error || returnTask.error;
-
-  function submit(event: React.FormEvent) {
-    event.preventDefault();
-    if (!form.title.trim() || !form.executorId || create.isPending) return;
-    create.mutate({
-      title: form.title.trim(),
-      description: form.description.trim() || null,
-      executorId: form.executorId,
-      projectId: form.projectId || null,
-      priority: form.priority,
-      dueAt: form.dueAt ? new Date(form.dueAt).toISOString() : null,
-    });
-  }
+  const stats = useMemo(() => {
+    const data = tasks.data ?? [];
+    const now = Date.now();
+    return {
+      attention: data.filter((task) => ['QUESTION', 'WAITING_REVIEW', 'RETURNED'].includes(task.status)).length,
+      inProgress: data.filter((task) => ['ACCEPTED', 'IN_PROGRESS'].includes(task.status)).length,
+      review: data.filter((task) => task.status === 'WAITING_REVIEW').length,
+      overdue: data.filter((task) => task.dueAt && new Date(task.dueAt).getTime() < now && !['COMPLETED', 'CANCELLED'].includes(task.status)).length,
+    };
+  }, [tasks.data]);
 
   return (
     <Page
       title="Делегированные"
-      description="Отдельные задачи для исполнителей. Они не смешиваются с личными задачами и Моим днём."
+      description="Отдельный поток задач для исполнителей: статус, активность, комментарии и файлы."
+      actions={
+        <button type="button" onClick={() => setCreateModal({ entity: 'delegated' })} className="btn-base btn-primary">
+          <Plus size={17} />
+          Делегировать
+        </button>
+      }
     >
-      <div className="grid items-start gap-4 xl:grid-cols-[420px_1fr] xl:gap-5">
-        <form onSubmit={submit} className="grid self-start gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm sm:p-5">
-          <div>
-            <h2 className="text-lg font-semibold">Новая делегированная задача</h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              Выбери исполнителя и опиши результат, который нужно получить.
-            </p>
+      <MetricStrip
+        items={[
+          { label: 'Требуют внимания', value: stats.attention, icon: <AlertCircle size={18} />, tone: 'red' },
+          { label: 'В работе', value: stats.inProgress, icon: <UserRoundCheck size={18} />, tone: 'blue' },
+          { label: 'На проверке', value: stats.review, icon: <MessageSquare size={18} />, tone: 'orange' },
+          { label: 'Просрочены', value: stats.overdue, icon: <Clock3 size={18} />, tone: 'red' },
+        ]}
+      />
+
+      <UiCard className="mt-5 overflow-hidden">
+        <div className="border-b border-[var(--focus-border-soft,var(--line))] px-3 pt-3">
+          <div className="flex gap-1 overflow-x-auto">
+            {tabs.map((tab) => (
+              <button
+                key={tab.label}
+                type="button"
+                onClick={() => setFilters((value) => ({ ...value, status: tab.value }))}
+                className={`whitespace-nowrap rounded-t-2xl px-4 py-3 text-sm font-semibold ${
+                  filters.status === tab.value
+                    ? 'border-b-2 border-[var(--accent)] text-[var(--accent)]'
+                    : 'text-[var(--muted)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
-          <input className="h-11 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 py-2" placeholder="Название *" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-          <textarea className="min-h-28 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 py-2" placeholder="Описание" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          <select className="h-11 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 py-2" value={form.executorId} onChange={(e) => setForm({ ...form, executorId: e.target.value })}>
-            <option value="">Выберите исполнителя</option>
+        </div>
+        <div className="grid gap-3 p-3 md:grid-cols-[1fr_1fr]">
+          <select
+            value={filters.status}
+            onChange={(event) => setFilters((value) => ({ ...value, status: event.target.value }))}
+            className="h-10 rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm"
+          >
+            <option value="ACTIVE">Все активные</option>
+            <option value="ATTENTION">Требуют внимания</option>
+            {Object.entries(delegatedStatusLabel).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+          <select
+            value={filters.executorId}
+            onChange={(event) => setFilters((value) => ({ ...value, executorId: event.target.value }))}
+            className="h-10 rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm"
+          >
+            <option value="">Все исполнители</option>
             {executors.data?.map((executor) => <option key={executor.id} value={executor.id}>{executor.fullName}</option>)}
           </select>
-          <select className="h-11 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 py-2" value={form.projectId} onChange={(e) => setForm({ ...form, projectId: e.target.value })}>
-            <option value="">Без проекта</option>
-            {projects.data?.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
-          </select>
-          <select className="h-11 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 py-2" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as TaskPriority })}>
-            <option value="LOW">Низкий</option>
-            <option value="NORMAL">Обычный</option>
-            <option value="HIGH">Высокий</option>
-            <option value="URGENT">Срочный</option>
-          </select>
-          <input type="datetime-local" className="h-11 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 py-2" value={form.dueAt} onChange={(e) => setForm({ ...form, dueAt: e.target.value })} />
-          <button disabled={create.isPending || !form.executorId || !form.title.trim()} className="btn-base btn-primary w-full">
-            {create.isPending ? 'Создаю...' : 'Создать задачу'}
-          </button>
-          {message ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</p> : null}
-          {actionError ? <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{actionError.message}</p> : null}
-        </form>
+        </div>
+      </UiCard>
 
-        <section className="grid content-start gap-4">
-          <div className="grid gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3 shadow-sm sm:grid-cols-2">
-            <select className="h-11 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm" value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
-              <option value="">Все статусы</option>
-              {Object.entries(statusLabel).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
-            <select className="h-11 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm" value={filters.executorId} onChange={(e) => setFilters({ ...filters, executorId: e.target.value })}>
-              <option value="">Все исполнители</option>
-              {executors.data?.map((executor) => <option key={executor.id} value={executor.id}>{executor.fullName}</option>)}
-            </select>
-          </div>
-          <input className="h-11 w-full rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2" placeholder="Комментарий для проверки/возврата" value={reviewMessage} onChange={(e) => setReviewMessage(e.target.value)} />
-
-          {tasks.isLoading ? <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-5 text-sm text-[var(--muted)]">Загружаю делегированные задачи...</div> : null}
-          {tasks.error ? <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">Не удалось загрузить задачи: {tasks.error.message}</div> : null}
-          {tasks.data?.length ? tasks.data.map((task) => (
-            <DelegatedTaskCard
-              key={task.id}
-              task={task}
-              busyAction={{
-                send: send.isPending,
-                remind: remind.isPending,
-                cancel: cancel.isPending,
-                accept: accept.isPending,
-                return: returnTask.isPending,
-              }}
-              onSend={() => send.mutate(task.id)}
-              onRemind={() => remind.mutate(task.id)}
-              onCancel={() => cancel.mutate(task.id)}
-              onAccept={() => accept.mutate(task.id)}
-              onReturn={() => returnTask.mutate(task.id)}
-            />
-          )) : null}
-          {!tasks.isLoading && !tasks.error && !tasks.data?.length ? <EmptyState text="Делегированных задач пока нет." /> : null}
-        </section>
+      <div className="mt-5">
+        {tasks.isLoading ? <LoadingState text="Загружаю делегированные задачи…" /> : null}
+        {tasks.error ? <ErrorState text={`Не удалось загрузить делегированные: ${tasks.error.message}`} /> : null}
+        {!tasks.isLoading && !tasks.error && visibleTasks.length === 0 ? (
+          <EmptyPanel title="Делегированных задач нет" text="Создай задачу через кнопку «Делегировать»." />
+        ) : null}
+        {visibleTasks.length ? (
+          <UiCard className="overflow-hidden">
+            <div className="hidden overflow-x-auto md:block">
+              <table className="focus-table w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="p-4">Исполнитель</th>
+                    <th className="p-4">Задача</th>
+                    <th className="p-4">Проект</th>
+                    <th className="p-4">Срок</th>
+                    <th className="p-4">Статус</th>
+                    <th className="p-4">Активность</th>
+                    <th className="w-12 p-4" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleTasks.map((task) => <DelegatedRow key={task.id} task={task} />)}
+                </tbody>
+              </table>
+            </div>
+            <div className="grid gap-2 p-3 md:hidden">
+              {visibleTasks.map((task) => <DelegatedMobileRow key={task.id} task={task} />)}
+            </div>
+          </UiCard>
+        ) : null}
       </div>
+
+      <CreateEntityModal
+        open={Boolean(createModal)}
+        state={createModal ?? { entity: 'delegated' }}
+        onClose={() => setCreateModal(null)}
+      />
     </Page>
   );
 }
 
-function DelegatedTaskCard({
-  task,
-  busyAction,
-  onSend,
-  onRemind,
-  onCancel,
-  onAccept,
-  onReturn,
-}: {
-  task: DelegatedTask;
-  busyAction: { send: boolean; remind: boolean; cancel: boolean; accept: boolean; return: boolean };
-  onSend: () => void;
-  onRemind: () => void;
-  onCancel: () => void;
-  onAccept: () => void;
-  onReturn: () => void;
-}) {
-  const queryClient = useQueryClient();
-  const [ownerComment, setOwnerComment] = useState('');
-  const [cardMessage, setCardMessage] = useState<string | null>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const isClosed = ['COMPLETED', 'CANCELLED'].includes(task.status);
-  const publicUrl =
-    typeof window === 'undefined'
-      ? ''
-      : `${window.location.origin}/public/delegated/${task.publicAccessToken}`;
-
-  const comment = useMutation({
-    mutationFn: (message: string) => api.commentDelegatedTask(task.id, message),
-    onSuccess: async () => {
-      setOwnerComment('');
-      setCardMessage('Комментарий отправлен исполнителю.');
-      await queryClient.invalidateQueries({ queryKey: ['delegated-tasks'] });
-    },
-  });
-
-  const upload = useMutation({
-    mutationFn: async (file: File) => {
-      if (file.size > 10 * 1024 * 1024) {
-        throw new Error('Файл слишком большой. Максимум 10 МБ.');
-      }
-      return api.createAttachment({
-        delegatedTaskId: task.id,
-        fileName: file.name,
-        mimeType: file.type || 'application/octet-stream',
-        dataBase64: await fileToBase64(file),
-      });
-    },
-    onSuccess: async () => {
-      setCardMessage('Файл добавлен.');
-      await queryClient.invalidateQueries({ queryKey: ['delegated-tasks'] });
-    },
-  });
-
-  async function downloadAttachment(id: string, fileName: string) {
-    const blob = await api.downloadAttachment(id);
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-
+function DelegatedRow({ task }: { task: DelegatedTask }) {
+  const unread = task.comments?.filter((comment) => comment.author === 'EXECUTOR').length ?? 0;
   return (
-    <article className={`interactive-card overflow-hidden rounded-2xl border bg-[var(--panel)] shadow-sm transition-all ${isExpanded ? 'border-[var(--accent)] shadow-md' : 'border-[var(--line)]'}`}>
-      <button
-        type="button"
-        className="group grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-[var(--accent-soft)] active:scale-[0.995] sm:grid-cols-[auto_minmax(0,1fr)_auto_auto_auto] sm:gap-3 sm:px-4"
-        aria-expanded={isExpanded}
-        onClick={() => setIsExpanded((value) => !value)}
-      >
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--background)] text-[var(--muted)] transition-colors group-hover:text-[var(--accent)]">
-          {isExpanded ? <ChevronDown size={17} /> : <ChevronRight size={17} />}
-        </span>
-        <span className="min-w-0">
-          <span className="block truncate text-sm font-semibold sm:text-base">{task.title}</span>
-          <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-[var(--muted)] sm:hidden">
-            <span className="truncate">{task.executor.fullName}</span>
-            {task.dueAt ? <span className="shrink-0">· {new Date(task.dueAt).toLocaleDateString('ru-RU')}</span> : null}
+    <tr className="task-row transition">
+      <td className="p-4">
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--accent-soft)] text-sm font-semibold text-[var(--accent)]">
+            {task.executor.fullName.slice(0, 1).toUpperCase()}
           </span>
-        </span>
-        <span className="hidden min-w-0 truncate text-xs text-[var(--muted)] sm:block">{task.executor.fullName}</span>
-        <span className="hidden min-w-0 truncate text-xs text-[var(--muted)] sm:block">
-          {task.project?.name ?? 'Без проекта'}
-          {task.dueAt ? ` · ${new Date(task.dueAt).toLocaleDateString('ru-RU')}` : ''}
-        </span>
-        <span className="flex shrink-0 items-center gap-1.5">
-          <span className="hidden rounded-full bg-[var(--background)] px-2 py-1 text-xs text-[var(--muted)] sm:inline-flex">{task.priority}</span>
-          <span className="rounded-full bg-[var(--accent-soft)] px-2 py-1 text-xs text-[var(--accent)]">{statusLabel[task.status]}</span>
-        </span>
-      </button>
-
-      {isExpanded ? (
-        <div className="border-t border-[var(--line)] p-4 sm:p-5">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <div className="mb-2 flex flex-wrap gap-2 text-xs">
-            <span className="rounded-full bg-[var(--accent-soft)] px-2 py-1 text-[var(--accent)]">{statusLabel[task.status]}</span>
-            <span className="rounded-full bg-[var(--background)] px-2 py-1">{task.priority}</span>
-            <span className="rounded-full bg-[var(--background)] px-2 py-1">{task.executor.fullName}</span>
-          </div>
-          <h2 className="text-lg font-semibold">{task.title}</h2>
-          {task.description ? <p className="mt-2 text-sm text-[var(--muted)]">{task.description}</p> : null}
-          <p className="mt-2 text-xs text-[var(--muted)]">
-            {task.project ? `Проект: ${task.project.name}` : 'Без проекта'}
-            {task.dueAt ? ` · Срок: ${new Date(task.dueAt).toLocaleString('ru-RU')}` : ''}
-          </p>
-          {task.comments?.length ? (
-            <div className="mt-3 rounded-xl bg-[var(--background)] p-3 text-sm">
-              <p className="mb-2 font-medium">Комментарии</p>
-              {task.comments.slice(-3).map((comment) => (
-                <p key={comment.id} className="text-[var(--muted)]">
-                  {comment.author}: {comment.message}
-                </p>
-              ))}
-            </div>
-          ) : null}
+          <span className="font-medium">{task.executor.fullName}</span>
         </div>
-        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:flex-wrap lg:min-w-[220px] lg:justify-end">
-          <button
-            type="button"
-            className="btn-base btn-secondary w-full sm:w-auto"
-            onClick={() => {
-              navigator.clipboard?.writeText(publicUrl);
-              setCardMessage('Ссылка исполнителя скопирована.');
-            }}
-          >
-            <LinkIcon size={16} /> Ссылка
-          </button>
-          {task.status === 'DRAFT' ? (
-            <button disabled={busyAction.send} onClick={onSend} className="btn-base btn-primary w-full sm:w-auto">
-              {busyAction.send ? 'Отправляю...' : 'Отправить'}
-            </button>
-          ) : null}
-          {task.status === 'WAITING_REVIEW' ? (
-            <>
-              <button disabled={busyAction.accept} onClick={onAccept} className="btn-base btn-success w-full sm:w-auto">
-                {busyAction.accept ? 'Принимаю...' : 'Принять'}
-              </button>
-              <button disabled={busyAction.return} onClick={onReturn} className="btn-base btn-warning w-full sm:w-auto">
-                {busyAction.return ? 'Возвращаю...' : 'Вернуть'}
-              </button>
-            </>
-          ) : null}
-          {!isClosed ? (
-            <button disabled={busyAction.remind} onClick={onRemind} className="btn-base btn-secondary w-full sm:w-auto">
-              {busyAction.remind ? 'Отправляю...' : 'Напомнить'}
-            </button>
-          ) : null}
-          {!isClosed ? (
-            <button disabled={busyAction.cancel} onClick={onCancel} className="btn-base btn-danger w-full sm:w-auto">
-              {busyAction.cancel ? 'Отменяю...' : 'Отменить'}
-            </button>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="mt-4 grid gap-4 border-t border-[var(--line)] pt-4 lg:grid-cols-2">
-        <section className="rounded-2xl bg-[var(--background)] p-3 sm:p-4">
-          <h3 className="font-semibold">Комментарии</h3>
-          <div className="mt-3 grid max-h-56 gap-2 overflow-auto">
-            {task.comments?.length ? task.comments.map((item) => (
-              <div key={item.id} className="rounded-xl bg-[var(--panel)] p-3 text-sm">
-                <p className="text-xs text-[var(--muted)]">{item.author} · {new Date(item.createdAt).toLocaleString('ru-RU')}</p>
-                <p className="mt-1 whitespace-pre-wrap">{item.message}</p>
-              </div>
-            )) : <p className="text-sm text-[var(--muted)]">Комментариев пока нет.</p>}
-          </div>
-          {!isClosed ? (
-            <div className="mt-3 grid gap-2">
-              <textarea
-                className="min-h-20 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-sm"
-                placeholder="Ответить исполнителю"
-                value={ownerComment}
-                onChange={(event) => setOwnerComment(event.target.value)}
-              />
-              <button className="btn-base btn-primary w-full" disabled={comment.isPending || !ownerComment.trim()} onClick={() => comment.mutate(ownerComment)}>
-                <Send size={16} /> Ответить
-              </button>
-            </div>
-          ) : null}
-        </section>
-
-        <section className="rounded-2xl bg-[var(--background)] p-3 sm:p-4">
-          <div className="grid gap-3 sm:flex sm:items-center sm:justify-between">
-            <h3 className="font-semibold">Файлы</h3>
-            {!isClosed ? (
-              <label className="btn-base btn-secondary min-h-0 w-full cursor-pointer px-3 py-2 sm:w-auto sm:py-1">
-                <UploadCloud size={16} /> Загрузить
-                <input
-                  type="file"
-                  className="hidden"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) upload.mutate(file);
-                  }}
-                />
-              </label>
-            ) : null}
-          </div>
-          <div className="mt-3 grid gap-2">
-            {task.attachments?.length ? task.attachments.map((file) => (
-              <div key={file.id} className="interactive-card grid gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-sm sm:flex sm:items-center sm:justify-between">
-                <div className="flex min-w-0 items-center gap-2">
-                  <FileUp size={16} className="text-[var(--accent)]" />
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{file.fileName}</p>
-                    <p className="text-xs text-[var(--muted)]">{formatSize(file.sizeBytes)}</p>
-                  </div>
-                </div>
-                <button className="btn-base btn-secondary min-h-0 w-full px-3 py-2 sm:w-auto sm:py-1" onClick={() => downloadAttachment(file.id, file.fileName)}>
-                  <Download size={15} /> Скачать
-                </button>
-              </div>
-            )) : <p className="text-sm text-[var(--muted)]">Файлов пока нет.</p>}
-          </div>
-        </section>
-      </div>
-
-      {cardMessage ? <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{cardMessage}</p> : null}
-      {(comment.error || upload.error) ? <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{(comment.error || upload.error)?.message}</p> : null}
-        </div>
-      ) : null}
-    </article>
+      </td>
+      <td className="min-w-[260px] p-4">
+        <DelegatedTaskModalLink task={task} className="text-left font-semibold hover:text-[var(--accent)]">
+          {task.title}
+        </DelegatedTaskModalLink>
+        {unread ? <p className="mt-1 text-xs text-[var(--accent)]">{unread} комментариев от исполнителя</p> : null}
+      </td>
+      <td className="p-4 text-[var(--muted)]">{task.project?.name ?? 'Без проекта'}</td>
+      <td className="whitespace-nowrap p-4 text-[var(--muted)]">{formatDate(task.dueAt)}</td>
+      <td className="p-4"><DelegatedStatus status={task.status} /></td>
+      <td className="whitespace-nowrap p-4 text-[var(--muted)]">{formatDate(task.updatedAt)}</td>
+      <td className="p-4">
+        <DelegatedTaskModalLink task={task} className="rounded-xl p-2 text-[var(--muted)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]">
+          <Send size={17} />
+        </DelegatedTaskModalLink>
+      </td>
+    </tr>
   );
+}
+
+function DelegatedMobileRow({ task }: { task: DelegatedTask }) {
+  return (
+    <DelegatedTaskModalLink
+      task={task}
+      className="rounded-2xl border border-[var(--focus-border-soft,var(--line))] bg-[var(--focus-surface-secondary,var(--background))] p-3 text-left"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate font-semibold">{task.title}</p>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            {task.executor.fullName} · {task.project?.name ?? 'Без проекта'} · {formatDate(task.dueAt)}
+          </p>
+        </div>
+        <DelegatedStatus status={task.status} />
+      </div>
+    </DelegatedTaskModalLink>
+  );
+}
+
+function DelegatedStatus({ status }: { status: DelegatedTaskStatus }) {
+  const tone =
+    status === 'COMPLETED'
+      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/35 dark:text-emerald-200'
+      : status === 'WAITING_REVIEW'
+        ? 'bg-violet-50 text-violet-700 dark:bg-violet-950/35 dark:text-violet-200'
+        : status === 'QUESTION' || status === 'RETURNED'
+          ? 'bg-orange-50 text-orange-700 dark:bg-orange-950/35 dark:text-orange-200'
+          : status === 'CANCELLED'
+            ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+            : 'bg-blue-50 text-blue-700 dark:bg-blue-950/35 dark:text-blue-200';
+  return <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${tone}`}>{delegatedStatusLabel[status]}</span>;
 }
