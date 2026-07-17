@@ -154,6 +154,166 @@ function TaskPill({
   );
 }
 
+function QueueTaskRow({
+  task,
+  action,
+  actionLabel = 'В план',
+}: {
+  task: Task;
+  action?: () => void;
+  actionLabel?: string;
+}) {
+  return (
+    <article
+      draggable
+      onDragStart={(event) => event.dataTransfer.setData('text/plain', `task:${task.id}`)}
+      className="group rounded-2xl border border-[var(--focus-border-soft,var(--line))] bg-[var(--focus-surface,var(--panel))] px-3 py-2.5 transition hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]/45"
+    >
+      <div className="flex items-start gap-2">
+        <span className="mt-1.5 h-3 w-3 shrink-0 rounded-full border-2 border-[var(--accent)] bg-[var(--panel)]" />
+        <div className="min-w-0 flex-1">
+          <TaskModalLink task={task} className="line-clamp-2 text-left text-sm font-semibold leading-snug hover:text-[var(--accent)]">
+            {task.title}
+          </TaskModalLink>
+          <div className="mt-1 text-[11px] text-[var(--muted)]">
+            {task.dueAt ? formatDueDate(task.dueAt, task.dueDateType) : task.project?.name ?? 'Без проекта'}
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <TaskKindBadge kind={task.kind ?? 'TASK'} />
+            <PriorityBadge priority={task.priority} />
+            {task.estimatedDurationMinutes ? (
+              <span className="rounded-full bg-[var(--focus-surface-secondary,var(--background))] px-2 py-0.5 text-[11px] font-medium text-[var(--muted)]">
+                {formatMinutes(task.estimatedDurationMinutes)}
+              </span>
+            ) : null}
+          </div>
+        </div>
+        {action ? (
+          <button
+            type="button"
+            onClick={action}
+            className="shrink-0 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5 text-xs font-medium text-[var(--accent)] opacity-0 transition hover:border-[var(--accent)] hover:bg-[var(--accent-soft)] group-hover:opacity-100 focus:opacity-100"
+          >
+            {actionLabel}
+          </button>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
+function QueuePlanItemRow({
+  item,
+  onComplete,
+  onRemove,
+  onUnschedule,
+  onSchedule,
+  onDuration,
+}: {
+  item: DailyPlanItem;
+  onComplete: () => void;
+  onRemove: () => void;
+  onUnschedule: () => void;
+  onSchedule: (start: string, duration: number) => void;
+  onDuration: (duration: number) => void;
+}) {
+  const [editingTime, setEditingTime] = useState(false);
+  const [time, setTime] = useState(formatTime(item.scheduledStartAt) || '09:00');
+  const duration = item.task.estimatedDurationMinutes ?? 30;
+  const done = item.completedInPlanAt || item.task.status === 'COMPLETED';
+
+  useEffect(() => {
+    setTime(formatTime(item.scheduledStartAt) || '09:00');
+  }, [item.scheduledStartAt]);
+
+  return (
+    <article
+      draggable
+      onDragStart={(event) => event.dataTransfer.setData('text/plain', `item:${item.id}`)}
+      className={`group rounded-2xl border px-3 py-2.5 transition ${
+        done
+          ? 'border-emerald-200 bg-emerald-50/80 dark:bg-emerald-950/20'
+          : 'border-[var(--focus-border-soft,var(--line))] bg-[var(--focus-surface,var(--panel))] hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]/45'
+      }`}
+    >
+      <div className="flex items-start gap-2">
+        <button
+          type="button"
+          onClick={onComplete}
+          disabled={Boolean(done)}
+          className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-emerald-600 transition hover:bg-emerald-50 disabled:opacity-50"
+          aria-label="Выполнить"
+        >
+          <CheckCircle2 size={17} />
+        </button>
+        <div className="min-w-0 flex-1">
+          <TaskModalLink task={item.task} className="line-clamp-2 text-left text-sm font-semibold leading-snug hover:text-[var(--accent)]">
+            {item.task.title}
+          </TaskModalLink>
+          <div className="mt-1 text-[11px] text-[var(--muted)]">
+            {item.scheduledStartAt ? `${formatTime(item.scheduledStartAt)}–${formatTime(item.scheduledEndAt)}` : 'Без времени'}
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <TaskKindBadge kind={item.task.kind ?? 'TASK'} />
+            <PriorityBadge priority={item.task.priority} />
+            <span className="rounded-full bg-[var(--focus-surface-secondary,var(--background))] px-2 py-0.5 text-[11px] font-medium text-[var(--muted)]">
+              {formatMinutes(duration)}
+            </span>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+          <button
+            type="button"
+            onClick={() => setEditingTime((value) => !value)}
+            className="rounded-lg px-2 py-1 text-xs font-medium text-[var(--accent)] hover:bg-[var(--accent-soft)]"
+          >
+            Время
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="rounded-lg p-1.5 text-slate-500 hover:bg-red-50 hover:text-red-600"
+            aria-label="Убрать из дня"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      </div>
+      {editingTime ? (
+        <div className="mt-3 grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--background)] p-2">
+          <TimeStepSelect value={time} onChange={setTime} minuteStep={15} />
+          <select
+            className="h-10 rounded-xl border border-[var(--line)] bg-transparent px-2 text-sm"
+            value={duration}
+            onChange={(event) => onDuration(Number(event.target.value))}
+          >
+            {durationOptions.map((value) => (
+              <option key={value} value={value}>
+                {formatMinutes(value)}
+              </option>
+            ))}
+          </select>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                onSchedule(time, duration);
+                setEditingTime(false);
+              }}
+              className="btn-base btn-primary h-9"
+            >
+              Назначить
+            </button>
+            <button type="button" onClick={onUnschedule} className="btn-base btn-secondary h-9">
+              Без времени
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
 function PlanItemCard({
   item,
   date,
@@ -362,12 +522,24 @@ function TimelineBoard({
   onDuration: (item: DailyPlanItem, duration: number) => void;
   onDropAt: (event: React.DragEvent, time: string) => void;
 }) {
+  const [now, setNow] = useState(() => new Date());
   const layout = buildTimelineLayout(items);
   const totalHeight = (timelineEndHour - timelineStartHour) * timelineHourHeight;
   const hours = Array.from(
     { length: timelineEndHour - timelineStartHour + 1 },
     (_, index) => timelineStartHour + index,
   );
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const showNowLine =
+    date === todayLocalDate() &&
+    nowMinutes >= timelineStartHour * 60 &&
+    nowMinutes <= timelineEndHour * 60;
+  const nowTop = ((nowMinutes - timelineStartHour * 60) / 60) * timelineHourHeight;
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   function handleDrop(event: React.DragEvent<HTMLDivElement>) {
     event.preventDefault();
@@ -405,6 +577,18 @@ function TimelineBoard({
               style={{ top: (index * timelineHourHeight) / 4 }}
             />
           ))}
+          {showNowLine ? (
+            <div
+              className="pointer-events-none absolute left-0 right-0 z-20"
+              style={{ top: nowTop }}
+            >
+              <span className="absolute -left-[58px] -translate-y-1/2 rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm">
+                {timeFromMinutes(nowMinutes)}
+              </span>
+              <div className="h-0.5 bg-red-500 shadow-[0_0_0_1px_rgba(239,68,68,0.15)]" />
+              <span className="absolute -left-1 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-red-500" />
+            </div>
+          ) : null}
           {layout.map(({ item, top, height, left, width }) => (
             <div
               key={item.id}
@@ -899,7 +1083,6 @@ export default function MyDayPage() {
             <TaskItemGroup
               title="Запланировано без времени"
               items={unscheduledItems}
-              date={date}
               completeItem={(id) => completeItem.mutate(id)}
               removeItem={(id) => removeItem.mutate(id)}
               unscheduleItem={(id) => unscheduleItem.mutate(id)}
@@ -1084,10 +1267,15 @@ function TaskGroup({
   if (!tasks.length) return null;
   return (
     <div className="mb-4">
-      <h3 className="mb-2 text-sm font-medium text-[var(--muted)]">{title}</h3>
-      <div className="grid gap-2">
+      <h3 className="mb-2 flex items-center justify-between text-sm font-medium text-[var(--muted)]">
+        <span>{title}</span>
+        <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--accent)]">
+          {tasks.length}
+        </span>
+      </h3>
+      <div className="grid gap-1.5">
         {tasks.map((task) => (
-          <TaskPill
+          <QueueTaskRow
             key={task.id}
             task={task}
             action={() => onAdd(task.id)}
@@ -1102,7 +1290,6 @@ function TaskGroup({
 function TaskItemGroup({
   title,
   items,
-  date,
   completeItem,
   removeItem,
   unscheduleItem,
@@ -1111,7 +1298,6 @@ function TaskItemGroup({
 }: {
   title: string;
   items: DailyPlanItem[];
-  date: string;
   completeItem: (id: string) => void;
   removeItem: (id: string) => void;
   unscheduleItem: (id: string) => void;
@@ -1121,19 +1307,22 @@ function TaskItemGroup({
   if (!items.length) return null;
   return (
     <div className="mb-4">
-      <h3 className="mb-2 text-sm font-medium text-[var(--muted)]">{title}</h3>
-      <div className="grid gap-2">
+      <h3 className="mb-2 flex items-center justify-between text-sm font-medium text-[var(--muted)]">
+        <span>{title}</span>
+        <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--accent)]">
+          {items.length}
+        </span>
+      </h3>
+      <div className="grid gap-1.5">
         {items.map((item) => (
-          <PlanItemCard
+          <QueuePlanItemRow
             key={item.id}
             item={item}
-            date={date}
             onComplete={() => completeItem(item.id)}
             onRemove={() => removeItem(item.id)}
             onUnschedule={() => unscheduleItem(item.id)}
             onSchedule={(start, duration) => scheduleExistingItem(item, start, duration)}
             onDuration={(duration) => updateDuration(item, duration)}
-            compact
           />
         ))}
       </div>
