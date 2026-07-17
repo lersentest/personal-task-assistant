@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Clock3, MoreHorizontal, Plus, Trash2 } from 'lucide-react';
+import { CheckCircle2, Clock3, ListChecks, MoreHorizontal, Plus, Trash2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { CreateEntityModal, CreateEntityState } from '@/components/create-entity-modal';
@@ -54,6 +54,13 @@ function formatMinutes(value: number | null) {
   const hours = Math.floor(value / 60);
   const minutes = value % 60;
   return minutes ? `${hours} ч ${minutes} мин` : `${hours} ч`;
+}
+
+function checklistText(task: Task) {
+  const total = task.checklistItems?.length ?? 0;
+  if (!total) return null;
+  const done = task.checklistItems.filter((item) => item.isCompleted).length;
+  return `${done}/${total}`;
 }
 
 export default function TasksPage() {
@@ -300,6 +307,12 @@ function TaskTableRow({
           {task.title}
         </TaskModalLink>
         {task.description ? <p className="mt-1 line-clamp-1 text-xs text-[var(--muted)]">{task.description}</p> : null}
+        {checklistText(task) ? (
+          <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-[var(--accent-soft)] px-2 py-1 text-xs font-medium text-[var(--accent)]">
+            <ListChecks size={13} />
+            {checklistText(task)}
+          </span>
+        ) : null}
       </td>
       <td className={`${compact ? 'p-3' : 'p-4'} text-[var(--muted)]`}>{task.project?.name ?? 'Без проекта'}</td>
       <td className={`${compact ? 'p-3' : 'p-4'} whitespace-nowrap text-[var(--muted)]`}>
@@ -345,6 +358,12 @@ function TaskMobileRow({
           <div className="mt-2 flex flex-wrap gap-1.5">
             <PriorityBadge priority={task.priority} />
             <StatusBadge status={task.status} />
+            {checklistText(task) ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-soft)] px-2 py-1 text-xs font-medium text-[var(--accent)]">
+                <ListChecks size={13} />
+                {checklistText(task)}
+              </span>
+            ) : null}
           </div>
         </div>
         {task.status !== 'COMPLETED' ? (

@@ -7,6 +7,10 @@ import { TasksService } from '../tasks/tasks.service';
 const taskInclude = {
   project: true,
   tags: { include: { tag: true } },
+  checklistItems: {
+    where: { deletedAt: null },
+    orderBy: { position: 'asc' as const },
+  },
 } as const;
 
 const itemInclude = {

@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { AttachmentPanel } from '@/components/attachment-panel';
 import { Page } from '@/components/page';
+import { TaskChecklist } from '@/components/task-checklist';
 import { TaskForm } from '@/components/task-form';
 import { api } from '@/lib/api';
 import { invalidateTaskCaches } from '@/lib/cache';
@@ -26,7 +27,12 @@ export default function TaskDetailsPage() {
 
   return (
     <Page title={task.data?.title ?? 'Задача'} description={task.data?.project?.name ?? 'Без проекта'}>
-      {task.data && editing ? <TaskForm task={task.data} onDone={() => setEditing(false)} /> : null}
+      {task.data && editing ? (
+        <div className="grid gap-5">
+          <TaskForm task={task.data} onDone={() => setEditing(false)} />
+          <TaskChecklist task={task.data} />
+        </div>
+      ) : null}
       {task.data && !editing ? (
         <div className="grid gap-5 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
           <div className="grid gap-3 text-sm text-[var(--muted)] sm:grid-cols-2 lg:grid-cols-4">
@@ -36,6 +42,7 @@ export default function TaskDetailsPage() {
             <Info label="Создана" value={formatDate(task.data.createdAt)} />
           </div>
           <p className="whitespace-pre-wrap text-[var(--foreground)]">{task.data.description ?? 'Описание не указано.'}</p>
+          <TaskChecklist task={task.data} />
           <div className="flex flex-wrap gap-2">
             <button onClick={() => setEditing(true)} className="rounded-xl bg-[var(--foreground)] px-4 py-2 text-sm text-[var(--background)]">Редактировать</button>
             <button onClick={() => remove.mutate()} className="rounded-xl border border-[var(--line)] px-4 py-2 text-sm">Переместить в корзину</button>

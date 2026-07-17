@@ -21,6 +21,7 @@ import { invalidateTaskCaches } from '@/lib/cache';
 import { dueModeLabel, formatDate, formatDueDate, priorityLabel, statusLabel, taskKindLabel } from '@/lib/labels';
 import { Task, TaskChecklistItem } from '@/lib/types';
 import { AttachmentPanel } from './attachment-panel';
+import { TaskChecklist as TaskChecklistPanel } from './task-checklist';
 import { TaskForm } from './task-form';
 import { EntityDrawer } from './ui-kit';
 
@@ -172,13 +173,16 @@ export function TaskDetailsModal({
           ) : null}
 
           {data && editing ? (
-            <TaskForm
-              task={data}
-              onDone={() => {
-                setEditing(false);
-                queryClient.invalidateQueries({ queryKey: ['task', taskId] });
-              }}
-            />
+            <div className="grid gap-5">
+              <TaskForm
+                task={data}
+                onDone={() => {
+                  setEditing(false);
+                  queryClient.invalidateQueries({ queryKey: ['task', taskId] });
+                }}
+              />
+              <TaskChecklistPanel task={data} />
+            </div>
           ) : null}
 
           {data && !editing ? (
@@ -193,7 +197,7 @@ export function TaskDetailsModal({
                   </p>
                 </div>
 
-                <TaskChecklist task={data} />
+                <TaskChecklistPanel task={data} />
 
                 <AttachmentPanel taskId={taskId} title="Файлы задачи" />
               </section>
