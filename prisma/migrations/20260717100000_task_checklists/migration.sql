@@ -1,4 +1,4 @@
-﻿CREATE TABLE "task_checklist_items" (
+CREATE TABLE "task_checklist_items" (
   "id" UUID NOT NULL DEFAULT gen_random_uuid(),
   "task_id" UUID NOT NULL,
   "title" VARCHAR(500) NOT NULL,
