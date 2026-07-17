@@ -246,21 +246,21 @@ export function TaskForm({
       ) : null}
 
       {!task && !compact ? (
-        <section className="grid gap-2 rounded-2xl border border-[var(--line)] bg-[var(--background)]/45 p-3">
+        <section className="grid gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
           <div>
-            <h3 className="flex items-center gap-2 font-semibold">
-              <CheckSquare size={17} />
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--text)]">
+              <CheckSquare size={16} className="text-[var(--accent)]" />
               Чек-лист
             </h3>
-            <p className="text-sm text-[var(--muted)]">
+            <p className="mt-1 text-xs text-[var(--muted)]">
               Добавь мелкие шаги внутри задачи. Пустые строки не сохраняются.
             </p>
           </div>
-          <div className="grid gap-1">
+          <div className="grid gap-1.5">
             {checklistDrafts.map((item, index) => (
               <div
                 key={index}
-                className="flex items-center gap-2 rounded-xl px-2 py-1.5 transition focus-within:bg-[var(--panel)]"
+                className="flex items-center gap-2 rounded-xl border border-transparent bg-[var(--background)]/70 px-3 py-2 transition focus-within:border-[var(--accent)] focus-within:bg-[var(--background)] focus-within:ring-2 focus-within:ring-[var(--accent-soft)]"
               >
                 <span className="h-4 w-4 shrink-0 rounded border border-dashed border-[var(--line)]" />
                 <input

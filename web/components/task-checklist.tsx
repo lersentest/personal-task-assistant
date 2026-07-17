@@ -66,10 +66,10 @@ export function TaskChecklist({ task, compact = false }: { task: Task; compact?:
   const error = createItem.error || updateItem.error || deleteItem.error;
 
   return (
-    <div className={`rounded-2xl border border-[var(--line)] bg-[var(--background)]/45 ${compact ? 'p-3' : 'p-5'}`}>
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
-          <ListChecks size={17} />
+    <section className={`grid gap-2 ${compact ? '' : 'rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3'}`}>
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--text)]">
+          <ListChecks size={16} className="text-[var(--accent)]" />
           Чек-лист
         </h3>
         {items.length ? (
@@ -96,7 +96,7 @@ export function TaskChecklist({ task, compact = false }: { task: Task; compact?:
         ))}
 
         {drafts.map((draft, index) => (
-          <div key={index} className="flex items-center gap-2 rounded-xl px-2 py-1.5 transition focus-within:bg-[var(--panel)]">
+          <div key={index} className="flex items-center gap-2 rounded-xl border border-dashed border-[var(--line)] bg-[var(--background)]/60 px-3 py-2 transition focus-within:border-[var(--accent)] focus-within:bg-[var(--background)] focus-within:ring-2 focus-within:ring-[var(--accent-soft)]">
             <span className="h-4 w-4 shrink-0 rounded border border-dashed border-[var(--line)]" />
             <input
               value={draft}
@@ -129,8 +129,8 @@ export function TaskChecklist({ task, compact = false }: { task: Task; compact?:
         ))}
       </div>
 
-      {error ? <p className="mt-3 text-sm text-red-500">{error.message}</p> : null}
-    </div>
+      {error ? <p className="text-sm text-red-500">{error.message}</p> : null}
+    </section>
   );
 }
 
@@ -164,7 +164,7 @@ function ChecklistItemRow({
 
   return (
     <div
-      className={`group flex items-center gap-2 rounded-xl px-2 py-1.5 transition hover:bg-[var(--panel)] ${
+      className={`group flex items-center gap-2 rounded-xl border border-transparent bg-[var(--background)]/60 px-3 py-2 transition hover:border-[var(--line)] hover:bg-[var(--background)] ${
         item.isCompleted ? 'opacity-55' : ''
       }`}
     >
