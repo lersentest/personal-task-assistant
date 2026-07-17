@@ -167,37 +167,39 @@ function QueueTaskRow({
     <article
       draggable
       onDragStart={(event) => event.dataTransfer.setData('text/plain', `task:${task.id}`)}
-      className="group rounded-2xl border border-[var(--focus-border-soft,var(--line))] bg-[var(--focus-surface,var(--panel))] px-3 py-2.5 transition hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]/45"
+      className="group rounded-2xl border border-[var(--focus-border-soft,var(--line))] bg-[var(--focus-surface,var(--panel))] px-2.5 py-2 transition hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]/45"
     >
-      <div className="flex items-start gap-2">
-        <span className="mt-1.5 h-3 w-3 shrink-0 rounded-full border-2 border-[var(--accent)] bg-[var(--panel)]" />
+      <div className="flex items-start gap-2.5">
+        <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full border-2 border-[var(--accent)] bg-[var(--panel)]" />
         <div className="min-w-0 flex-1">
-          <TaskModalLink task={task} className="line-clamp-2 text-left text-sm font-semibold leading-snug hover:text-[var(--accent)]">
+          <TaskModalLink task={task} className="line-clamp-2 text-left text-[13px] font-semibold leading-snug hover:text-[var(--accent)]">
             {task.title}
           </TaskModalLink>
-          <div className="mt-1 text-[11px] text-[var(--muted)]">
+          <div className="mt-0.5 truncate text-[10px] text-[var(--muted)]">
             {task.dueAt ? formatDueDate(task.dueAt, task.dueDateType) : task.project?.name ?? 'Без проекта'}
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <div className="mt-1 flex flex-wrap items-center gap-1">
             <TaskKindBadge kind={task.kind ?? 'TASK'} />
             <PriorityBadge priority={task.priority} />
             {task.estimatedDurationMinutes ? (
-              <span className="rounded-full bg-[var(--focus-surface-secondary,var(--background))] px-2 py-0.5 text-[11px] font-medium text-[var(--muted)]">
+              <span className="rounded-full bg-[var(--focus-surface-secondary,var(--background))] px-1.5 py-0.5 text-[10px] font-medium text-[var(--muted)]">
                 {formatMinutes(task.estimatedDurationMinutes)}
               </span>
             ) : null}
           </div>
         </div>
-        {action ? (
+      </div>
+      {action ? (
+        <div className="max-h-0 overflow-hidden opacity-0 transition-all duration-150 group-hover:mt-2 group-hover:max-h-10 group-hover:opacity-100 group-focus-within:mt-2 group-focus-within:max-h-10 group-focus-within:opacity-100">
           <button
             type="button"
             onClick={action}
-            className="shrink-0 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5 text-xs font-medium text-[var(--accent)] opacity-0 transition hover:border-[var(--accent)] hover:bg-[var(--accent-soft)] group-hover:opacity-100 focus:opacity-100"
+            className="h-8 w-full rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2.5 text-xs font-medium text-[var(--accent)] transition hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]"
           >
             {actionLabel}
           </button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -230,52 +232,54 @@ function QueuePlanItemRow({
     <article
       draggable
       onDragStart={(event) => event.dataTransfer.setData('text/plain', `item:${item.id}`)}
-      className={`group rounded-2xl border px-3 py-2.5 transition ${
+      className={`group rounded-2xl border px-2.5 py-2 transition ${
         done
           ? 'border-emerald-200 bg-emerald-50/80 dark:bg-emerald-950/20'
           : 'border-[var(--focus-border-soft,var(--line))] bg-[var(--focus-surface,var(--panel))] hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]/45'
       }`}
     >
-      <div className="flex items-start gap-2">
-        <button
-          type="button"
-          onClick={onComplete}
-          disabled={Boolean(done)}
-          className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-emerald-600 transition hover:bg-emerald-50 disabled:opacity-50"
-          aria-label="Выполнить"
-        >
-          <CheckCircle2 size={17} />
-        </button>
+      <div className="flex items-start gap-2.5">
+        <span className="mt-1.5 inline-flex h-2.5 w-2.5 shrink-0 rounded-full border-2 border-emerald-500 bg-[var(--panel)]" />
         <div className="min-w-0 flex-1">
-          <TaskModalLink task={item.task} className="line-clamp-2 text-left text-sm font-semibold leading-snug hover:text-[var(--accent)]">
+          <TaskModalLink task={item.task} className="line-clamp-2 text-left text-[13px] font-semibold leading-snug hover:text-[var(--accent)]">
             {item.task.title}
           </TaskModalLink>
-          <div className="mt-1 text-[11px] text-[var(--muted)]">
+          <div className="mt-0.5 truncate text-[10px] text-[var(--muted)]">
             {item.scheduledStartAt ? `${formatTime(item.scheduledStartAt)}–${formatTime(item.scheduledEndAt)}` : 'Без времени'}
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <div className="mt-1 flex flex-wrap items-center gap-1">
             <TaskKindBadge kind={item.task.kind ?? 'TASK'} />
             <PriorityBadge priority={item.task.priority} />
-            <span className="rounded-full bg-[var(--focus-surface-secondary,var(--background))] px-2 py-0.5 text-[11px] font-medium text-[var(--muted)]">
+            <span className="rounded-full bg-[var(--focus-surface-secondary,var(--background))] px-1.5 py-0.5 text-[10px] font-medium text-[var(--muted)]">
               {formatMinutes(duration)}
             </span>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+      </div>
+      <div className="max-h-0 overflow-hidden opacity-0 transition-all duration-150 group-hover:mt-2 group-hover:max-h-10 group-hover:opacity-100 group-focus-within:mt-2 group-focus-within:max-h-10 group-focus-within:opacity-100">
+        <div className="grid grid-cols-[1fr_1fr_auto] gap-1">
+          <button
+            type="button"
+            onClick={onComplete}
+            disabled={Boolean(done)}
+            className="h-8 rounded-xl border border-emerald-200 bg-emerald-50 px-2 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50"
+          >
+            Выполнить
+          </button>
           <button
             type="button"
             onClick={() => setEditingTime((value) => !value)}
-            className="rounded-lg px-2 py-1 text-xs font-medium text-[var(--accent)] hover:bg-[var(--accent-soft)]"
+            className="h-8 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 text-xs font-medium text-[var(--accent)] transition hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]"
           >
             Время
           </button>
           <button
             type="button"
             onClick={onRemove}
-            className="rounded-lg p-1.5 text-slate-500 hover:bg-red-50 hover:text-red-600"
+            className="h-8 w-9 rounded-xl border border-[var(--line)] text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
             aria-label="Убрать из дня"
           >
-            <Trash2 size={16} />
+            <Trash2 className="mx-auto" size={15} />
           </button>
         </div>
       </div>
