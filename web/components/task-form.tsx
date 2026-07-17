@@ -93,6 +93,7 @@ export function TaskForm({
   const [dueDate, setDueDate] = useState(initialDue.date);
   const [dueTime, setDueTime] = useState(initialDue.time);
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [checklistDrafts, setChecklistDrafts] = useState(['']);
   const [estimatedDurationMinutes, setEstimatedDurationMinutes] = useState(
     task?.estimatedDurationMinutes?.toString() ?? '',
   );
@@ -114,6 +115,13 @@ export function TaskForm({
         estimatedDurationMinutes: estimatedDurationMinutes
           ? Number(estimatedDurationMinutes)
           : null,
+        ...(!task
+          ? {
+              checklistItems: checklistDrafts
+                .map((item) => item.trim())
+                .filter(Boolean),
+            }
+          : {}),
       };
       return task ? api.updateTask(task.id, input) : api.createTask(input);
     },
@@ -126,6 +134,7 @@ export function TaskForm({
         setDueMode('NONE');
         setDueDate('');
         setDueTime('');
+        setChecklistDrafts(['']);
       }
       onDone?.();
     },
@@ -140,6 +149,18 @@ export function TaskForm({
     setDueMode(mode);
     if (!dueDate) setDueDate(localDate());
     setDueTime(time);
+  }
+
+  function changeChecklistDraft(index: number, value: string) {
+    setChecklistDrafts((current) => {
+      const next = [...current];
+      next[index] = value;
+      if (value.trim() && index === next.length - 1) next.push('');
+      while (next.length > 1 && !next[next.length - 1].trim() && !next[next.length - 2].trim()) {
+        next.pop();
+      }
+      return next;
+    });
   }
 
   return (
@@ -222,6 +243,45 @@ export function TaskForm({
           value={description}
           onChange={(event) => setDescription(event.target.value)}
         />
+      ) : null}
+
+      {!task && !compact ? (
+        <section className="grid gap-2 rounded-2xl border border-[var(--line)] bg-[var(--background)]/45 p-3">
+          <div>
+            <h3 className="flex items-center gap-2 font-semibold">
+              <CheckSquare size={17} />
+              Чек-лист
+            </h3>
+            <p className="text-sm text-[var(--muted)]">
+              Добавь мелкие шаги внутри задачи. Пустые строки не сохраняются.
+            </p>
+          </div>
+          <div className="grid gap-1">
+            {checklistDrafts.map((item, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-2 rounded-xl px-2 py-1.5 transition focus-within:bg-[var(--panel)]"
+              >
+                <span className="h-4 w-4 shrink-0 rounded border border-dashed border-[var(--line)]" />
+                <input
+                  value={item}
+                  onChange={(event) => changeChecklistDraft(index, event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Enter') return;
+                    event.preventDefault();
+                    const inputs = event.currentTarget
+                      .closest('section')
+                      ?.querySelectorAll<HTMLInputElement>('input[data-checklist-create]');
+                    inputs?.[index + 1]?.focus();
+                  }}
+                  data-checklist-create
+                  placeholder={index === 0 ? 'Первый пункт…' : 'Новый пункт…'}
+                  className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--muted)]"
+                />
+              </div>
+            ))}
+          </div>
+        </section>
       ) : null}
 
       <ProjectCombobox

@@ -99,6 +99,7 @@ export interface TaskInput {
   remindAt?: string | null;
   estimatedDurationMinutes?: number | null;
   tags?: string[];
+  checklistItems?: string[];
 }
 
 export interface ProjectInput {

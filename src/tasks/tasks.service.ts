@@ -68,6 +68,7 @@ export class TasksService {
       });
 
       await this.replaceTags(tx, task.id, input.ownerId, input.tags ?? []);
+      await this.createInitialChecklistItems(tx, task.id, input.checklistItems ?? []);
       await this.syncReminders(tx, task.id, {
         dueAt: input.dueAt ?? null,
         dueDateType: input.dueDateType ?? null,
@@ -591,6 +592,25 @@ export class TasksService {
     return [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))]
       .slice(0, 10)
       .map((tag) => tag.slice(0, 80));
+  }
+
+  private async createInitialChecklistItems(
+    tx: Prisma.TransactionClient,
+    taskId: string,
+    rawItems: string[],
+  ): Promise<void> {
+    const items = rawItems
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, 200);
+    if (!items.length) return;
+    await tx.taskChecklistItem.createMany({
+      data: items.map((title, position) => ({
+        taskId,
+        title,
+        position,
+      })),
+    });
   }
 
   private async getChecklistItemOwned(

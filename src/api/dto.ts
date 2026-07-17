@@ -46,6 +46,7 @@ export const createTaskSchema = z.object({
   remindAt: z.string().datetime().nullable().optional(),
   estimatedDurationMinutes: z.number().int().min(5).max(1440).nullable().optional(),
   tags: z.array(z.string().min(1).max(80)).max(10).optional(),
+  checklistItems: z.array(z.string().min(1).max(500)).max(200).optional(),
 });
 
 export const updateTaskSchema = createTaskSchema.partial();

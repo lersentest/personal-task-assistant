@@ -16,4 +16,5 @@ export interface CreateTaskInput {
   estimatedDurationMinutes?: number | null;
   sourceType?: 'TEXT' | 'VOICE' | 'FORWARDED_MESSAGE';
   tags?: string[];
+  checklistItems?: string[];
 }
