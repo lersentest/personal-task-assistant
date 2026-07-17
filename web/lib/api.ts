@@ -200,6 +200,29 @@ export const api = {
     request<Task>(`/api/tasks/${id}/restore`, { method: 'POST' }),
   deleteTask: (id: string) =>
     request<{ ok: true }>(`/api/tasks/${id}`, { method: 'DELETE' }),
+  createTaskChecklistItem: (taskId: string, title: string) =>
+    request<Task>(`/api/tasks/${taskId}/checklist-items`, {
+      method: 'POST',
+      body: JSON.stringify({ title }),
+    }),
+  updateTaskChecklistItem: (
+    taskId: string,
+    itemId: string,
+    input: { title?: string; isCompleted?: boolean },
+  ) =>
+    request<Task>(`/api/tasks/${taskId}/checklist-items/${itemId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
+  deleteTaskChecklistItem: (taskId: string, itemId: string) =>
+    request<Task>(`/api/tasks/${taskId}/checklist-items/${itemId}`, {
+      method: 'DELETE',
+    }),
+  reorderTaskChecklistItems: (taskId: string, itemIds: string[]) =>
+    request<Task>(`/api/tasks/${taskId}/checklist-items/reorder`, {
+      method: 'PATCH',
+      body: JSON.stringify({ itemIds }),
+    }),
   executors: () => request<Executor[]>('/api/executors'),
   executor: (id: string) => request<Executor>(`/api/executors/${id}`),
   createExecutor: (input: ExecutorInput) =>

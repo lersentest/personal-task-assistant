@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, FolderKanban } from 'lucide-react';
+import { CheckCircle2, Clock, FolderKanban, ListChecks } from 'lucide-react';
 import { formatDueDate, priorityLabel, statusLabel, taskKindLabel } from '@/lib/labels';
 import { Task } from '@/lib/types';
 import { TaskModalLink } from './task-detail-modal';
@@ -15,6 +15,8 @@ export function TaskCard({
 }) {
   const { interfaceMode } = useUiMode();
   const isFocus = interfaceMode === 'focus';
+  const checklistTotal = task.checklistItems?.length ?? 0;
+  const checklistDone = task.checklistItems?.filter((item) => item.isCompleted).length ?? 0;
   const priorityTone =
     task.priority === 'URGENT'
       ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-200'
@@ -60,6 +62,12 @@ export function TaskCard({
                   {task.estimatedDurationMinutes} мин
                 </span>
               ) : null}
+              {checklistTotal ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--focus-surface-secondary)] px-2 py-1">
+                  <ListChecks size={13} />
+                  {checklistDone}/{checklistTotal}
+                </span>
+              ) : null}
               <span className="inline-flex items-center gap-1 rounded-full bg-[var(--focus-surface-secondary)] px-2 py-1">
                 <FolderKanban size={13} />
                 {task.project?.name ?? 'Без проекта'}
@@ -101,6 +109,7 @@ export function TaskCard({
             <span>{priorityLabel[task.priority]}</span>
             <span>{taskKindLabel[task.kind ?? 'TASK']}</span>
             {task.estimatedDurationMinutes ? <span>{task.estimatedDurationMinutes} мин</span> : null}
+            {checklistTotal ? <span className="inline-flex items-center gap-1"><ListChecks size={13} />{checklistDone}/{checklistTotal}</span> : null}
             {task.project ? <span className="inline-flex items-center gap-1"><FolderKanban size={13} />{task.project.name}</span> : <span>Без проекта</span>}
           </div>
         </div>

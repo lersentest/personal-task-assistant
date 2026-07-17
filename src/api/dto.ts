@@ -50,6 +50,19 @@ export const createTaskSchema = z.object({
 
 export const updateTaskSchema = createTaskSchema.partial();
 
+export const createTaskChecklistItemSchema = z.object({
+  title: z.string().min(1).max(500),
+});
+
+export const updateTaskChecklistItemSchema = z.object({
+  title: z.string().min(1).max(500).optional(),
+  isCompleted: z.boolean().optional(),
+});
+
+export const reorderTaskChecklistItemsSchema = z.object({
+  itemIds: z.array(z.string().uuid()).max(200),
+});
+
 export const listTasksSchema = z.object({
   view: z
     .enum(['TODAY', 'OVERDUE', 'UPCOMING', 'ALL', 'COMPLETED', 'CANCELLED', 'TRASH'])

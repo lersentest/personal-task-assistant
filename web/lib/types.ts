@@ -36,6 +36,18 @@ export interface TagLink {
   };
 }
 
+export interface TaskChecklistItem {
+  id: string;
+  taskId: string;
+  title: string;
+  isCompleted: boolean;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+  deletedAt: string | null;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -56,6 +68,7 @@ export interface Task {
   deletedAt: string | null;
   project: Project | null;
   tags: TagLink[];
+  checklistItems: TaskChecklistItem[];
 }
 
 export interface DashboardData {

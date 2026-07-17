@@ -13,6 +13,10 @@ import { UpdateTaskInput } from './types/update-task.input';
 const taskInclude = {
   project: true,
   tags: { include: { tag: true } },
+  checklistItems: {
+    where: { deletedAt: null },
+    orderBy: { position: 'asc' as const },
+  },
   reminders: {
     where: { status: 'PENDING' as const },
     orderBy: { remindAt: 'asc' as const },
@@ -388,6 +392,95 @@ export class TasksService {
     return updated;
   }
 
+  async createChecklistItem(
+    ownerId: string,
+    taskId: string,
+    title: string,
+  ): Promise<TaskDetails> {
+    const cleanTitle = title.trim();
+    if (!cleanTitle) {
+      throw new BadRequestException('Пункт чек-листа не может быть пустым.');
+    }
+    await this.getOwned(ownerId, taskId);
+    const last = await this.prisma.taskChecklistItem.findFirst({
+      where: { taskId, deletedAt: null },
+      orderBy: { position: 'desc' },
+      select: { position: true },
+    });
+    await this.prisma.taskChecklistItem.create({
+      data: {
+        taskId,
+        title: cleanTitle,
+        position: (last?.position ?? -1) + 1,
+      },
+    });
+    return this.getOwned(ownerId, taskId);
+  }
+
+  async updateChecklistItem(
+    ownerId: string,
+    taskId: string,
+    itemId: string,
+    input: { title?: string; isCompleted?: boolean },
+  ): Promise<TaskDetails> {
+    await this.getChecklistItemOwned(ownerId, taskId, itemId);
+    const data: Prisma.TaskChecklistItemUpdateInput = {};
+    if (input.title !== undefined) {
+      const cleanTitle = input.title.trim();
+      if (!cleanTitle) {
+        throw new BadRequestException('Пункт чек-листа не может быть пустым.');
+      }
+      data.title = cleanTitle;
+    }
+    if (input.isCompleted !== undefined) {
+      data.isCompleted = input.isCompleted;
+      data.completedAt = input.isCompleted ? new Date() : null;
+    }
+    await this.prisma.taskChecklistItem.update({
+      where: { id: itemId },
+      data,
+    });
+    return this.getOwned(ownerId, taskId);
+  }
+
+  async deleteChecklistItem(
+    ownerId: string,
+    taskId: string,
+    itemId: string,
+  ): Promise<TaskDetails> {
+    await this.getChecklistItemOwned(ownerId, taskId, itemId);
+    await this.prisma.taskChecklistItem.update({
+      where: { id: itemId },
+      data: { deletedAt: new Date() },
+    });
+    return this.getOwned(ownerId, taskId);
+  }
+
+  async reorderChecklistItems(
+    ownerId: string,
+    taskId: string,
+    itemIds: string[],
+  ): Promise<TaskDetails> {
+    await this.getOwned(ownerId, taskId);
+    const uniqueItemIds = [...new Set(itemIds)];
+    const items = await this.prisma.taskChecklistItem.findMany({
+      where: { taskId, deletedAt: null, id: { in: uniqueItemIds } },
+      select: { id: true },
+    });
+    if (items.length !== uniqueItemIds.length) {
+      throw new BadRequestException('В списке есть неизвестные пункты чек-листа.');
+    }
+    await this.prisma.$transaction(
+      uniqueItemIds.map((id, position) =>
+        this.prisma.taskChecklistItem.update({
+          where: { id },
+          data: { position },
+        }),
+      ),
+    );
+    return this.getOwned(ownerId, taskId);
+  }
+
   async softDelete(ownerId: string, taskId: string): Promise<void> {
     const task = await this.getOwned(ownerId, taskId);
     await this.prisma.$transaction(async (tx) => {
@@ -498,6 +591,26 @@ export class TasksService {
     return [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))]
       .slice(0, 10)
       .map((tag) => tag.slice(0, 80));
+  }
+
+  private async getChecklistItemOwned(
+    ownerId: string,
+    taskId: string,
+    itemId: string,
+  ) {
+    const item = await this.prisma.taskChecklistItem.findFirst({
+      where: {
+        id: itemId,
+        taskId,
+        deletedAt: null,
+        task: {
+          ownerId,
+          deletedAt: null,
+        },
+      },
+    });
+    if (!item) throw new NotFoundException('Пункт чек-листа не найден.');
+    return item;
   }
 
   private async syncExactTimeDailyPlan(

@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  ListChecks,
   Search,
   Trash2,
 } from 'lucide-react';
@@ -98,6 +99,8 @@ function TaskKindBadge({ kind }: { kind: Task['kind'] }) {
 }
 
 function compactTaskMeta(task: Task, duration?: number) {
+  const checklistTotal = task.checklistItems?.length ?? 0;
+  const checklistDone = task.checklistItems?.filter((item) => item.isCompleted).length ?? 0;
   return (
     <div className="mt-2 flex flex-wrap items-center gap-1.5">
       <TaskKindBadge kind={task.kind ?? 'TASK'} />
@@ -110,6 +113,12 @@ function compactTaskMeta(task: Task, duration?: number) {
       {task.project ? (
         <span className="rounded-full bg-[var(--focus-surface-secondary,var(--background))] px-2.5 py-1 text-xs font-medium text-[var(--muted)]">
           {task.project.name}
+        </span>
+      ) : null}
+      {checklistTotal ? (
+        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--focus-surface-secondary,var(--background))] px-2.5 py-1 text-xs font-medium text-[var(--muted)]">
+          <ListChecks size={13} />
+          {checklistDone}/{checklistTotal}
         </span>
       ) : null}
     </div>
@@ -163,6 +172,8 @@ function QueueTaskRow({
   action?: () => void;
   actionLabel?: string;
 }) {
+  const checklistTotal = task.checklistItems?.length ?? 0;
+  const checklistDone = task.checklistItems?.filter((item) => item.isCompleted).length ?? 0;
   return (
     <article
       draggable
@@ -184,6 +195,12 @@ function QueueTaskRow({
             {task.estimatedDurationMinutes ? (
               <span className="rounded-full bg-[var(--focus-surface-secondary,var(--background))] px-1.5 py-0.5 text-[10px] font-medium text-[var(--muted)]">
                 {formatMinutes(task.estimatedDurationMinutes)}
+              </span>
+            ) : null}
+            {checklistTotal ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--focus-surface-secondary,var(--background))] px-1.5 py-0.5 text-[10px] font-medium text-[var(--muted)]">
+                <ListChecks size={12} />
+                {checklistDone}/{checklistTotal}
               </span>
             ) : null}
           </div>
@@ -223,6 +240,8 @@ function QueuePlanItemRow({
   const [time, setTime] = useState(formatTime(item.scheduledStartAt) || '09:00');
   const duration = item.task.estimatedDurationMinutes ?? 30;
   const done = item.completedInPlanAt || item.task.status === 'COMPLETED';
+  const checklistTotal = item.task.checklistItems?.length ?? 0;
+  const checklistDone = item.task.checklistItems?.filter((checklistItem) => checklistItem.isCompleted).length ?? 0;
 
   useEffect(() => {
     setTime(formatTime(item.scheduledStartAt) || '09:00');
@@ -253,6 +272,12 @@ function QueuePlanItemRow({
             <span className="rounded-full bg-[var(--focus-surface-secondary,var(--background))] px-1.5 py-0.5 text-[10px] font-medium text-[var(--muted)]">
               {formatMinutes(duration)}
             </span>
+            {checklistTotal ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--focus-surface-secondary,var(--background))] px-1.5 py-0.5 text-[10px] font-medium text-[var(--muted)]">
+                <ListChecks size={12} />
+                {checklistDone}/{checklistTotal}
+              </span>
+            ) : null}
           </div>
         </div>
       </div>

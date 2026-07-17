@@ -367,6 +367,7 @@ model Task {
   attachments Attachment[]
   dailyPlanItems DailyPlanItem[]
   activityEvents ActivityEvent[]
+  checklistItems TaskChecklistItem[]
 
   @@index([ownerId, status, deletedAt])
   @@index([ownerId, kind, deletedAt])
@@ -375,6 +376,23 @@ model Task {
   @@index([ownerId, dueAt])
   @@index([projectId, status, deletedAt])
   @@map("tasks")
+}
+
+model TaskChecklistItem {
+  id          String    @id @default(uuid()) @db.Uuid
+  taskId      String    @map("task_id") @db.Uuid
+  title       String    @db.VarChar(500)
+  isCompleted Boolean   @default(false) @map("is_completed")
+  position    Int       @default(0)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  completedAt DateTime? @map("completed_at") @db.Timestamptz(3)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, deletedAt, position])
+  @@map("task_checklist_items")
 }
 
 model DailyPlanItem {
