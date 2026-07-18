@@ -216,6 +216,7 @@ function EmptyChat({ onPrompt }: { onPrompt: (prompt: string) => void }) {
 
 function ChatMessage({ message }: { message: AiChatMessage }) {
   const isUser = message.role === 'USER';
+  const usage = !isUser ? aiUsage(message.metadata) : null;
 
   return (
     <article className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -237,6 +238,10 @@ function ChatMessage({ message }: { message: AiChatMessage }) {
         <p className={`mt-2 text-[11px] ${isUser ? 'text-white/70' : 'text-[var(--focus-text-muted)]'}`}>
           {formatDate(message.createdAt)}
           {!isUser && message.model ? ` · ${message.model}` : ''}
+          {usage ? ` · ${formatTokens(usage.totalTokens)} токенов` : ''}
+          {usage?.estimatedCostUsd !== null && usage?.estimatedCostUsd !== undefined
+            ? ` · ~${formatUsd(usage.estimatedCostUsd)}`
+            : ''}
         </p>
       </div>
     </article>
@@ -438,4 +443,37 @@ function formatDate(value: string) {
   } catch {
     return value;
   }
+}
+
+function aiUsage(metadata: Record<string, unknown> | null) {
+  const usage = metadata?.usage;
+  if (!usage || typeof usage !== 'object') return null;
+  const value = usage as Record<string, unknown>;
+  const totalTokens = toFiniteNumber(value.totalTokens);
+  const inputTokens = toFiniteNumber(value.inputTokens);
+  const outputTokens = toFiniteNumber(value.outputTokens);
+  const estimatedCostUsd = toNullableNumber(value.estimatedCostUsd);
+  if (!totalTokens && !inputTokens && !outputTokens) return null;
+  return {
+    totalTokens,
+    inputTokens,
+    outputTokens,
+    estimatedCostUsd,
+  };
+}
+
+function toFiniteNumber(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function toNullableNumber(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function formatTokens(value: number) {
+  return new Intl.NumberFormat('ru-RU').format(value);
+}
+
+function formatUsd(value: number) {
+  return `$${value.toFixed(value < 0.01 ? 5 : 4)}`;
 }

@@ -44,6 +44,27 @@ interface StoredMessage {
   createdAt: Date;
 }
 
+interface AiAnalyticsUsage {
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  responseCount: number;
+  estimatedCostUsd: number | null;
+  pricing: {
+    model: string;
+    inputPerMillionUsd: number | null;
+    cachedInputPerMillionUsd: number | null;
+    outputPerMillionUsd: number | null;
+    source: 'env' | 'known-model' | 'unknown';
+  };
+}
+
+interface AiAnalyticsAnswer {
+  text: string;
+  usage: AiAnalyticsUsage;
+}
+
 @Injectable()
 export class AiAnalyticsService {
   private readonly logger = new Logger(AiAnalyticsService.name);
@@ -51,6 +72,11 @@ export class AiAnalyticsService {
   private readonly fastModel: string;
   private readonly smartModel: string;
   private readonly maxToolCalls: number;
+  private readonly priceOverrides: {
+    inputPerMillionUsd: number | null;
+    cachedInputPerMillionUsd: number | null;
+    outputPerMillionUsd: number | null;
+  };
 
   constructor(
     private readonly prisma: PrismaService,
@@ -73,6 +99,19 @@ export class AiAnalyticsService {
       1,
       10,
     );
+    const inputPrice = this.optionalNumberFromConfig(
+      config.get<string>('AI_ANALYTICS_INPUT_PRICE_PER_1M_USD'),
+    );
+    this.priceOverrides = {
+      inputPerMillionUsd: inputPrice,
+      cachedInputPerMillionUsd:
+        this.optionalNumberFromConfig(
+          config.get<string>('AI_ANALYTICS_CACHED_INPUT_PRICE_PER_1M_USD'),
+        ) ?? (inputPrice === null ? null : inputPrice / 10),
+      outputPerMillionUsd: this.optionalNumberFromConfig(
+        config.get<string>('AI_ANALYTICS_OUTPUT_PRICE_PER_1M_USD'),
+      ),
+    };
   }
 
   async currentConversation(ownerId: string) {
@@ -115,10 +154,12 @@ export class AiAnalyticsService {
         ownerId,
         timezone,
         model,
-        history: history.map((message) => ({
-          role: message.role as MessageRole,
-          content: message.content,
-        })),
+        history: history
+          .filter((message) => !this.isFailedAssistantMessage(message))
+          .map((message) => ({
+            role: message.role as MessageRole,
+            content: message.content,
+          })),
         toolResults,
       });
 
@@ -129,12 +170,14 @@ export class AiAnalyticsService {
           conversationId: conversation.id,
           ownerId,
           role: 'ASSISTANT',
-          content: answer,
+          content: answer.text,
           model,
           artifacts: artifacts as unknown as Prisma.InputJsonValue,
           metadata: {
             durationMs: Date.now() - startedAt,
             toolCalls: toolResults.length,
+            usage: answer.usage,
+            estimatedCostUsd: answer.usage.estimatedCostUsd,
             sqlQueries: toolResults.map((result) => ({
               sql: result.sql,
               referencedViews: result.referencedViews,
@@ -142,7 +185,7 @@ export class AiAnalyticsService {
               truncated: result.truncated,
               durationMs: result.durationMs,
             })),
-          },
+          } as unknown as Prisma.InputJsonValue,
         },
       });
 
@@ -158,7 +201,16 @@ export class AiAnalyticsService {
 
       return this.currentConversation(ownerId);
     } catch (error) {
-      this.logger.error(error instanceof Error ? error.message : 'AI analytics failed');
+      this.logger.error(
+        JSON.stringify({
+          type: 'ai_analytics_failed',
+          message: error instanceof Error ? error.message : 'AI analytics failed',
+          stack:
+            error instanceof Error && error.stack
+              ? error.stack.split('\n').slice(0, 6).join('\n')
+              : undefined,
+        }),
+      );
 
       const message =
         error instanceof ServiceUnavailableException
@@ -190,26 +242,30 @@ export class AiAnalyticsService {
     model: string;
     history: Array<{ role: MessageRole; content: string }>;
     toolResults: AnalyticsSqlResult[];
-  }) {
+  }): Promise<AiAnalyticsAnswer> {
+    const requestInput: unknown[] = [
+      {
+        role: 'system',
+        content: this.systemPrompt(input.timezone),
+      },
+      ...input.history.slice(-20).map((message) => ({
+        role: message.role === 'USER' ? 'user' : 'assistant',
+        content: message.content,
+      })),
+    ];
+    const usage = this.emptyUsage(input.model);
+
     let response = await this.client.responses.create({
       model: input.model,
       store: false,
       tools: [this.sqlToolDefinition()],
-      input: [
-        {
-          role: 'system',
-          content: this.systemPrompt(input.timezone),
-        },
-        ...input.history.slice(-20).map((message) => ({
-          role: message.role === 'USER' ? 'user' : 'assistant',
-          content: message.content,
-        })),
-      ],
+      input: requestInput,
     } as never);
+    this.addUsage(usage, response);
 
     for (let index = 0; index < this.maxToolCalls; index += 1) {
       const calls = this.functionCalls(response);
-      if (!calls.length) return this.outputText(response);
+      if (!calls.length) return { text: this.outputText(response), usage };
 
       const outputs = [];
       for (const call of calls) {
@@ -254,16 +310,17 @@ export class AiAnalyticsService {
         }
       }
 
+      requestInput.push(...this.responseOutputItems(response), ...outputs);
       response = await this.client.responses.create({
         model: input.model,
         store: false,
-        previous_response_id: response.id,
         tools: [this.sqlToolDefinition()],
-        input: outputs,
+        input: requestInput,
       } as never);
+      this.addUsage(usage, response);
     }
 
-    return this.outputText(response);
+    return { text: this.outputText(response), usage };
   }
 
   private systemPrompt(timezone: string) {
@@ -324,6 +381,18 @@ export class AiAnalyticsService {
           typeof candidate.arguments === 'string'
         );
       });
+  }
+
+  private responseOutputItems(response: unknown) {
+    const output = (response as { output?: unknown[] }).output ?? [];
+    return output.filter((item) => {
+      const candidate = item as { type?: string };
+      return (
+        candidate.type === 'function_call' ||
+        candidate.type === 'reasoning' ||
+        candidate.type === 'message'
+      );
+    });
   }
 
   private parseToolArguments(value: string): { sql: string; purpose: string } {
@@ -429,6 +498,126 @@ export class AiAnalyticsService {
     return null;
   }
 
+  private emptyUsage(model: string): AiAnalyticsUsage {
+    const pricing = this.pricingForModel(model);
+    return {
+      inputTokens: 0,
+      cachedInputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      responseCount: 0,
+      estimatedCostUsd: null,
+      pricing,
+    };
+  }
+
+  private addUsage(usage: AiAnalyticsUsage, response: unknown) {
+    const responseUsage = (response as {
+      usage?: {
+        input_tokens?: number;
+        output_tokens?: number;
+        total_tokens?: number;
+        input_tokens_details?: { cached_tokens?: number };
+      };
+    }).usage;
+    if (!responseUsage) return;
+
+    usage.inputTokens += this.finiteNumber(responseUsage.input_tokens);
+    usage.cachedInputTokens += this.finiteNumber(
+      responseUsage.input_tokens_details?.cached_tokens,
+    );
+    usage.outputTokens += this.finiteNumber(responseUsage.output_tokens);
+    usage.totalTokens += this.finiteNumber(responseUsage.total_tokens);
+    usage.responseCount += 1;
+    usage.estimatedCostUsd = this.estimateCost(usage);
+  }
+
+  private estimateCost(usage: AiAnalyticsUsage) {
+    const inputPrice = usage.pricing.inputPerMillionUsd;
+    const cachedInputPrice = usage.pricing.cachedInputPerMillionUsd;
+    const outputPrice = usage.pricing.outputPerMillionUsd;
+    if (inputPrice === null || outputPrice === null) return null;
+
+    const cachedTokens = Math.min(usage.inputTokens, usage.cachedInputTokens);
+    const uncachedInputTokens = Math.max(0, usage.inputTokens - cachedTokens);
+    const inputCost = (uncachedInputTokens / 1_000_000) * inputPrice;
+    const cachedInputCost =
+      cachedInputPrice === null
+        ? (cachedTokens / 1_000_000) * inputPrice
+        : (cachedTokens / 1_000_000) * cachedInputPrice;
+    const outputCost = (usage.outputTokens / 1_000_000) * outputPrice;
+
+    return Number((inputCost + cachedInputCost + outputCost).toFixed(8));
+  }
+
+  private pricingForModel(model: string): AiAnalyticsUsage['pricing'] {
+    if (
+      this.priceOverrides.inputPerMillionUsd !== null &&
+      this.priceOverrides.outputPerMillionUsd !== null
+    ) {
+      return {
+        model,
+        inputPerMillionUsd: this.priceOverrides.inputPerMillionUsd,
+        cachedInputPerMillionUsd: this.priceOverrides.cachedInputPerMillionUsd,
+        outputPerMillionUsd: this.priceOverrides.outputPerMillionUsd,
+        source: 'env',
+      };
+    }
+
+    const known = this.knownModelPricing(model);
+    if (known) return known;
+
+    return {
+      model,
+      inputPerMillionUsd: null,
+      cachedInputPerMillionUsd: null,
+      outputPerMillionUsd: null,
+      source: 'unknown',
+    };
+  }
+
+  private knownModelPricing(model: string): AiAnalyticsUsage['pricing'] | null {
+    const normalized = model.replace(/-\d{4}-\d{2}-\d{2}$/, '');
+    const prices: Record<string, { input: number; cached: number | null; output: number }> = {
+      'gpt-5.5': { input: 5, cached: null, output: 30 },
+      'gpt-5.4': { input: 2.5, cached: 0.25, output: 15 },
+      'gpt-5.4-mini': { input: 0.75, cached: 0.075, output: 4.5 },
+      'gpt-5.4-nano': { input: 0.2, cached: 0.02, output: 1.25 },
+      'gpt-5.2': { input: 1.75, cached: 0.175, output: 14 },
+      'gpt-5.2-pro': { input: 21, cached: null, output: 168 },
+      'gpt-5': { input: 1.25, cached: 0.125, output: 10 },
+      'gpt-5-mini': { input: 0.25, cached: 0.025, output: 2 },
+      'gpt-5-nano': { input: 0.05, cached: 0.005, output: 0.4 },
+      'gpt-4.1': { input: 2, cached: 0.5, output: 8 },
+      'gpt-4.1-mini': { input: 0.4, cached: 0.1, output: 1.6 },
+      'gpt-4.1-nano': { input: 0.1, cached: 0.025, output: 0.4 },
+      'gpt-4o': { input: 2.5, cached: 1.25, output: 10 },
+      'gpt-4o-mini': { input: 0.15, cached: 0.075, output: 0.6 },
+    };
+    const price = prices[normalized];
+    if (!price) return null;
+    return {
+      model,
+      inputPerMillionUsd: price.input,
+      cachedInputPerMillionUsd: price.cached,
+      outputPerMillionUsd: price.output,
+      source: 'known-model',
+    };
+  }
+
+  private finiteNumber(value: unknown) {
+    return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+  }
+
+  private isFailedAssistantMessage(message: { role: unknown; metadata: unknown }) {
+    return (
+      message.role === 'ASSISTANT' &&
+      typeof message.metadata === 'object' &&
+      message.metadata !== null &&
+      (message.metadata as { failed?: unknown }).failed === true
+    );
+  }
+
   private chooseModel(content: string) {
     const text = content.toLowerCase();
     const complex =
@@ -517,5 +706,11 @@ export class AiAnalyticsService {
     const parsed = Number(value);
     if (!Number.isFinite(parsed)) return fallback;
     return Math.min(max, Math.max(min, Math.floor(parsed)));
+  }
+
+  private optionalNumberFromConfig(value: string | undefined) {
+    if (typeof value !== 'string' || !value.trim()) return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
   }
 }

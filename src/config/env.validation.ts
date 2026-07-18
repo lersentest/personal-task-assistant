@@ -12,6 +12,9 @@ export interface AppEnvironment {
   AI_ANALYTICS_MAX_TOOL_CALLS: string;
   AI_ANALYTICS_MAX_RESULT_ROWS: string;
   AI_ANALYTICS_QUERY_TIMEOUT_MS: string;
+  AI_ANALYTICS_INPUT_PRICE_PER_1M_USD: string;
+  AI_ANALYTICS_CACHED_INPUT_PRICE_PER_1M_USD: string;
+  AI_ANALYTICS_OUTPUT_PRICE_PER_1M_USD: string;
   PORT: string;
   FRONTEND_ORIGINS: string;
   PUBLIC_WEB_URL: string;
@@ -95,6 +98,21 @@ export function validateEnvironment(
       values.AI_ANALYTICS_QUERY_TIMEOUT_MS.trim()
         ? values.AI_ANALYTICS_QUERY_TIMEOUT_MS
         : '5000',
+    AI_ANALYTICS_INPUT_PRICE_PER_1M_USD:
+      typeof values.AI_ANALYTICS_INPUT_PRICE_PER_1M_USD === 'string' &&
+      values.AI_ANALYTICS_INPUT_PRICE_PER_1M_USD.trim()
+        ? values.AI_ANALYTICS_INPUT_PRICE_PER_1M_USD
+        : '',
+    AI_ANALYTICS_CACHED_INPUT_PRICE_PER_1M_USD:
+      typeof values.AI_ANALYTICS_CACHED_INPUT_PRICE_PER_1M_USD === 'string' &&
+      values.AI_ANALYTICS_CACHED_INPUT_PRICE_PER_1M_USD.trim()
+        ? values.AI_ANALYTICS_CACHED_INPUT_PRICE_PER_1M_USD
+        : '',
+    AI_ANALYTICS_OUTPUT_PRICE_PER_1M_USD:
+      typeof values.AI_ANALYTICS_OUTPUT_PRICE_PER_1M_USD === 'string' &&
+      values.AI_ANALYTICS_OUTPUT_PRICE_PER_1M_USD.trim()
+        ? values.AI_ANALYTICS_OUTPUT_PRICE_PER_1M_USD
+        : '',
     PORT:
       typeof values.PORT === 'string' && values.PORT.trim()
         ? values.PORT
