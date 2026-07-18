@@ -21,17 +21,22 @@ export interface AnalyticsSqlResult {
   durationMs: number;
 }
 
+interface AnalyticsPoolTarget {
+  label: 'AI_ANALYTICS_DATABASE_URL' | 'DATABASE_URL';
+  pool: Pool;
+}
+
 @Injectable()
 export class AnalyticsSqlService implements OnModuleDestroy {
   private readonly logger = new Logger(AnalyticsSqlService.name);
-  private readonly pool: Pool | null;
+  private readonly pools: AnalyticsPoolTarget[];
   private readonly maxRows: number;
   private readonly timeoutMs: number;
 
   constructor(config: ConfigService) {
-    const connectionString =
-      config.get<string>('AI_ANALYTICS_DATABASE_URL')?.trim() ||
-      config.get<string>('DATABASE_URL')?.trim();
+    const analyticsConnectionString =
+      config.get<string>('AI_ANALYTICS_DATABASE_URL')?.trim() || null;
+    const appConnectionString = config.get<string>('DATABASE_URL')?.trim() || null;
     this.maxRows = this.numberFromConfig(
       config.get<string>('AI_ANALYTICS_MAX_RESULT_ROWS'),
       100,
@@ -45,59 +50,68 @@ export class AnalyticsSqlService implements OnModuleDestroy {
       30000,
     );
 
-    this.pool = connectionString
-      ? new Pool(this.poolOptions(connectionString))
-      : null;
+    this.pools = this.poolTargets(analyticsConnectionString, appConnectionString);
   }
 
   async onModuleDestroy() {
-    await this.pool?.end();
+    await Promise.all(this.pools.map((target) => target.pool.end()));
   }
 
   async execute(userId: string, sql: string): Promise<AnalyticsSqlResult> {
-    if (!this.pool) {
+    if (!this.pools.length) {
       throw new ServiceUnavailableException(
         'AI analytics database connection is not configured.',
       );
     }
 
     const validated = validateAnalyticsSql(sql, { maxRows: this.maxRows + 1 });
-    const client = await this.pool.connect();
-    const startedAt = Date.now();
+    let lastError: unknown = null;
 
-    try {
-      await this.beginReadOnly(client, userId);
-      const result = await client.query(validated.executableSql);
-      await client.query('COMMIT');
+    for (let index = 0; index < this.pools.length; index += 1) {
+      const target = this.pools[index];
+      const startedAt = Date.now();
+      let client: PoolClient | null = null;
 
-      const allRows = result.rows.map((row) => this.normalizeRow(row));
-      const truncated = allRows.length > this.maxRows;
-      const rows = truncated ? allRows.slice(0, this.maxRows) : allRows;
+      try {
+        client = await target.pool.connect();
+        await this.beginReadOnly(client, userId);
+        const result = await client.query(validated.executableSql);
+        await client.query('COMMIT');
 
-      return {
-        sql: validated.originalSql,
-        executableSql: validated.executableSql,
-        columns: result.fields.map((field) => field.name),
-        rows,
-        rowCount: rows.length,
-        truncated,
-        referencedViews: validated.referencedViews,
-        durationMs: Date.now() - startedAt,
-      };
-    } catch (error) {
-      await this.safeRollback(client);
-      this.logger.warn(
-        JSON.stringify({
-          type: 'ai_analytics_sql_failed',
-          message: error instanceof Error ? error.message : 'Unknown SQL error',
-          durationMs: Date.now() - startedAt,
+        const allRows = result.rows.map((row) => this.normalizeRow(row));
+        const truncated = allRows.length > this.maxRows;
+        const rows = truncated ? allRows.slice(0, this.maxRows) : allRows;
+
+        return {
+          sql: validated.originalSql,
+          executableSql: validated.executableSql,
+          columns: result.fields.map((field) => field.name),
+          rows,
+          rowCount: rows.length,
+          truncated,
           referencedViews: validated.referencedViews,
-        }),
-      );
-      throw error;
-    } finally {
-      client.release();
+          durationMs: Date.now() - startedAt,
+        };
+      } catch (error) {
+        lastError = error;
+        if (client) await this.safeRollback(client);
+        this.logger.warn(
+          JSON.stringify({
+            type: 'ai_analytics_sql_failed',
+            connection: target.label,
+            willRetryWithFallback: index < this.pools.length - 1,
+            message: error instanceof Error ? error.message : 'Unknown SQL error',
+            durationMs: Date.now() - startedAt,
+            referencedViews: validated.referencedViews,
+          }),
+        );
+        if (index >= this.pools.length - 1) throw error;
+      } finally {
+        client?.release();
+      }
     }
+
+    throw lastError instanceof Error ? lastError : new Error('AI analytics SQL failed.');
   }
 
   private async beginReadOnly(client: PoolClient, userId: string) {
@@ -158,6 +172,31 @@ export class AnalyticsSqlService implements OnModuleDestroy {
         rejectUnauthorized: true,
       },
     };
+  }
+
+  private poolTargets(
+    analyticsConnectionString: string | null,
+    appConnectionString: string | null,
+  ): AnalyticsPoolTarget[] {
+    const targets: AnalyticsPoolTarget[] = [];
+    const seen = new Set<string>();
+
+    if (analyticsConnectionString) {
+      targets.push({
+        label: 'AI_ANALYTICS_DATABASE_URL',
+        pool: new Pool(this.poolOptions(analyticsConnectionString)),
+      });
+      seen.add(analyticsConnectionString);
+    }
+
+    if (appConnectionString && !seen.has(appConnectionString)) {
+      targets.push({
+        label: 'DATABASE_URL',
+        pool: new Pool(this.poolOptions(appConnectionString)),
+      });
+    }
+
+    return targets;
   }
 
   private numberFromConfig(
