@@ -29,7 +29,9 @@ export class AnalyticsSqlService implements OnModuleDestroy {
   private readonly timeoutMs: number;
 
   constructor(config: ConfigService) {
-    const connectionString = config.get<string>('AI_ANALYTICS_DATABASE_URL');
+    const connectionString =
+      config.get<string>('AI_ANALYTICS_DATABASE_URL')?.trim() ||
+      config.get<string>('DATABASE_URL')?.trim();
     this.maxRows = this.numberFromConfig(
       config.get<string>('AI_ANALYTICS_MAX_RESULT_ROWS'),
       100,
