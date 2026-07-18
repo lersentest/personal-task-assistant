@@ -135,6 +135,11 @@ enum DelegatedReminderType {
   DIGEST
 }
 
+enum AiAnalyticsMessageRole {
+  USER
+  ASSISTANT
+}
+
 model User {
   id             String   @id @default(uuid()) @db.Uuid
   telegramId     BigInt   @unique @map("telegram_id")
@@ -161,6 +166,8 @@ model User {
   executors       Executor[]
   delegatedTasks  DelegatedTask[] @relation("DelegatedTaskOwner")
   delegatedEvents DelegatedTaskEvent[]
+  aiAnalyticsConversations AiAnalyticsConversation[]
+  aiAnalyticsMessages      AiAnalyticsMessage[]
 
   @@map("users")
 }
@@ -519,4 +526,38 @@ model Attachment {
   @@index([projectId])
   @@index([delegatedTaskId])
   @@map("attachments")
+}
+
+model AiAnalyticsConversation {
+  id        String    @id @default(uuid()) @db.Uuid
+  ownerId   String    @map("owner_id") @db.Uuid
+  title     String    @default("AI-чат") @db.VarChar(200)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
+
+  owner    User                 @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  messages AiAnalyticsMessage[]
+
+  @@index([ownerId, archivedAt, updatedAt])
+  @@map("ai_analytics_conversations")
+}
+
+model AiAnalyticsMessage {
+  id             String                 @id @default(uuid()) @db.Uuid
+  conversationId String                 @map("conversation_id") @db.Uuid
+  ownerId        String                 @map("owner_id") @db.Uuid
+  role           AiAnalyticsMessageRole
+  content        String                 @db.Text
+  model          String?                @db.VarChar(120)
+  artifacts      Json?
+  metadata       Json?
+  createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  conversation AiAnalyticsConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  owner        User                    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@index([ownerId, createdAt])
+  @@map("ai_analytics_messages")
 }

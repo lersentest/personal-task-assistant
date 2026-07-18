@@ -307,3 +307,34 @@ export interface DelegatedTaskInput {
   priority?: TaskPriority;
   dueAt?: string | null;
 }
+
+export interface AiChatArtifact {
+  type: 'table' | 'chart';
+  title: string;
+  columns?: string[];
+  rows?: Record<string, unknown>[];
+  rowCount?: number;
+  truncated?: boolean;
+  chartType?: 'bar' | 'line';
+  xKey?: string;
+  yKey?: string;
+  data?: Array<Record<string, string | number | null>>;
+}
+
+export interface AiChatMessage {
+  id: string;
+  role: 'USER' | 'ASSISTANT';
+  content: string;
+  model: string | null;
+  artifacts: AiChatArtifact[] | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface AiChatConversation {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messages: AiChatMessage[];
+}

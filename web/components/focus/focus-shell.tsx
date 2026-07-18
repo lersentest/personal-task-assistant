@@ -29,6 +29,7 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import { AiAnalyticsChatModal } from '@/components/ai-analytics-chat-modal';
 import { CreateEntityModal, CreateEntityState } from '@/components/create-entity-modal';
 import { DelegatedTaskDetailsModal } from '@/components/delegated-task-detail-modal';
 import { FileDetailsModal } from '@/components/file-detail-modal';
@@ -146,6 +147,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [createModal, setCreateModal] = useState<CreateEntityState | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [aiChatOpen, setAiChatOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -257,6 +259,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
       }
       if (event.key === 'Escape') {
         setPaletteOpen(false);
+        setAiChatOpen(false);
         setCreateOpen(false);
         setMobileMenuOpen(false);
       }
@@ -330,9 +333,18 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
   function openCreate(state: CreateEntityState) {
     setPaletteOpen(false);
     setCreateOpen(false);
+    setAiChatOpen(false);
     setMobileMenuOpen(false);
     setCommandQuery('');
     setCreateModal(state);
+  }
+
+  function openAiChat() {
+    setPaletteOpen(false);
+    setCreateOpen(false);
+    setMobileMenuOpen(false);
+    setCommandQuery('');
+    setAiChatOpen(true);
   }
 
   function openCreateItem(item: (typeof createItems)[number]) {
@@ -399,6 +411,18 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
             </div>
           ) : null}
         </div>
+
+        <button
+          type="button"
+          onClick={openAiChat}
+          className="mb-7 flex h-12 w-full items-center gap-3 rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface-secondary)] px-4 text-sm font-semibold text-[var(--focus-text)] transition hover:border-[var(--focus-primary)] hover:bg-[var(--focus-primary-soft)] active:scale-[0.99]"
+        >
+          <Sparkles size={18} className="text-[var(--focus-primary)]" />
+          AI-чат
+          <span className="ml-auto rounded-full bg-[var(--focus-primary-soft)] px-2 py-0.5 text-[11px] text-[var(--focus-primary)]">
+            beta
+          </span>
+        </button>
 
         <nav className="grid gap-6">
           {sections.map((section) => (
@@ -611,6 +635,18 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
               <Search size={17} />
               Поиск и команды
               <span className="ml-auto rounded-lg bg-[var(--focus-surface)] px-2 py-1 text-xs">⌘K</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={openAiChat}
+              className="mb-4 flex h-11 items-center gap-3 rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-primary-soft)] px-3 text-left text-sm font-semibold text-[var(--focus-primary)]"
+            >
+              <Sparkles size={17} />
+              AI-чат по системе
+              <span className="ml-auto rounded-full bg-[var(--focus-surface)] px-2 py-0.5 text-[11px]">
+                beta
+              </span>
             </button>
 
             <div className="mb-5 grid grid-cols-2 gap-2">
@@ -892,6 +928,10 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
           onClose={() => setSelectedFile(null)}
         />
       ) : null}
+      <AiAnalyticsChatModal
+        open={aiChatOpen}
+        onClose={() => setAiChatOpen(false)}
+      />
     </div>
   );
 }

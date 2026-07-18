@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import {
+  AiChatConversation,
   Attachment,
   ConfirmedVoiceOperation,
   DashboardData,
@@ -277,6 +278,13 @@ export const api = {
     }),
   calendar: () => request<Task[]>('/api/calendar'),
   search: (query = '') => request<{ tasks: Task[]; delegatedTasks: DelegatedTask[]; projects: Project[]; files: Attachment[] }>(`/api/search${query}`),
+  aiAnalyticsConversation: () =>
+    request<AiChatConversation>('/api/ai-analytics/conversation'),
+  sendAiAnalyticsMessage: (input: { conversationId?: string | null; content: string }) =>
+    request<AiChatConversation>('/api/ai-analytics/messages', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
   attachments: (query = '') => request<Attachment[]>(`/api/attachments${query}`),
   createAttachment: (input: {
     taskId?: string | null;

@@ -6,6 +6,12 @@ export interface AppEnvironment {
   OPENAI_API_KEY: string;
   OPENAI_TEXT_MODEL: string;
   OPENAI_TRANSCRIPTION_MODEL: string;
+  AI_ANALYTICS_DATABASE_URL: string;
+  AI_ANALYTICS_FAST_MODEL: string;
+  AI_ANALYTICS_SMART_MODEL: string;
+  AI_ANALYTICS_MAX_TOOL_CALLS: string;
+  AI_ANALYTICS_MAX_RESULT_ROWS: string;
+  AI_ANALYTICS_QUERY_TIMEOUT_MS: string;
   PORT: string;
   FRONTEND_ORIGINS: string;
   PUBLIC_WEB_URL: string;
@@ -59,6 +65,36 @@ export function validateEnvironment(
       values.OPENAI_TRANSCRIPTION_MODEL.trim()
         ? values.OPENAI_TRANSCRIPTION_MODEL
         : 'gpt-4o-mini-transcribe',
+    AI_ANALYTICS_DATABASE_URL:
+      typeof values.AI_ANALYTICS_DATABASE_URL === 'string' &&
+      values.AI_ANALYTICS_DATABASE_URL.trim()
+        ? values.AI_ANALYTICS_DATABASE_URL
+        : '',
+    AI_ANALYTICS_FAST_MODEL:
+      typeof values.AI_ANALYTICS_FAST_MODEL === 'string' &&
+      values.AI_ANALYTICS_FAST_MODEL.trim()
+        ? values.AI_ANALYTICS_FAST_MODEL
+        : '',
+    AI_ANALYTICS_SMART_MODEL:
+      typeof values.AI_ANALYTICS_SMART_MODEL === 'string' &&
+      values.AI_ANALYTICS_SMART_MODEL.trim()
+        ? values.AI_ANALYTICS_SMART_MODEL
+        : '',
+    AI_ANALYTICS_MAX_TOOL_CALLS:
+      typeof values.AI_ANALYTICS_MAX_TOOL_CALLS === 'string' &&
+      values.AI_ANALYTICS_MAX_TOOL_CALLS.trim()
+        ? values.AI_ANALYTICS_MAX_TOOL_CALLS
+        : '4',
+    AI_ANALYTICS_MAX_RESULT_ROWS:
+      typeof values.AI_ANALYTICS_MAX_RESULT_ROWS === 'string' &&
+      values.AI_ANALYTICS_MAX_RESULT_ROWS.trim()
+        ? values.AI_ANALYTICS_MAX_RESULT_ROWS
+        : '100',
+    AI_ANALYTICS_QUERY_TIMEOUT_MS:
+      typeof values.AI_ANALYTICS_QUERY_TIMEOUT_MS === 'string' &&
+      values.AI_ANALYTICS_QUERY_TIMEOUT_MS.trim()
+        ? values.AI_ANALYTICS_QUERY_TIMEOUT_MS
+        : '5000',
     PORT:
       typeof values.PORT === 'string' && values.PORT.trim()
         ? values.PORT

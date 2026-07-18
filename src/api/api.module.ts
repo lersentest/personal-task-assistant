@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { AiModule } from '../ai/ai.module';
+import { AiAnalyticsModule } from '../ai-analytics/ai-analytics.module';
 import { AttachmentsModule } from '../attachments/attachments.module';
 import { AttachmentsController } from './attachments.controller';
+import { AiAnalyticsController } from './ai-analytics.controller';
 import { DashboardController } from './dashboard.controller';
 import { DelegatedTasksController } from './delegated-tasks.controller';
 import { ExecutorsController } from './executors.controller';
@@ -24,6 +26,7 @@ import { VoiceModule } from '../voice/voice.module';
 @Module({
   imports: [
     AiModule,
+    AiAnalyticsModule,
     UsersModule,
     TasksModule,
     ProjectsModule,
@@ -37,6 +40,7 @@ import { VoiceModule } from '../voice/voice.module';
   ],
   controllers: [
     DashboardController,
+    AiAnalyticsController,
     MyDayController,
     ExecutorsController,
     DelegatedTasksController,
