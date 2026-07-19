@@ -5,6 +5,7 @@ import { PrismaService } from '../database/prisma.service';
 import { DelegatedTasksService } from '../delegated-tasks/delegated-tasks.service';
 import { ProjectsService } from '../projects/projects.service';
 import { TasksService } from '../tasks/tasks.service';
+import { jsonSafe } from './json-safe';
 
 @Controller('api')
 @UseGuards(SupabaseAuthGuard)
@@ -121,6 +122,11 @@ export class DashboardController {
             .includes(normalizedSearch),
         )
       : projects;
-    return { tasks, delegatedTasks: delegatedTasks.slice(0, 20), projects: filteredProjects.slice(0, 20), files };
+    return jsonSafe({
+      tasks,
+      delegatedTasks: delegatedTasks.slice(0, 20),
+      projects: filteredProjects.slice(0, 20),
+      files,
+    });
   }
 }
