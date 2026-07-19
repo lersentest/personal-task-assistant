@@ -57,7 +57,7 @@ export class PrismaService
     const connectionString = configService.getOrThrow<string>('DATABASE_URL');
     const slowQueryWarningMs = numberFromConfig(
       configService.get<string>('DB_SLOW_QUERY_WARNING_MS'),
-      1000,
+      3000,
       0,
       60000,
     );

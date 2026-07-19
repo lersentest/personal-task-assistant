@@ -118,7 +118,7 @@ export function validateEnvironment(
       typeof values.DB_SLOW_QUERY_WARNING_MS === 'string' &&
       values.DB_SLOW_QUERY_WARNING_MS.trim()
         ? values.DB_SLOW_QUERY_WARNING_MS
-        : '1000',
+        : '3000',
     PORT:
       typeof values.PORT === 'string' && values.PORT.trim()
         ? values.PORT
