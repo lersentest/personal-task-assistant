@@ -1,28 +1,14 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  CalendarClock,
-  CheckCircle2,
-  Clock3,
-  ExternalLink,
-  FolderKanban,
-  ListChecks,
-  RotateCcw,
-  Tag,
-  Trash2,
-  X,
-} from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ExternalLink, FolderKanban, Sparkles, X } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { invalidateTaskCaches } from '@/lib/cache';
-import { dueModeLabel, formatDate, formatDueDate, priorityLabel, statusLabel, taskKindLabel } from '@/lib/labels';
-import { Task, TaskChecklistItem } from '@/lib/types';
+import { taskKindLabel } from '@/lib/labels';
+import { Task, TaskKind } from '@/lib/types';
 import { AttachmentPanel } from './attachment-panel';
-import { TaskChecklist as TaskChecklistPanel } from './task-checklist';
-import { TaskForm } from './task-form';
-import { EntityDrawer } from './ui-kit';
+import { TaskForm, TaskKindCards } from './task-form';
 
 export function TaskModalLink({
   task,
@@ -75,6 +61,7 @@ export function TaskDetailsModal({
 }) {
   const queryClient = useQueryClient();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [selectedKind, setSelectedKind] = useState<TaskKind>(initialTask?.kind ?? 'TASK');
   const task = useQuery({
     queryKey: ['task', taskId],
     queryFn: () => api.task(taskId),
@@ -82,37 +69,7 @@ export function TaskDetailsModal({
     initialData: initialTask,
   });
 
-  const complete = useMutation({
-    mutationFn: () => api.completeTask(taskId),
-    onSuccess: () => {
-      void invalidateTaskCaches(queryClient, taskId);
-    },
-  });
-
-  const reopen = useMutation({
-    mutationFn: () => api.updateTask(taskId, { status: 'IN_PROGRESS' }),
-    onSuccess: () => {
-      void invalidateTaskCaches(queryClient, taskId);
-    },
-  });
-
-  const remove = useMutation({
-    mutationFn: () => api.deleteTask(taskId),
-    onSuccess: () => {
-      void invalidateTaskCaches(queryClient, taskId);
-      onClose();
-    },
-  });
-
-  useEffect(() => {
-    if (!open) setHasUnsavedChanges(false);
-  }, [open]);
-
-  if (!open) return null;
-
-  const data = task.data;
-  const incompleteChecklistItems = data?.checklistItems?.filter((item) => !item.isCompleted).length ?? 0;
-  const requestClose = () => {
+  const requestClose = useCallback(() => {
     if (
       hasUnsavedChanges &&
       !window.confirm('Есть несохранённые изменения. Закрыть без сохранения?')
@@ -120,15 +77,52 @@ export function TaskDetailsModal({
       return;
     }
     onClose();
-  };
+  }, [hasUnsavedChanges, onClose]);
+
+  useEffect(() => {
+    if (!open) setHasUnsavedChanges(false);
+  }, [open]);
+
+  useEffect(() => {
+    if (task.data?.kind) setSelectedKind(task.data.kind);
+  }, [task.data?.kind]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') requestClose();
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open, requestClose]);
+
+  if (!open) return null;
+
+  const data = task.data;
 
   return (
-    <EntityDrawer
-      open={open}
-      onClose={requestClose}
-      width="max-w-5xl"
-      eyebrow={
-        <>
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-[10000] flex items-stretch justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-6"
+      onMouseDown={requestClose}
+    >
+      <div
+        className="flex h-full w-full max-w-4xl flex-col overflow-hidden border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface,var(--panel))] shadow-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-3xl"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header className="flex items-start justify-between gap-4 border-b border-[var(--focus-border-soft,var(--line))] p-4 sm:p-6">
+          <div className="min-w-0">
+            <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
+              <span className="inline-flex items-center gap-2 rounded-full bg-[var(--accent-soft)] px-3 py-1 font-semibold text-[var(--accent)]">
+                <Sparkles size={14} />
+                Редактирование
+              </span>
               <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-1 font-medium text-[var(--accent)]">
                 {data ? taskKindLabel[data.kind ?? 'TASK'] : 'Задача'}
               </span>
@@ -142,10 +136,15 @@ export function TaskDetailsModal({
                   Без проекта
                 </span>
               )}
-        </>
-      }
-      title={data?.title ?? 'Загружаю задачу…'}
-      actions={
+            </div>
+            <h2 className="truncate text-xl font-semibold tracking-[-0.03em] text-[var(--foreground)] sm:text-2xl">
+              {data?.title ?? 'Загружаю задачу…'}
+            </h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Измени задачу и нажми «Сохранить». При закрытии без сохранения система предупредит.
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
             <Link
               href={`/tasks/${taskId}`}
               className="btn-base btn-secondary hidden sm:inline-flex"
@@ -153,8 +152,18 @@ export function TaskDetailsModal({
               <ExternalLink size={16} />
               Страница
             </Link>
-      }
-    >
+            <button
+              type="button"
+              onClick={requestClose}
+              className="rounded-xl border border-[var(--line)] p-2 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)]"
+              title="Закрыть"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </header>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
           {task.isLoading && !data ? (
             <div className="rounded-2xl border border-dashed border-[var(--line)] p-8 text-center text-[var(--muted)]">
               Загружаю задачу…
@@ -168,339 +177,32 @@ export function TaskDetailsModal({
           ) : null}
 
           {data ? (
-            <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-              <section className="grid min-w-0 gap-5">
-                <TaskForm
-                  task={data}
-                  onDone={() => {
-                    setHasUnsavedChanges(false);
-                    void queryClient.invalidateQueries({ queryKey: ['task', taskId] });
-                  }}
-                  onCancel={requestClose}
-                  onDirtyChange={setHasUnsavedChanges}
-                />
+            <div className="grid gap-5">
+              <div className="grid gap-2">
+                <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+                  Тип
+                </span>
+                <TaskKindCards value={selectedKind} onChange={setSelectedKind} />
+              </div>
 
-                <TaskChecklistPanel task={data} />
+              <TaskForm
+                task={data}
+                kindValue={selectedKind}
+                onKindChange={setSelectedKind}
+                showKindSelector={false}
+                onDone={() => {
+                  setHasUnsavedChanges(false);
+                  void queryClient.invalidateQueries({ queryKey: ['task', taskId] });
+                }}
+                onCancel={requestClose}
+                onDirtyChange={setHasUnsavedChanges}
+              />
 
-                <AttachmentPanel taskId={taskId} title="Файлы задачи" />
-              </section>
-
-              <aside className="grid min-w-0 content-start gap-4">
-                <div className="rounded-2xl border border-[var(--line)] bg-[var(--background)]/45 p-4">
-                  <h3 className="mb-3 font-semibold">Сводка</h3>
-                  <div className="grid gap-2">
-                    <InfoRow icon={<CheckCircle2 size={16} />} label="Статус" value={statusLabel[data.status]} />
-                    <InfoRow label="Приоритет" value={priorityLabel[data.priority]} tone={priorityTone(data.priority)} />
-                    <InfoRow icon={<CalendarClock size={16} />} label="Срок" value={formatDueDate(data.dueAt, data.dueDateType)} />
-                    <InfoRow icon={<Clock3 size={16} />} label="Оценка" value={data.estimatedDurationMinutes ? `${data.estimatedDurationMinutes} мин` : 'Без оценки'} />
-                    <InfoRow label="Режим срока" value={dueModeLabel(data.dueDateType)} />
-                    <InfoRow label="Создана" value={formatDate(data.createdAt)} />
-                  </div>
-                </div>
-
-                {data.tags?.length ? (
-                  <div className="rounded-2xl border border-[var(--line)] bg-[var(--background)]/45 p-4">
-                    <h3 className="mb-3 flex items-center gap-2 font-semibold">
-                      <Tag size={17} />
-                      Теги
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {data.tags.map((item) => (
-                        <span key={item.tag.id} className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-sm text-[var(--accent)]">
-                          #{item.tag.name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-
-                <div className="rounded-2xl border border-[var(--line)] bg-[var(--background)]/45 p-4">
-                  <h3 className="mb-3 font-semibold">Действия</h3>
-                  <div className="grid gap-2">
-                    {data.status !== 'COMPLETED' && !data.deletedAt ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (
-                            incompleteChecklistItems > 0 &&
-                            !window.confirm(`В чек-листе осталось ${incompleteChecklistItems}. Всё равно завершить задачу?`)
-                          ) {
-                            return;
-                          }
-                          complete.mutate();
-                        }}
-                        disabled={complete.isPending}
-                        className="btn-base btn-success h-11"
-                      >
-                        <CheckCircle2 size={17} />
-                        Завершить
-                      </button>
-                    ) : null}
-                    {data.status === 'COMPLETED' && !data.deletedAt ? (
-                      <button
-                        type="button"
-                        onClick={() => reopen.mutate()}
-                        disabled={reopen.isPending}
-                        className="btn-base btn-secondary h-11"
-                      >
-                        <RotateCcw size={17} />
-                        Вернуть в работу
-                      </button>
-                    ) : null}
-                    {!data.deletedAt ? (
-                      <button
-                        type="button"
-                        onClick={() => remove.mutate()}
-                        disabled={remove.isPending}
-                        className="btn-base btn-danger h-11"
-                      >
-                        <Trash2 size={17} />
-                        В корзину
-                      </button>
-                    ) : null}
-                  </div>
-                  {(complete.error || reopen.error || remove.error) ? (
-                    <p className="mt-3 text-sm text-red-500">
-                      {(complete.error || reopen.error || remove.error)?.message}
-                    </p>
-                  ) : null}
-                </div>
-              </aside>
+              <AttachmentPanel taskId={taskId} title="Файлы задачи" />
             </div>
           ) : null}
-    </EntityDrawer>
-  );
-}
-
-function TaskChecklist({ task }: { task: Task }) {
-  const queryClient = useQueryClient();
-  const items = task.checklistItems ?? [];
-  const completed = items.filter((item) => item.isCompleted).length;
-  const [drafts, setDrafts] = useState(['']);
-
-  const syncTask = async (updatedTask: Task) => {
-    queryClient.setQueryData(['task', task.id], updatedTask);
-    await invalidateTaskCaches(queryClient, task.id);
-  };
-
-  const createItem = useMutation({
-    mutationFn: (title: string) => api.createTaskChecklistItem(task.id, title),
-  });
-
-  const updateItem = useMutation({
-    mutationFn: ({
-      itemId,
-      input,
-    }: {
-      itemId: string;
-      input: { title?: string; isCompleted?: boolean };
-    }) => api.updateTaskChecklistItem(task.id, itemId, input),
-    onSuccess: syncTask,
-  });
-
-  const deleteItem = useMutation({
-    mutationFn: (itemId: string) => api.deleteTaskChecklistItem(task.id, itemId),
-    onSuccess: syncTask,
-  });
-
-  function changeDraft(index: number, value: string) {
-    setDrafts((current) => {
-      const next = [...current];
-      next[index] = value;
-      if (value.trim() && index === next.length - 1) next.push('');
-      while (next.length > 1 && !next[next.length - 1].trim() && !next[next.length - 2].trim()) {
-        next.pop();
-      }
-      return next;
-    });
-  }
-
-  function commitDraft(index: number) {
-    const title = drafts[index]?.trim();
-    if (!title) return;
-    setDrafts((current) => {
-      const next = current.filter((_, itemIndex) => itemIndex !== index);
-      return next.length ? next : [''];
-    });
-    createItem.mutate(title, {
-      onSuccess: (updatedTask) => {
-        void syncTask(updatedTask);
-      },
-    });
-  }
-
-  const busy = createItem.isPending || updateItem.isPending || deleteItem.isPending;
-  const error = createItem.error || updateItem.error || deleteItem.error;
-
-  return (
-    <div className="rounded-2xl border border-[var(--line)] bg-[var(--background)]/45 p-5">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
-          <ListChecks size={17} />
-          Чек-лист
-        </h3>
-        {items.length ? (
-          <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--accent)]">
-            {completed}/{items.length}
-          </span>
-        ) : null}
+        </div>
       </div>
-
-      <div className="grid gap-1.5" data-checklist>
-        {items.map((item) => (
-          <ChecklistItemRow
-            key={item.id}
-            item={item}
-            disabled={busy}
-            onToggle={(isCompleted) =>
-              updateItem.mutate({ itemId: item.id, input: { isCompleted } })
-            }
-            onRename={(title) =>
-              updateItem.mutate({ itemId: item.id, input: { title } })
-            }
-            onDelete={() => deleteItem.mutate(item.id)}
-          />
-        ))}
-
-        {drafts.map((draft, index) => (
-          <div key={index} className="flex items-center gap-2 rounded-xl px-2 py-1.5 transition focus-within:bg-[var(--panel)]">
-            <span className="h-4 w-4 shrink-0 rounded border border-dashed border-[var(--line)]" />
-            <input
-              value={draft}
-              onChange={(event) => changeDraft(index, event.target.value)}
-              onBlur={(event) => {
-                if (event.currentTarget.dataset.skipCommit === 'true') {
-                  delete event.currentTarget.dataset.skipCommit;
-                  return;
-                }
-                commitDraft(index);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault();
-                  event.currentTarget.dataset.skipCommit = 'true';
-                  commitDraft(index);
-                  const next = event.currentTarget
-                    .closest('[data-checklist]')
-                    ?.querySelectorAll<HTMLInputElement>('input[data-checklist-draft]');
-                  window.setTimeout(() => next?.[index + 1]?.focus(), 0);
-                }
-              }}
-              disabled={busy}
-              data-checklist-draft
-              placeholder={index === 0 && !items.length ? 'Добавить первый пункт…' : 'Новый пункт…'}
-              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--muted)]"
-            />
-          </div>
-        ))}
-      </div>
-
-      {error ? <p className="mt-3 text-sm text-red-500">{error.message}</p> : null}
     </div>
   );
-}
-
-function ChecklistItemRow({
-  item,
-  disabled,
-  onToggle,
-  onRename,
-  onDelete,
-}: {
-  item: TaskChecklistItem;
-  disabled: boolean;
-  onToggle: (isCompleted: boolean) => void;
-  onRename: (title: string) => void;
-  onDelete: () => void;
-}) {
-  const [title, setTitle] = useState(item.title);
-
-  useEffect(() => {
-    setTitle(item.title);
-  }, [item.title]);
-
-  function commitTitle() {
-    const cleanTitle = title.trim();
-    if (!cleanTitle) {
-      setTitle(item.title);
-      return;
-    }
-    if (cleanTitle !== item.title) onRename(cleanTitle);
-  }
-
-  return (
-    <div
-      className={`group flex items-center gap-2 rounded-xl px-2 py-1.5 transition hover:bg-[var(--panel)] ${
-        item.isCompleted ? 'opacity-55' : ''
-      }`}
-    >
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => onToggle(!item.isCompleted)}
-        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition ${
-          item.isCompleted
-            ? 'border-emerald-500 bg-emerald-500 text-white'
-            : 'border-[var(--line)] hover:border-[var(--accent)]'
-        }`}
-        aria-label={item.isCompleted ? 'Вернуть пункт' : 'Отметить пункт'}
-      >
-        {item.isCompleted ? <CheckCircle2 size={13} /> : null}
-      </button>
-      <input
-        value={title}
-        disabled={disabled}
-        onChange={(event) => setTitle(event.target.value)}
-        onBlur={commitTitle}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') {
-            event.preventDefault();
-            commitTitle();
-            event.currentTarget.blur();
-          }
-        }}
-        className={`min-w-0 flex-1 bg-transparent text-sm outline-none ${
-          item.isCompleted ? 'text-[var(--muted)] line-through' : ''
-        }`}
-      />
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={onDelete}
-        className="rounded-lg p-1.5 text-[var(--muted)] opacity-0 transition hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 focus:opacity-100"
-        aria-label="Удалить пункт"
-      >
-        <X size={15} />
-      </button>
-    </div>
-  );
-}
-
-function InfoRow({
-  icon,
-  label,
-  value,
-  tone,
-}: {
-  icon?: React.ReactNode;
-  label: string;
-  value: string;
-  tone?: string;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-xl bg-[var(--panel)] px-3 py-2.5 text-sm">
-      <span className="inline-flex items-center gap-2 text-[var(--muted)]">
-        {icon}
-        {label}
-      </span>
-      <span className={tone ?? 'font-medium'}>{value}</span>
-    </div>
-  );
-}
-
-function priorityTone(priority: Task['priority']) {
-  if (priority === 'URGENT') return 'font-semibold text-red-600';
-  if (priority === 'HIGH') return 'font-semibold text-orange-600';
-  if (priority === 'LOW') return 'font-semibold text-slate-500';
-  return 'font-semibold text-blue-600';
 }

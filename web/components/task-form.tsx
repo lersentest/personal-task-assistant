@@ -8,6 +8,7 @@ import { invalidateTaskCaches } from '@/lib/cache';
 import { priorityLabel, taskKindLabel } from '@/lib/labels';
 import { Task, TaskInput, TaskKind, TaskStatus } from '@/lib/types';
 import { ProjectCombobox } from './project-combobox';
+import { TaskChecklist as TaskChecklistPanel } from './task-checklist';
 import { TimeStepSelect } from './time-step-select';
 
 type DueMode = 'NONE' | 'ON_DATE' | 'BEFORE_DATE' | 'EXACT_TIME';
@@ -33,6 +34,46 @@ const statusActions: Array<{ value: TaskStatus; label: string; description: stri
   { value: 'COMPLETED', label: 'Выполнена', description: 'Можно убрать из активных' },
   { value: 'CANCELLED', label: 'Отменена', description: 'Больше не актуальна' },
 ];
+
+const statusTone: Record<TaskStatus, string> = {
+  NEW: 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/70 dark:bg-blue-950/35 dark:text-blue-200',
+  IN_PROGRESS: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/35 dark:text-amber-200',
+  COMPLETED: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/35 dark:text-emerald-200',
+  CANCELLED: 'border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300',
+};
+
+export function TaskKindCards({
+  value,
+  onChange,
+}: {
+  value: TaskKind;
+  onChange: (kind: TaskKind) => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+      {taskKinds.map((item) => {
+        const Icon = item.icon;
+        const active = value === item.value;
+        return (
+          <button
+            key={item.value}
+            type="button"
+            onClick={() => onChange(item.value)}
+            className={`group grid min-h-20 gap-2 rounded-2xl border p-3 text-left transition active:scale-[0.98] ${
+              active
+                ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]'
+                : 'border-[var(--line)] bg-[var(--background)]/45 text-[var(--muted)] hover:border-[var(--accent)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]'
+            }`}
+            title={item.hint}
+          >
+            <Icon size={19} />
+            <span className="text-sm font-semibold">{taskKindLabel[item.value]}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function pad(value: number) {
   return String(value).padStart(2, '0');
@@ -82,6 +123,8 @@ export function TaskForm({
   onDirtyChange,
   compact = false,
   initialKind = 'TASK',
+  kindValue,
+  onKindChange,
   showKindSelector = true,
   showStatusActions = true,
 }: {
@@ -92,6 +135,8 @@ export function TaskForm({
   onDirtyChange?: (dirty: boolean) => void;
   compact?: boolean;
   initialKind?: TaskKind;
+  kindValue?: TaskKind;
+  onKindChange?: (kind: TaskKind) => void;
   showKindSelector?: boolean;
   showStatusActions?: boolean;
 }) {
@@ -102,7 +147,8 @@ export function TaskForm({
   const [selectedProjectId, setSelectedProjectId] = useState(task?.project?.id ?? projectId ?? '');
   const [status, setStatus] = useState<TaskStatus>(task?.status ?? 'NEW');
   const [priority, setPriority] = useState(task?.priority ?? 'NORMAL');
-  const [kind, setKind] = useState<TaskKind>(task?.kind ?? initialKind);
+  const [localKind, setLocalKind] = useState<TaskKind>(task?.kind ?? initialKind);
+  const kind = kindValue ?? localKind;
   const [dueMode, setDueMode] = useState<DueMode>(initialDueMode(task));
   const [dueDate, setDueDate] = useState(initialDue.date);
   const [dueTime, setDueTime] = useState(initialDue.time);
@@ -171,6 +217,12 @@ export function TaskForm({
   }, [currentSnapshot, baselineSnapshot, onDirtyChange]);
 
   const projects = useQuery({ queryKey: ['projects'], queryFn: api.projects });
+
+  function changeKind(nextKind: TaskKind) {
+    if (kindValue === undefined) setLocalKind(nextKind);
+    onKindChange?.(nextKind);
+  }
+
   const mutation = useMutation({
     mutationFn: () => {
       const dueAt = buildDueAt(dueMode, dueDate, dueTime);
@@ -254,28 +306,7 @@ export function TaskForm({
             <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
               Тип
             </span>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-              {taskKinds.map((item) => {
-                const Icon = item.icon;
-                const active = kind === item.value;
-                return (
-                  <button
-                    key={item.value}
-                    type="button"
-                    onClick={() => setKind(item.value)}
-                    className={`group grid min-h-20 gap-2 rounded-2xl border p-3 text-left transition active:scale-[0.98] ${
-                      active
-                        ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]'
-                        : 'border-[var(--line)] bg-[var(--background)]/45 text-[var(--muted)] hover:border-[var(--accent)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]'
-                    }`}
-                    title={item.hint}
-                  >
-                    <Icon size={19} />
-                    <span className="text-sm font-semibold">{taskKindLabel[item.value]}</span>
-                  </button>
-                );
-              })}
-            </div>
+            <TaskKindCards value={kind} onChange={changeKind} />
           </div>
         ) : null}
 
@@ -297,11 +328,10 @@ export function TaskForm({
       </div>
 
       {showStatusActions ? (
-        <section className="grid gap-2">
-          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+        <section className="flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--background)]/45 px-3 py-2">
+          <span className="mr-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
             Статус
           </span>
-          <div className="grid gap-2 sm:grid-cols-4">
             {statusActions.map((item) => {
               const active = status === item.value;
               return (
@@ -309,18 +339,17 @@ export function TaskForm({
                   key={item.value}
                   type="button"
                   onClick={() => setStatus(item.value)}
-                  className={`rounded-2xl border p-3 text-left transition active:scale-[0.98] ${
+                  className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition active:scale-[0.98] ${
                     active
-                      ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]'
-                      : 'border-[var(--line)] bg-[var(--background)]/45 text-[var(--muted)] hover:border-[var(--accent)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]'
+                      ? statusTone[item.value]
+                      : 'border-[var(--line)] bg-[var(--panel)] text-[var(--muted)] hover:border-[var(--accent)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]'
                   }`}
+                  title={item.description}
                 >
-                  <span className="block text-sm font-semibold">{item.label}</span>
-                  <span className="mt-1 block text-xs opacity-80">{item.description}</span>
+                  {item.label}
                 </button>
               );
             })}
-          </div>
         </section>
       ) : null}
 
@@ -348,42 +377,48 @@ export function TaskForm({
         />
       ) : null}
 
-      {!task && !compact ? (
+      {!compact ? (
         <section className="grid gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-          <div>
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--text)]">
-              <CheckSquare size={16} className="text-[var(--accent)]" />
-              Чек-лист
-            </h3>
-            <p className="mt-1 text-xs text-[var(--muted)]">
-              Добавь мелкие шаги внутри задачи. Пустые строки не сохраняются.
-            </p>
-          </div>
-          <div className="grid gap-1.5">
-            {checklistDrafts.map((item, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-2 rounded-xl border border-transparent bg-[var(--background)]/70 px-3 py-2 transition focus-within:border-[var(--accent)] focus-within:bg-[var(--background)] focus-within:ring-2 focus-within:ring-[var(--accent-soft)]"
-              >
-                <span className="h-4 w-4 shrink-0 rounded border border-dashed border-[var(--line)]" />
-                <input
-                  value={item}
-                  onChange={(event) => changeChecklistDraft(index, event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key !== 'Enter') return;
-                    event.preventDefault();
-                    const inputs = event.currentTarget
-                      .closest('section')
-                      ?.querySelectorAll<HTMLInputElement>('input[data-checklist-create]');
-                    inputs?.[index + 1]?.focus();
-                  }}
-                  data-checklist-create
-                  placeholder={index === 0 ? 'Первый пункт…' : 'Новый пункт…'}
-                  className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--muted)]"
-                />
+          {task ? (
+            <TaskChecklistPanel task={task} compact />
+          ) : (
+            <>
+              <div>
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--text)]">
+                  <CheckSquare size={16} className="text-[var(--accent)]" />
+                  Чек-лист
+                </h3>
+                <p className="mt-1 text-xs text-[var(--muted)]">
+                  Добавь мелкие шаги внутри задачи. Пустые строки не сохраняются.
+                </p>
               </div>
-            ))}
-          </div>
+              <div className="grid gap-1.5">
+                {checklistDrafts.map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 rounded-xl border border-transparent bg-[var(--background)]/70 px-3 py-2 transition focus-within:border-[var(--accent)] focus-within:bg-[var(--background)] focus-within:ring-2 focus-within:ring-[var(--accent-soft)]"
+                  >
+                    <span className="h-4 w-4 shrink-0 rounded border border-dashed border-[var(--line)]" />
+                    <input
+                      value={item}
+                      onChange={(event) => changeChecklistDraft(index, event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key !== 'Enter') return;
+                        event.preventDefault();
+                        const inputs = event.currentTarget
+                          .closest('section')
+                          ?.querySelectorAll<HTMLInputElement>('input[data-checklist-create]');
+                        inputs?.[index + 1]?.focus();
+                      }}
+                      data-checklist-create
+                      placeholder={index === 0 ? 'Первый пункт…' : 'Новый пункт…'}
+                      className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--muted)]"
+                    />
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </section>
       ) : null}
 

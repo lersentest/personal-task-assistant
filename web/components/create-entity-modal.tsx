@@ -1,19 +1,13 @@
 'use client';
 
 import {
-  CheckSquare,
-  FileText,
-  FolderKanban,
-  Lightbulb,
-  Phone,
   Sparkles,
-  Users,
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { DelegatedTaskForm } from '@/components/delegated-task-form';
 import { ProjectForm } from '@/components/project-form';
-import { TaskForm } from '@/components/task-form';
+import { TaskForm, TaskKindCards } from '@/components/task-form';
 import { taskKindLabel } from '@/lib/labels';
 import { TaskKind } from '@/lib/types';
 
@@ -21,14 +15,6 @@ export type CreateEntityState =
   | { entity: 'task'; kind?: TaskKind }
   | { entity: 'project' }
   | { entity: 'delegated' };
-
-const taskKindIcons: Record<TaskKind, typeof CheckSquare> = {
-  TASK: CheckSquare,
-  CALL: Phone,
-  MEETING: Users,
-  IDEA: Lightbulb,
-  NOTE: FileText,
-};
 
 const taskKindDescriptions: Record<TaskKind, string> = {
   TASK: 'Обычная рабочая задача с описанием, сроком и приоритетом.',
@@ -164,27 +150,7 @@ export function CreateEntityModal({
             <DelegatedTaskForm onDone={onClose} />
           ) : (
             <div className="grid gap-5">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-                {(['TASK', 'CALL', 'MEETING', 'IDEA', 'NOTE'] as TaskKind[]).map((kind) => {
-                  const Icon = taskKindIcons[kind];
-                  const active = selectedKind === kind;
-                  return (
-                    <button
-                      key={kind}
-                      type="button"
-                      onClick={() => setSelectedKind(kind)}
-                      className={`rounded-2xl border p-3 text-left transition ${
-                        active
-                          ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]'
-                          : 'border-[var(--line)] bg-[var(--background)] text-[var(--muted)] hover:border-[var(--accent)]'
-                      }`}
-                    >
-                      <Icon size={18} />
-                      <span className="mt-2 block text-sm font-semibold">{taskKindLabel[kind]}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              <TaskKindCards value={selectedKind} onChange={setSelectedKind} />
               <TaskForm
                 key={selectedKind}
                 initialKind={selectedKind}
