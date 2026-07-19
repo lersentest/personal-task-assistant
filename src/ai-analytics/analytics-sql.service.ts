@@ -32,6 +32,8 @@ export class AnalyticsSqlService implements OnModuleDestroy {
   private readonly pools: AnalyticsPoolTarget[];
   private readonly maxRows: number;
   private readonly timeoutMs: number;
+  private readonly fallbackCooldownMs = 5 * 60 * 1000;
+  private readonly unavailableUntil = new Map<AnalyticsPoolTarget['label'], number>();
 
   constructor(config: ConfigService) {
     const analyticsConnectionString =
@@ -69,6 +71,12 @@ export class AnalyticsSqlService implements OnModuleDestroy {
 
     for (let index = 0; index < this.pools.length; index += 1) {
       const target = this.pools[index];
+      const willRetryWithFallback = index < this.pools.length - 1;
+
+      if (willRetryWithFallback && this.isTargetCoolingDown(target)) {
+        continue;
+      }
+
       const startedAt = Date.now();
       let client: PoolClient | null = null;
 
@@ -95,17 +103,30 @@ export class AnalyticsSqlService implements OnModuleDestroy {
       } catch (error) {
         lastError = error;
         if (client) await this.safeRollback(client);
-        this.logger.warn(
-          JSON.stringify({
-            type: 'ai_analytics_sql_failed',
-            connection: target.label,
-            willRetryWithFallback: index < this.pools.length - 1,
-            message: error instanceof Error ? error.message : 'Unknown SQL error',
-            durationMs: Date.now() - startedAt,
-            referencedViews: validated.referencedViews,
-          }),
-        );
-        if (index >= this.pools.length - 1) throw error;
+
+        const logPayload = {
+          type: 'ai_analytics_sql_failed',
+          connection: target.label,
+          willRetryWithFallback,
+          message: error instanceof Error ? error.message : 'Unknown SQL error',
+          durationMs: Date.now() - startedAt,
+          referencedViews: validated.referencedViews,
+        };
+
+        if (willRetryWithFallback) {
+          const coolingDownUntil = this.coolDownTarget(target);
+          this.logger.log(
+            JSON.stringify({
+              ...logPayload,
+              type: 'ai_analytics_sql_fallback',
+              nextConnection: this.pools[index + 1].label,
+              coolingDownUntil: new Date(coolingDownUntil).toISOString(),
+            }),
+          );
+        } else {
+          this.logger.warn(JSON.stringify(logPayload));
+          throw error;
+        }
       } finally {
         client?.release();
       }
@@ -197,6 +218,17 @@ export class AnalyticsSqlService implements OnModuleDestroy {
     }
 
     return targets;
+  }
+
+  private isTargetCoolingDown(target: AnalyticsPoolTarget) {
+    const coolingDownUntil = this.unavailableUntil.get(target.label);
+    return typeof coolingDownUntil === 'number' && coolingDownUntil > Date.now();
+  }
+
+  private coolDownTarget(target: AnalyticsPoolTarget) {
+    const coolingDownUntil = Date.now() + this.fallbackCooldownMs;
+    this.unavailableUntil.set(target.label, coolingDownUntil);
+    return coolingDownUntil;
   }
 
   private numberFromConfig(

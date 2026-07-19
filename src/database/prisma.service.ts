@@ -34,17 +34,36 @@ function createAdapter(connectionString: string): PrismaPg {
   });
 }
 
+function numberFromConfig(
+  value: string | undefined,
+  fallback: number,
+  min: number,
+  max: number,
+) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, Math.floor(parsed)));
+}
+
 @Injectable()
 export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
   private readonly logger = new Logger(PrismaService.name);
+  private readonly slowQueryWarningMs: number;
 
   constructor(configService: ConfigService) {
     const connectionString = configService.getOrThrow<string>('DATABASE_URL');
+    const slowQueryWarningMs = numberFromConfig(
+      configService.get<string>('DB_SLOW_QUERY_WARNING_MS'),
+      1000,
+      0,
+      60000,
+    );
     const adapter = createAdapter(connectionString);
     super({ adapter, log: [{ emit: 'event', level: 'query' }] as const });
+    this.slowQueryWarningMs = slowQueryWarningMs;
 
     const clientWithQueryEvents = this as unknown as {
       $on: (
@@ -55,7 +74,12 @@ export class PrismaService
 
     clientWithQueryEvents.$on('query', (event) => {
       addRequestTiming('db', event.duration);
-      if (event.duration < 150) return;
+      if (
+        this.slowQueryWarningMs <= 0 ||
+        event.duration < this.slowQueryWarningMs
+      ) {
+        return;
+      }
       this.logger.warn(
         JSON.stringify({
           type: 'db_slow_query',

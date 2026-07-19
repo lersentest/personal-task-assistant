@@ -390,11 +390,12 @@ export class AiAnalyticsService {
     const output = (response as { output?: unknown[] }).output ?? [];
     return output.filter((item) => {
       const candidate = item as { type?: string };
-      return (
-        candidate.type === 'function_call' ||
-        candidate.type === 'reasoning' ||
-        candidate.type === 'message'
-      );
+      // The analytics chat uses store:false, so previous response state is not
+      // available on OpenAI's side. Re-sending reasoning/message output items
+      // from a non-stored response can make the next tool-turn fail with
+      // "Previous response with id ... not found". For stateless tool loops we
+      // only need to echo the function call item plus our function_call_output.
+      return candidate.type === 'function_call';
     });
   }
 

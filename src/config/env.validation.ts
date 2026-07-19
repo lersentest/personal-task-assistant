@@ -15,6 +15,7 @@ export interface AppEnvironment {
   AI_ANALYTICS_INPUT_PRICE_PER_1M_USD: string;
   AI_ANALYTICS_CACHED_INPUT_PRICE_PER_1M_USD: string;
   AI_ANALYTICS_OUTPUT_PRICE_PER_1M_USD: string;
+  DB_SLOW_QUERY_WARNING_MS: string;
   PORT: string;
   FRONTEND_ORIGINS: string;
   PUBLIC_WEB_URL: string;
@@ -113,6 +114,11 @@ export function validateEnvironment(
       values.AI_ANALYTICS_OUTPUT_PRICE_PER_1M_USD.trim()
         ? values.AI_ANALYTICS_OUTPUT_PRICE_PER_1M_USD
         : '',
+    DB_SLOW_QUERY_WARNING_MS:
+      typeof values.DB_SLOW_QUERY_WARNING_MS === 'string' &&
+      values.DB_SLOW_QUERY_WARNING_MS.trim()
+        ? values.DB_SLOW_QUERY_WARNING_MS
+        : '1000',
     PORT:
       typeof values.PORT === 'string' && values.PORT.trim()
         ? values.PORT
