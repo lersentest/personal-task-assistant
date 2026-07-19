@@ -203,14 +203,16 @@ export class DelegatedTasksService {
     const title = input.title.trim();
     if (!title) throw new BadRequestException('Task title is required.');
     await this.executors.getOwned(ownerId, input.executorId);
-    if (input.projectId) await this.projects.getOwned(ownerId, input.projectId);
+    const projectId =
+      input.projectId ?? (await this.projects.ensureUnassignedProject(ownerId)).id;
+    if (projectId) await this.projects.getOwned(ownerId, projectId);
 
     const task = await this.prisma.$transaction(async (tx) => {
       const created = await tx.delegatedTask.create({
         data: {
           ownerId,
           executorId: input.executorId,
-          projectId: input.projectId ?? null,
+          projectId,
           title,
           description: input.description?.trim() || null,
           priority: input.priority ?? 'NORMAL',
@@ -238,7 +240,11 @@ export class DelegatedTasksService {
   ): Promise<DelegatedTaskDetails> {
     const existing = await this.getOwned(ownerId, taskId);
     if (input.executorId) await this.executors.getOwned(ownerId, input.executorId);
-    if (input.projectId) await this.projects.getOwned(ownerId, input.projectId);
+    const projectId =
+      input.projectId === null
+        ? (await this.projects.ensureUnassignedProject(ownerId)).id
+        : input.projectId;
+    if (projectId) await this.projects.getOwned(ownerId, projectId);
     if (input.title !== undefined && !input.title.trim()) {
       throw new BadRequestException('Task title is required.');
     }
@@ -251,7 +257,7 @@ export class DelegatedTasksService {
             ? { executorId: input.executorId }
             : {}),
           ...(input.projectId !== undefined
-            ? { projectId: input.projectId }
+            ? { projectId }
             : {}),
           ...(input.title !== undefined ? { title: input.title.trim() } : {}),
           ...(input.description !== undefined

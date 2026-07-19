@@ -55,13 +55,13 @@ const sections = [
     items: [
       { href: '/tasks', label: 'Задачи', icon: CheckSquare },
       { href: '/delegated', label: 'Делегированные', icon: Users },
-      { href: '/executors', label: 'Исполнители', icon: Users },
       { href: '/projects', label: 'Проекты', icon: FolderKanban },
     ],
   },
   {
     title: 'Библиотека',
     items: [
+      { href: '/executors', label: 'Исполнители', icon: Users },
       { href: '/search', label: 'Поиск', icon: Search },
       { href: '/files', label: 'Файлы', icon: Archive },
     ],
@@ -69,7 +69,6 @@ const sections = [
   {
     title: 'Система',
     items: [
-      { href: '/unassigned', label: 'Без проекта', icon: Menu },
       { href: '/trash', label: 'Корзина', icon: Trash2 },
     ],
   },
@@ -419,18 +418,6 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
           ) : null}
         </div>
 
-        <button
-          type="button"
-          onClick={openAiChat}
-          className="mb-7 flex h-12 w-full items-center gap-3 rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface-secondary)] px-4 text-sm font-semibold text-[var(--focus-text)] transition hover:border-[var(--focus-primary)] hover:bg-[var(--focus-primary-soft)] active:scale-[0.99]"
-        >
-          <Sparkles size={18} className="text-[var(--focus-primary)]" />
-          AI-чат
-          <span className="ml-auto rounded-full bg-[var(--focus-primary-soft)] px-2 py-0.5 text-[11px] text-[var(--focus-primary)]">
-            beta
-          </span>
-        </button>
-
         <nav className="grid gap-6">
           {sections.map((section) => (
             <div key={section.title}>
@@ -473,9 +460,6 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
           <Link href="/settings" className="flex items-center gap-3 rounded-2xl px-3 py-2.5 hover:bg-[var(--focus-surface-secondary)]">
             <Settings size={18} /> Настройки
           </Link>
-          <Link href="/profile" className="flex items-center gap-3 rounded-2xl px-3 py-2.5 hover:bg-[var(--focus-surface-secondary)]">
-            <User size={18} /> Профиль
-          </Link>
           <button onClick={logout} className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left hover:bg-[var(--focus-surface-secondary)]">
             <LogOut size={18} /> Выход
           </button>
@@ -496,31 +480,33 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
             </button>
             <button
               onClick={() => setPaletteOpen(true)}
-              className="hidden h-11 min-w-0 flex-1 items-center gap-3 rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] px-4 text-sm text-[var(--focus-text-muted)] shadow-sm transition hover:border-[var(--focus-primary)] md:flex md:max-w-[620px]"
+              className="hidden h-11 min-w-0 flex-1 items-center gap-3 rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] px-4 text-sm text-[var(--focus-text-muted)] shadow-sm transition hover:border-[var(--focus-primary)] md:flex"
             >
               <Search size={18} />
-              Поиск по задачам, проектам, тегам...
+              Поиск и команды
               <span className="ml-auto inline-flex items-center gap-1 rounded-lg bg-[var(--focus-surface-secondary)] px-2 py-1 text-xs text-[var(--focus-text-muted)]">
                 <Command size={13} /> K
               </span>
             </button>
             <div className="ml-auto flex items-center gap-2">
-              <VoiceCommandButton variant="inline" />
               <button
+                type="button"
                 onClick={() => setPaletteOpen(true)}
-                className="hidden h-11 items-center gap-2 rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] px-4 text-sm font-semibold shadow-sm transition hover:bg-[var(--focus-surface-secondary)] sm:flex"
+                className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] text-[var(--focus-text-secondary)] shadow-sm transition hover:border-[var(--focus-primary)] hover:bg-[var(--focus-primary-soft)] md:hidden"
+                aria-label="Открыть поиск и команды"
+              >
+                <Search size={18} />
+              </button>
+              <button
+                type="button"
+                onClick={openAiChat}
+                className="flex h-11 items-center gap-2 rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] px-3 text-sm font-semibold shadow-sm transition hover:border-[var(--focus-primary)] hover:bg-[var(--focus-primary-soft)] sm:px-4"
+                aria-label="Открыть AI-чат"
               >
                 <Sparkles size={17} />
-                Команды
+                <span className="hidden sm:inline">AI-чат</span>
               </button>
-              <button
-                hidden
-                onClick={() => openCreate({ entity: 'task', kind: 'TASK' })}
-                className="hidden h-11 items-center gap-2 rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] px-4 text-sm font-semibold shadow-sm transition hover:bg-[var(--focus-surface-secondary)] sm:flex"
-              >
-                <Plus size={18} />
-                Создать
-              </button>
+              <VoiceCommandButton variant="inline" />
               <Link
                 href="/profile"
                 className="flex h-11 items-center gap-3 rounded-2xl px-2 text-sm hover:bg-[var(--focus-surface-secondary)]"
@@ -714,9 +700,6 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
               </button>
               <Link href="/settings" className="flex items-center gap-3 rounded-2xl px-3 py-3 hover:bg-[var(--focus-surface-secondary)]">
                 <Settings size={18} /> Настройки
-              </Link>
-              <Link href="/profile" className="flex items-center gap-3 rounded-2xl px-3 py-3 hover:bg-[var(--focus-surface-secondary)]">
-                <User size={18} /> Профиль
               </Link>
               <button onClick={logout} className="flex items-center gap-3 rounded-2xl px-3 py-3 text-left hover:bg-[var(--focus-surface-secondary)]">
                 <LogOut size={18} /> Выход

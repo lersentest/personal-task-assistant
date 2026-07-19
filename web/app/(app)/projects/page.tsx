@@ -11,6 +11,8 @@ import { useUiMode } from '@/components/ui-mode-provider';
 import { api } from '@/lib/api';
 import { projectStatusLabel } from '@/lib/labels';
 
+const UNASSIGNED_PROJECT_NAME = 'Без проекта';
+
 export default function ProjectsPage() {
   const { interfaceMode } = useUiMode();
   const isFocus = interfaceMode === 'focus';
@@ -41,8 +43,9 @@ export default function ProjectsPage() {
       ) : null}
       <div className={isFocus ? 'grid gap-4 md:grid-cols-2 2xl:grid-cols-3' : 'grid gap-4 md:grid-cols-2 xl:grid-cols-3'}>
         {projects.data?.map((project) => {
-          const count = project._count?.tasks ?? 0;
-          const progress = project.status === 'COMPLETED' ? 100 : Math.min(95, Math.max(12, count * 8));
+          const isUnassigned = project.name === UNASSIGNED_PROJECT_NAME;
+          const activeCount = project.taskStats?.active ?? project._count?.tasks ?? 0;
+          const completedCount = project.taskStats?.completed ?? 0;
           return (
             <ProjectModalLink
               key={project.id}
@@ -58,7 +61,11 @@ export default function ProjectsPage() {
                   ) : null}
                   <div className="min-w-0">
                     <h2 className="font-semibold">{project.name}</h2>
-                    <p className="mt-1 line-clamp-2 text-sm text-[var(--muted)]">{project.description ?? 'Без описания'}</p>
+                    <p className="mt-1 line-clamp-2 text-sm text-[var(--muted)]">
+                      {isUnassigned
+                        ? 'Все задачи, которые создаются без выбора проекта.'
+                        : project.description ?? 'Без описания'}
+                    </p>
                   </div>
                 </div>
                 <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-1 text-xs font-medium text-[var(--accent)]">
@@ -68,17 +75,22 @@ export default function ProjectsPage() {
               {isFocus ? (
                 <>
                   <div className="mt-auto pt-5">
-                  <div className="h-2 overflow-hidden rounded-full bg-[var(--focus-surface-secondary)]">
-                    <div className="h-full rounded-full bg-[var(--focus-primary)]" style={{ width: `${progress}%` }} />
-                  </div>
-                  <div className="mt-3 flex items-center justify-between text-xs text-[var(--focus-text-muted)]">
-                    <span>{count} задач</span>
-                    <span>{progress}%</span>
-                  </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-2xl bg-[var(--focus-surface-secondary)] px-3 py-3">
+                        <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--focus-text-muted)]">Текущие</p>
+                        <p className="mt-1 text-2xl font-semibold text-[var(--focus-text)]">{activeCount}</p>
+                      </div>
+                      <div className="rounded-2xl bg-[rgba(34,197,94,0.10)] px-3 py-3">
+                        <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--focus-text-muted)]">Выполнено</p>
+                        <p className="mt-1 text-2xl font-semibold text-[var(--focus-success)]">{completedCount}</p>
+                      </div>
+                    </div>
                   </div>
                 </>
               ) : (
-                <p className="mt-4 text-sm text-[var(--muted)]">Активных задач: {count}</p>
+                <p className="mt-4 text-sm text-[var(--muted)]">
+                  Текущие: {activeCount} · Выполнено: {completedCount}
+                </p>
               )}
             </ProjectModalLink>
           );

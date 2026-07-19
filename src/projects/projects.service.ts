@@ -4,7 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { Prisma } from '../generated/prisma/client';
 import { CreateProjectInput } from './types/create-project.input';
+
+export const UNASSIGNED_PROJECT_NAME = 'Без проекта';
 
 @Injectable()
 export class ProjectsService {
@@ -52,8 +55,35 @@ export class ProjectsService {
     });
   }
 
-  list(ownerId: string) {
-    return this.prisma.project.findMany({
+  async ensureUnassignedProject(
+    ownerId: string,
+    createdById = ownerId,
+    tx: PrismaService | Prisma.TransactionClient = this.prisma,
+  ) {
+    return tx.project.upsert({
+      where: {
+        ownerId_name: {
+          ownerId,
+          name: UNASSIGNED_PROJECT_NAME,
+        },
+      },
+      create: {
+        ownerId,
+        createdById,
+        name: UNASSIGNED_PROJECT_NAME,
+        description: 'Служебный проект для задач без выбранного проекта.',
+      },
+      update: {
+        status: 'ACTIVE',
+        archivedAt: null,
+        deletedAt: null,
+      },
+    });
+  }
+
+  async list(ownerId: string) {
+    await this.ensureUnassignedProject(ownerId);
+    const projects = await this.prisma.project.findMany({
       where: { ownerId, deletedAt: null, status: { not: 'ARCHIVED' } },
       include: {
         _count: {
@@ -69,6 +99,45 @@ export class ProjectsService {
       },
       orderBy: [{ status: 'asc' }, { name: 'asc' }],
     });
+    const completedCounts = await this.prisma.task.groupBy({
+      by: ['projectId'],
+      where: {
+        ownerId,
+        deletedAt: null,
+        projectId: { not: null },
+        status: 'COMPLETED',
+      },
+      _count: { _all: true },
+    });
+    const totalCounts = await this.prisma.task.groupBy({
+      by: ['projectId'],
+      where: {
+        ownerId,
+        deletedAt: null,
+        projectId: { not: null },
+      },
+      _count: { _all: true },
+    });
+    const completedByProject = new Map(
+      completedCounts.map((item) => [item.projectId, item._count._all]),
+    );
+    const totalByProject = new Map(
+      totalCounts.map((item) => [item.projectId, item._count._all]),
+    );
+    return projects
+      .map((project) => ({
+        ...project,
+        taskStats: {
+          active: project._count.tasks,
+          completed: completedByProject.get(project.id) ?? 0,
+          total: totalByProject.get(project.id) ?? 0,
+        },
+      }))
+      .sort((a, b) => {
+        if (a.name === UNASSIGNED_PROJECT_NAME) return -1;
+        if (b.name === UNASSIGNED_PROJECT_NAME) return 1;
+        return 0;
+      });
   }
 
   getOwned(ownerId: string, projectId: string) {

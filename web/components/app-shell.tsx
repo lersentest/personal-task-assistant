@@ -34,9 +34,8 @@ const nav = [
   { href: '/calendar', label: 'Календарь', icon: CalendarDays },
   { href: '/tasks', label: 'Задачи', icon: CheckSquare },
   { href: '/delegated', label: 'Делегированные', icon: Users },
-  { href: '/executors', label: 'Исполнители', icon: Users },
   { href: '/projects', label: 'Проекты', icon: FolderKanban },
-  { href: '/unassigned', label: 'Без проекта', icon: Menu },
+  { href: '/executors', label: 'Исполнители', icon: Users },
   { href: '/search', label: 'Поиск', icon: Search },
   { href: '/files', label: 'Файлы', icon: FolderKanban },
   { href: '/trash', label: 'Корзина', icon: Trash2 },
@@ -124,9 +123,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
           <Link href="/settings" className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-[var(--background)]">
             <Settings size={17} /> Настройки
-          </Link>
-          <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-[var(--background)]">
-            <User size={17} /> Профиль
           </Link>
           <button onClick={logout} className="flex items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-[var(--background)]">
             <LogOut size={17} /> Выход
@@ -235,9 +231,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
             <Link href="/settings" className="flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-[var(--background)]">
               <Settings size={17} /> Настройки
-            </Link>
-            <Link href="/profile" className="flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-[var(--background)]">
-              <User size={17} /> Профиль
             </Link>
             <button onClick={logout} className="flex items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-[var(--background)]">
               <LogOut size={17} /> Выход

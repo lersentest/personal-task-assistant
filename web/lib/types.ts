@@ -27,6 +27,11 @@ export interface Project {
   _count?: {
     tasks: number;
   };
+  taskStats?: {
+    active: number;
+    completed: number;
+    total: number;
+  };
 }
 
 export interface TagLink {

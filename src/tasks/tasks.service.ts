@@ -6,6 +6,7 @@ import {
 import { DateTime } from 'luxon';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { UNASSIGNED_PROJECT_NAME } from '../projects/projects.service';
 import { CreateTaskInput } from './types/create-task.input';
 import { BulkTaskFilter, ListTasksOptions } from './types/task-view';
 import { UpdateTaskInput } from './types/update-task.input';
@@ -46,12 +47,14 @@ export class TasksService {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      const projectId =
+        input.projectId ?? (await this.ensureUnassignedProject(tx, input.ownerId, input.createdById)).id;
       const task = await tx.task.create({
         data: {
           ownerId: input.ownerId,
           createdById: input.createdById,
           assigneeId: input.assigneeId,
-          projectId: input.projectId ?? null,
+          projectId,
           title,
           description: input.description?.trim() || null,
           originalText: input.originalText?.trim() || null,
@@ -88,7 +91,7 @@ export class TasksService {
           actorId: input.createdById,
           type: 'TASK_CREATED',
           taskId: task.id,
-          projectId: input.projectId ?? null,
+          projectId,
           title,
           metadata: {
             priority: input.priority ?? 'NORMAL',
@@ -116,6 +119,10 @@ export class TasksService {
 
     return this.prisma.$transaction(async (tx) => {
       const now = new Date();
+      const nextProjectId =
+        input.projectId === null
+          ? (await this.ensureUnassignedProject(tx, ownerId)).id
+          : input.projectId;
       const statusTimes = input.status
         ? {
             completedAt: input.status === 'COMPLETED' ? now : null,
@@ -131,7 +138,7 @@ export class TasksService {
             ? { description: input.description?.trim() || null }
             : {}),
           ...(input.projectId !== undefined
-            ? { projectId: input.projectId }
+            ? { projectId: nextProjectId }
             : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
           ...(input.priority !== undefined
@@ -304,6 +311,32 @@ export class TasksService {
       const aDue = a.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER;
       const bDue = b.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER;
       return aDue - bDue;
+    });
+  }
+
+  private ensureUnassignedProject(
+    tx: Prisma.TransactionClient,
+    ownerId: string,
+    createdById = ownerId,
+  ) {
+    return tx.project.upsert({
+      where: {
+        ownerId_name: {
+          ownerId,
+          name: UNASSIGNED_PROJECT_NAME,
+        },
+      },
+      create: {
+        ownerId,
+        createdById,
+        name: UNASSIGNED_PROJECT_NAME,
+        description: 'Служебный проект для задач без выбранного проекта.',
+      },
+      update: {
+        status: 'ACTIVE',
+        archivedAt: null,
+        deletedAt: null,
+      },
     });
   }
 
