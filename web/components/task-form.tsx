@@ -36,10 +36,17 @@ const statusActions: Array<{ value: TaskStatus; label: string; description: stri
 ];
 
 const statusTone: Record<TaskStatus, string> = {
-  NEW: 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/70 dark:bg-blue-950/35 dark:text-blue-200',
-  IN_PROGRESS: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/35 dark:text-amber-200',
-  COMPLETED: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/35 dark:text-emerald-200',
-  CANCELLED: 'border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300',
+  NEW: 'border-blue-300 bg-blue-100 text-blue-800 shadow-sm ring-1 ring-blue-200 dark:border-blue-700 dark:bg-blue-950/55 dark:text-blue-100 dark:ring-blue-900',
+  IN_PROGRESS: 'border-amber-300 bg-amber-100 text-amber-800 shadow-sm ring-1 ring-amber-200 dark:border-amber-700 dark:bg-amber-950/55 dark:text-amber-100 dark:ring-amber-900',
+  COMPLETED: 'border-emerald-300 bg-emerald-100 text-emerald-800 shadow-sm ring-1 ring-emerald-200 dark:border-emerald-700 dark:bg-emerald-950/55 dark:text-emerald-100 dark:ring-emerald-900',
+  CANCELLED: 'border-slate-300 bg-slate-200 text-slate-700 shadow-sm ring-1 ring-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700',
+};
+
+const statusIdleTone: Record<TaskStatus, string> = {
+  NEW: 'border-blue-100 bg-blue-50/45 text-blue-700 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-900/50 dark:bg-blue-950/20 dark:text-blue-200',
+  IN_PROGRESS: 'border-amber-100 bg-amber-50/45 text-amber-700 hover:border-amber-300 hover:bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200',
+  COMPLETED: 'border-emerald-100 bg-emerald-50/45 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-200',
+  CANCELLED: 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-300',
 };
 
 export function TaskKindCards({
@@ -300,16 +307,16 @@ export function TaskForm({
         if (title.trim()) mutation.mutate();
       }}
     >
-      <div className={`grid gap-4 ${showKindSelector ? 'lg:grid-cols-[minmax(0,1fr)_220px]' : 'lg:grid-cols-[220px]'}`}>
-        {showKindSelector ? (
-          <div className="grid gap-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-              Тип
-            </span>
-            <TaskKindCards value={kind} onChange={changeKind} />
-          </div>
-        ) : null}
+      {showKindSelector ? (
+        <div className="grid gap-2">
+          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+            Тип
+          </span>
+          <TaskKindCards value={kind} onChange={changeKind} />
+        </div>
+      ) : null}
 
+      <div className={`grid gap-4 ${showStatusActions ? 'lg:grid-cols-[220px_minmax(0,1fr)]' : 'lg:grid-cols-[220px]'}`}>
         <label className="grid content-start gap-2">
           <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
             Приоритет
@@ -325,13 +332,13 @@ export function TaskForm({
             <option value="URGENT">{priorityLabel.URGENT}</option>
           </select>
         </label>
-      </div>
 
-      {showStatusActions ? (
-        <section className="flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--background)]/45 px-3 py-2">
-          <span className="mr-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-            Статус
-          </span>
+        {showStatusActions ? (
+          <section className="grid content-start gap-2">
+            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+              Статус
+            </span>
+            <div className="flex min-h-12 flex-wrap items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--background)]/45 px-2.5 py-2">
             {statusActions.map((item) => {
               const active = status === item.value;
               return (
@@ -339,19 +346,22 @@ export function TaskForm({
                   key={item.value}
                   type="button"
                   onClick={() => setStatus(item.value)}
-                  className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition active:scale-[0.98] ${
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold transition active:scale-[0.98] ${
                     active
                       ? statusTone[item.value]
-                      : 'border-[var(--line)] bg-[var(--panel)] text-[var(--muted)] hover:border-[var(--accent)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]'
+                      : statusIdleTone[item.value]
                   }`}
                   title={item.description}
                 >
+                  <span className="h-1.5 w-1.5 rounded-full bg-current" />
                   {item.label}
                 </button>
               );
             })}
-        </section>
-      ) : null}
+            </div>
+          </section>
+        ) : null}
+      </div>
 
       <label className="grid gap-1.5">
         <span className="text-xs font-semibold text-[var(--muted)]">Название *</span>
