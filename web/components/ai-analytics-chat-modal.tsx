@@ -13,6 +13,8 @@ const examplePrompts = [
   'Кому я чаще всего делегирую задачи и где зависания?',
 ];
 
+const MESSAGE_TURN_PAGE_SIZE = 10;
+
 export function AiAnalyticsChatModal({
   open,
   onClose,
@@ -22,6 +24,7 @@ export function AiAnalyticsChatModal({
 }) {
   const queryClient = useQueryClient();
   const [message, setMessage] = useState('');
+  const [visibleTurns, setVisibleTurns] = useState(MESSAGE_TURN_PAGE_SIZE);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const conversationQuery = useQuery({
@@ -39,11 +42,16 @@ export function AiAnalyticsChatModal({
       }),
     onSuccess: (conversation) => {
       queryClient.setQueryData(['ai-analytics-conversation'], conversation);
+      setVisibleTurns(MESSAGE_TURN_PAGE_SIZE);
       setMessage('');
     },
   });
 
   const messages = conversationQuery.data?.messages ?? [];
+  const { visibleMessages, hiddenTurnCount } = useMemo(
+    () => sliceRecentTurns(messages, visibleTurns),
+    [messages, visibleTurns],
+  );
   const isBusy = conversationQuery.isLoading || sendMutation.isPending;
 
   useEffect(() => {
@@ -56,6 +64,10 @@ export function AiAnalyticsChatModal({
     }, 80);
     return () => window.clearTimeout(handle);
   }, [open, messages.length, sendMutation.isPending]);
+
+  useEffect(() => {
+    if (open) setVisibleTurns(MESSAGE_TURN_PAGE_SIZE);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -75,6 +87,16 @@ export function AiAnalyticsChatModal({
 
   function usePrompt(prompt: string) {
     setMessage(prompt);
+  }
+
+  function showMoreMessages() {
+    const scrollElement = scrollRef.current;
+    const previousHeight = scrollElement?.scrollHeight ?? 0;
+    setVisibleTurns((value) => value + MESSAGE_TURN_PAGE_SIZE);
+    window.requestAnimationFrame(() => {
+      if (!scrollElement) return;
+      scrollElement.scrollTop = scrollElement.scrollHeight - previousHeight + scrollElement.scrollTop;
+    });
   }
 
   if (!open) return null;
@@ -124,7 +146,18 @@ export function AiAnalyticsChatModal({
           ) : null}
 
           <div className="grid gap-4">
-            {messages.map((item) => (
+            {hiddenTurnCount > 0 ? (
+              <div className="sticky top-2 z-10 flex justify-center">
+                <button
+                  type="button"
+                  onClick={showMoreMessages}
+                  className="rounded-full border border-[var(--focus-border)] bg-[var(--focus-surface)] px-4 py-2 text-sm font-semibold text-[var(--focus-primary)] shadow-lg transition hover:border-[var(--focus-primary)] hover:bg-[var(--focus-primary-soft)] active:scale-[0.98]"
+                >
+                  Показать ещё {Math.min(MESSAGE_TURN_PAGE_SIZE, hiddenTurnCount)} предыдущих
+                </button>
+              </div>
+            ) : null}
+            {visibleMessages.map((item) => (
               <ChatMessage key={item.id} message={item} />
             ))}
             {sendMutation.isPending ? (
@@ -214,9 +247,61 @@ function EmptyChat({ onPrompt }: { onPrompt: (prompt: string) => void }) {
   );
 }
 
+function sliceRecentTurns(messages: AiChatMessage[], visibleTurns: number) {
+  if (messages.length <= MESSAGE_TURN_PAGE_SIZE) {
+    return { visibleMessages: messages, hiddenTurnCount: 0 };
+  }
+
+  const userMessageIndexes = messages
+    .map((item, index) => (item.role === 'USER' ? index : -1))
+    .filter((index) => index >= 0);
+
+  if (!userMessageIndexes.length) {
+    const startIndex = Math.max(0, messages.length - visibleTurns);
+    return {
+      visibleMessages: messages.slice(startIndex),
+      hiddenTurnCount: startIndex,
+    };
+  }
+
+  const hiddenTurnCount = Math.max(0, userMessageIndexes.length - visibleTurns);
+  const startIndex = hiddenTurnCount > 0 ? userMessageIndexes[hiddenTurnCount] : 0;
+
+  return {
+    visibleMessages: messages.slice(startIndex),
+    hiddenTurnCount,
+  };
+}
+
+function splitExplanationBlock(content: string) {
+  const lines = content.split(/\r?\n/);
+  const headingIndex = lines.findIndex((line) =>
+    /^#{0,6}\s*(как\s+(я\s+)?определил|как\s+определено|почему\s+так|методика|на\s+основе\s+чего|источники)\s*[:：]?/i.test(line.trim()),
+  );
+
+  if (headingIndex < 0) {
+    return { main: content, explanation: '' };
+  }
+
+  const firstExplanationLine = lines[headingIndex]
+    .replace(/^#{0,6}\s*(как\s+(я\s+)?определил|как\s+определено|почему\s+так|методика|на\s+основе\s+чего|источники)\s*[:：]?\s*/i, '')
+    .trim();
+  const main = lines.slice(0, headingIndex).join('\n').trim();
+  const explanation = [firstExplanationLine, ...lines.slice(headingIndex + 1)]
+    .filter(Boolean)
+    .join('\n')
+    .trim();
+
+  return {
+    main: main || 'Ответ готов.',
+    explanation,
+  };
+}
+
 function ChatMessage({ message }: { message: AiChatMessage }) {
   const isUser = message.role === 'USER';
   const usage = !isUser ? aiUsage(message.metadata) : null;
+  const contentParts = !isUser ? splitExplanationBlock(message.content) : null;
 
   return (
     <article className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -227,7 +312,23 @@ function ChatMessage({ message }: { message: AiChatMessage }) {
             : 'border border-[var(--focus-border)] bg-[var(--focus-surface-secondary)] text-[var(--focus-text)]'
         }`}
       >
-        <div className="whitespace-pre-wrap text-sm leading-6">{message.content}</div>
+        {contentParts ? (
+          <>
+            <div className="whitespace-pre-wrap text-sm leading-6">{contentParts.main}</div>
+            {contentParts.explanation ? (
+              <details className="mt-3 rounded-2xl border border-[var(--focus-border-soft)] bg-[var(--focus-surface)]/75 px-3 py-2 text-sm">
+                <summary className="cursor-pointer select-none font-semibold text-[var(--focus-text-secondary)]">
+                  Как определил
+                </summary>
+                <div className="mt-2 whitespace-pre-wrap leading-6 text-[var(--focus-text-muted)]">
+                  {contentParts.explanation}
+                </div>
+              </details>
+            ) : null}
+          </>
+        ) : (
+          <div className="whitespace-pre-wrap text-sm leading-6">{message.content}</div>
+        )}
         {!isUser && message.artifacts?.length ? (
           <div className="mt-4 grid gap-3">
             {message.artifacts.map((artifact, index) => (
