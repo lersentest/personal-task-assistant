@@ -59,7 +59,7 @@ async function getAccessToken() {
   const { data } = await supabase.auth.getSession();
   const session = data.session;
   const token = session?.access_token;
-  if (!token) throw new Error('Сессия истекла');
+  if (!token) return null;
 
   cachedAccessToken = {
     token,
@@ -71,19 +71,34 @@ async function getAccessToken() {
   return token;
 }
 
-async function authHeaders() {
+async function authHeaders(): Promise<Record<string, string>> {
   const token = await getAccessToken();
-  if (!token) throw new Error('Сессия истекла');
-  return {
-    Authorization: `Bearer ${token}`,
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
 }
 
-async function bearerHeader() {
+async function bearerHeader(): Promise<Record<string, string>> {
   const token = await getAccessToken();
-  if (!token) throw new Error('Сессия истекла');
-  return { Authorization: `Bearer ${token}`, 'X-Request-Id': createRequestId() };
+  const headers: Record<string, string> = { 'X-Request-Id': createRequestId() };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
+function buildHeaders(
+  baseHeaders: Record<string, string>,
+  initHeaders: HeadersInit | undefined,
+  requestId?: string,
+) {
+  const headers = new Headers();
+  Object.entries(baseHeaders).forEach(([key, value]) => headers.set(key, value));
+  if (requestId) headers.set('X-Request-Id', requestId);
+  if (initHeaders) {
+    new Headers(initHeaders).forEach((value, key) => headers.set(key, value));
+  }
+  return headers;
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -96,11 +111,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   try {
     const response = await fetch(`${apiUrl}${path}`, {
       ...init,
-      headers: {
-        ...headers,
-        'X-Request-Id': requestId,
-        ...(init.headers ?? {}),
-      },
+      credentials: 'include',
+      headers: buildHeaders(headers, init.headers, requestId),
     });
 
     if (!response.ok) {
@@ -119,11 +131,10 @@ async function publicRequest<T>(path: string, init: RequestInit = {}): Promise<T
   const requestId = createRequestId();
   const response = await fetch(`${apiUrl}${path}`, {
     ...init,
-    headers: {
+    headers: buildHeaders({
       'Content-Type': 'application/json',
       'X-Request-Id': requestId,
-      ...(init.headers ?? {}),
-    },
+    }, init.headers),
   });
 
   if (!response.ok) {
@@ -136,7 +147,8 @@ async function publicRequest<T>(path: string, init: RequestInit = {}): Promise<T
 async function download(path: string): Promise<Blob> {
   const headers = await authHeaders();
   const response = await fetch(`${apiUrl}${path}`, {
-    headers: { ...headers, 'X-Request-Id': createRequestId() },
+    credentials: 'include',
+    headers: buildHeaders(headers, undefined, createRequestId()),
   });
   if (!response.ok) {
     const text = await response.text();
@@ -160,7 +172,8 @@ async function formRequest<T>(path: string, formData: FormData): Promise<T> {
   const headers = await bearerHeader();
   const response = await fetch(`${apiUrl}${path}`, {
     method: 'POST',
-    headers: { ...headers, 'X-Request-Id': createRequestId() },
+    credentials: 'include',
+    headers: buildHeaders(headers, undefined, createRequestId()),
     body: formData,
   });
   if (!response.ok) {
@@ -184,7 +197,15 @@ function extractErrorMessage(text: string, fallback = 'Не удалось вы�
 }
 
 export const api = {
-  me: () => request<{ id: string; email: string | null; timezone: string }>('/api/me'),
+  me: () => request<{ id: string; email: string | null; timezone: string; sessionType?: 'OWNER' | 'AUDIT'; auditSessionId?: string | null }>('/api/me'),
+  activateAuditAccess: (token: string) =>
+    publicRequest<{ ok: true; expiresAt: string; sessionType: 'AUDIT'; auditIndexUrl: string }>('/api/audit/access', {
+      method: 'POST',
+      credentials: 'include',
+      body: JSON.stringify({ token }),
+    }),
+  revokeAuditSession: () =>
+    request<{ ok: true }>('/api/audit/logout', { method: 'POST' }),
   dashboard: () => request<DashboardData>('/api/dashboard'),
   tasks: (query = '') => request<Task[]>(`/api/tasks${query}`),
   task: (id: string) => request<Task>(`/api/tasks/${id}`),

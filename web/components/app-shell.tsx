@@ -21,9 +21,11 @@ import {
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { AuditBanner } from '@/components/audit-banner';
 import { CreateEntityModal, CreateEntityState } from '@/components/create-entity-modal';
 import { supabase } from '@/lib/supabase';
 import { FocusShell } from './focus/focus-shell';
+import { api } from '@/lib/api';
 import { useUiMode } from './ui-mode-provider';
 import { VoiceCommandButton } from './voice-command-button';
 
@@ -59,6 +61,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   async function logout() {
+    await api.revokeAuditSession().catch(() => undefined);
     await supabase.auth.signOut();
     router.replace('/login');
   }
@@ -84,6 +87,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[260px_1fr]">
+      <AuditBanner />
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-[260px] border-r border-[var(--line)] bg-[var(--panel)] px-4 py-5 lg:flex lg:flex-col">
         <Link href="/my-day" className="mb-6 text-lg font-semibold">
           Personal Tasks

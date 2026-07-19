@@ -14,6 +14,7 @@ import {
 } from 'crypto';
 import { performance } from 'node:perf_hooks';
 import { addRequestTiming, setRequestUserId } from '../../observability/request-context';
+import { AuditAccessService } from '../../audit-access/audit-access.service';
 import { AuthenticatedRequest, CurrentUser } from '../current-user';
 import { UsersService } from '../../users/users.service';
 
@@ -45,6 +46,7 @@ export class SupabaseAuthGuard implements CanActivate {
   constructor(
     private readonly config: ConfigService,
     private readonly users: UsersService,
+    private readonly auditAccess: AuditAccessService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -52,6 +54,14 @@ export class SupabaseAuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     try {
       const token = this.extractToken(request.headers.authorization);
+      if (!token) {
+        const auditUser = await this.auditAccess.authenticateRequest(request);
+        if (!auditUser) throw new UnauthorizedException('Missing session');
+        request.user = auditUser;
+        setRequestUserId(auditUser.id);
+        return true;
+      }
+
       const payload = await this.verifyToken(token);
       if (!payload.sub) throw new UnauthorizedException('Invalid session');
 
@@ -73,6 +83,8 @@ export class SupabaseAuthGuard implements CanActivate {
         authUserId: payload.sub,
         email: payload.email ?? null,
         timezone: user.timezone,
+        sessionType: 'OWNER',
+        auditSessionId: null,
       };
       request.user = currentUser;
       setRequestUserId(currentUser.id);
@@ -82,9 +94,9 @@ export class SupabaseAuthGuard implements CanActivate {
     }
   }
 
-  private extractToken(header: string | undefined): string {
+  private extractToken(header: string | undefined): string | null {
     if (!header?.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Missing bearer token');
+      return null;
     }
     return header.slice('Bearer '.length).trim();
   }

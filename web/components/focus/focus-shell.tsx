@@ -30,6 +30,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { AiAnalyticsChatModal } from '@/components/ai-analytics-chat-modal';
+import { AuditBanner } from '@/components/audit-banner';
 import { CreateEntityModal, CreateEntityState } from '@/components/create-entity-modal';
 import { DelegatedTaskDetailsModal } from '@/components/delegated-task-detail-modal';
 import { FileDetailsModal } from '@/components/file-detail-modal';
@@ -281,7 +282,15 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
     };
   }, [mobileMenuOpen]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (new URLSearchParams(window.location.search).get('ai') === '1') {
+      setAiChatOpen(true);
+    }
+  }, [pathname]);
+
   async function logout() {
+    await api.revokeAuditSession().catch(() => undefined);
     await supabase.auth.signOut();
     router.replace('/login');
   }
@@ -367,6 +376,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-[var(--focus-bg)] text-[var(--focus-text)] lg:grid lg:grid-cols-[292px_1fr]">
+      <AuditBanner />
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[292px] border-r border-[var(--focus-border-soft)] bg-[var(--focus-surface)]/96 px-4 py-5 shadow-[var(--focus-shadow)] backdrop-blur lg:flex lg:flex-col">
         <Link href="/my-day" className="mb-7 flex items-center gap-3 px-1">
           <span className="relative flex h-9 w-9 items-center justify-center rounded-2xl bg-[var(--focus-primary)] text-white shadow-sm">

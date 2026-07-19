@@ -3,6 +3,8 @@ import { AiModule } from '../ai/ai.module';
 import { AiAnalyticsModule } from '../ai-analytics/ai-analytics.module';
 import { AttachmentsModule } from '../attachments/attachments.module';
 import { AttachmentsController } from './attachments.controller';
+import { AuditAccessController } from './audit-access.controller';
+import { AuditAccessModule } from '../audit-access/audit-access.module';
 import { AiAnalyticsController } from './ai-analytics.controller';
 import { DashboardController } from './dashboard.controller';
 import { DelegatedTasksController } from './delegated-tasks.controller';
@@ -27,6 +29,7 @@ import { VoiceModule } from '../voice/voice.module';
   imports: [
     AiModule,
     AiAnalyticsModule,
+    AuditAccessModule,
     UsersModule,
     TasksModule,
     ProjectsModule,
@@ -40,6 +43,7 @@ import { VoiceModule } from '../voice/voice.module';
   ],
   controllers: [
     DashboardController,
+    AuditAccessController,
     AiAnalyticsController,
     MyDayController,
     ExecutorsController,

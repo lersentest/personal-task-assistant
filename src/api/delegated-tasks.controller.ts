@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { DelegatedTasksService } from '../delegated-tasks/delegated-tasks.service';
+import { assertNotAuditSession } from './audit-protection';
 import { SupabaseAuthGuard } from './auth/supabase-auth.guard';
 import { AuthenticatedRequest } from './current-user';
 import {
@@ -70,11 +71,13 @@ export class DelegatedTasksController {
 
   @Post(':id/send')
   async send(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    assertNotAuditSession(request);
     return jsonSafe(await this.delegatedTasks.send(request.user.id, id));
   }
 
   @Post(':id/remind')
   async remind(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    assertNotAuditSession(request);
     return jsonSafe(await this.delegatedTasks.remind(request.user.id, id));
   }
 
@@ -88,6 +91,7 @@ export class DelegatedTasksController {
     @Req() request: AuthenticatedRequest,
     @Param('id') id: string,
   ) {
+    assertNotAuditSession(request);
     return this.delegatedTasks.regeneratePublicLink(request.user.id, id);
   }
 
@@ -96,6 +100,7 @@ export class DelegatedTasksController {
     @Req() request: AuthenticatedRequest,
     @Param('id') id: string,
   ) {
+    assertNotAuditSession(request);
     await this.delegatedTasks.revokePublicLink(request.user.id, id);
     return { ok: true };
   }

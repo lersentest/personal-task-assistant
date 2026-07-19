@@ -3,12 +3,19 @@
 import { Session } from '@supabase/supabase-js';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { api } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
+
+type GateState =
+  | { status: 'loading' }
+  | { status: 'authenticated'; sessionType: 'OWNER' | 'AUDIT' }
+  | { status: 'anonymous' };
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [session, setSession] = useState<Session | null | undefined>(undefined);
+  const [gate, setGate] = useState<GateState>({ status: 'loading' });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -22,15 +29,42 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (session === undefined) return;
-    if (!session && pathname !== '/login') router.replace('/login');
-    if (session && pathname === '/login') router.replace('/dashboard');
+    let cancelled = false;
+
+    async function resolveAuthState() {
+      if (session) {
+        setGate({ status: 'authenticated', sessionType: 'OWNER' });
+        if (pathname === '/login') router.replace('/dashboard');
+        return;
+      }
+
+      try {
+        const currentUser = await api.me();
+        if (cancelled) return;
+        if (currentUser.sessionType === 'AUDIT') {
+          setGate({ status: 'authenticated', sessionType: 'AUDIT' });
+          if (pathname === '/login') router.replace('/my-day');
+          return;
+        }
+      } catch {
+        // No Supabase session and no valid audit cookie.
+      }
+
+      if (cancelled) return;
+      setGate({ status: 'anonymous' });
+      if (pathname !== '/login') router.replace('/login');
+    }
+
+    resolveAuthState();
+    return () => {
+      cancelled = true;
+    };
   }, [pathname, router, session]);
 
-  if (session === undefined) {
+  if (session === undefined || gate.status === 'loading') {
     return <div className="grid min-h-screen place-items-center text-sm text-[var(--muted)]">Загрузка...</div>;
   }
 
-  if (!session && pathname !== '/login') return null;
+  if (gate.status === 'anonymous' && pathname !== '/login') return null;
   return <>{children}</>;
 }
-
