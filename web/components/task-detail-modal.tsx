@@ -8,7 +8,6 @@ import {
   ExternalLink,
   FolderKanban,
   ListChecks,
-  Pencil,
   RotateCcw,
   Tag,
   Trash2,
@@ -75,7 +74,7 @@ export function TaskDetailsModal({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
-  const [editing, setEditing] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const task = useQuery({
     queryKey: ['task', taskId],
     queryFn: () => api.task(taskId),
@@ -106,31 +105,27 @@ export function TaskDetailsModal({
   });
 
   useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.body.style.overflow = '';
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [onClose, open]);
-
-  useEffect(() => {
-    if (!open) setEditing(false);
+    if (!open) setHasUnsavedChanges(false);
   }, [open]);
 
   if (!open) return null;
 
   const data = task.data;
   const incompleteChecklistItems = data?.checklistItems?.filter((item) => !item.isCompleted).length ?? 0;
+  const requestClose = () => {
+    if (
+      hasUnsavedChanges &&
+      !window.confirm('Есть несохранённые изменения. Закрыть без сохранения?')
+    ) {
+      return;
+    }
+    onClose();
+  };
 
   return (
     <EntityDrawer
       open={open}
-      onClose={onClose}
+      onClose={requestClose}
       width="max-w-5xl"
       eyebrow={
         <>
@@ -172,30 +167,18 @@ export function TaskDetailsModal({
             </div>
           ) : null}
 
-          {data && editing ? (
-            <div className="grid gap-5">
-              <TaskForm
-                task={data}
-                onDone={() => {
-                  setEditing(false);
-                  queryClient.invalidateQueries({ queryKey: ['task', taskId] });
-                }}
-              />
-              <TaskChecklistPanel task={data} />
-            </div>
-          ) : null}
-
-          {data && !editing ? (
+          {data ? (
             <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
               <section className="grid min-w-0 gap-5">
-                <div className="rounded-2xl border border-[var(--line)] bg-[var(--background)]/45 p-5">
-                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
-                    Описание
-                  </h3>
-                  <p className="whitespace-pre-wrap leading-7">
-                    {data.description?.trim() || 'Описание пока не указано.'}
-                  </p>
-                </div>
+                <TaskForm
+                  task={data}
+                  onDone={() => {
+                    setHasUnsavedChanges(false);
+                    void queryClient.invalidateQueries({ queryKey: ['task', taskId] });
+                  }}
+                  onCancel={requestClose}
+                  onDirtyChange={setHasUnsavedChanges}
+                />
 
                 <TaskChecklistPanel task={data} />
 
@@ -264,14 +247,6 @@ export function TaskDetailsModal({
                         Вернуть в работу
                       </button>
                     ) : null}
-                    <button
-                      type="button"
-                      onClick={() => setEditing(true)}
-                      className="btn-base btn-primary h-11"
-                    >
-                      <Pencil size={17} />
-                      Редактировать
-                    </button>
                     {!data.deletedAt ? (
                       <button
                         type="button"

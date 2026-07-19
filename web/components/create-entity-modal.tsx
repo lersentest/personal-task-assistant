@@ -10,7 +10,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { DelegatedTaskForm } from '@/components/delegated-task-form';
 import { ProjectForm } from '@/components/project-form';
 import { TaskForm } from '@/components/task-form';
@@ -83,16 +83,28 @@ export function CreateEntityModal({
   const [selectedKind, setSelectedKind] = useState<TaskKind>(
     state.entity === 'task' ? (state.kind ?? 'TASK') : 'TASK',
   );
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  const requestClose = useCallback(() => {
+    if (
+      hasUnsavedChanges &&
+      !window.confirm('Есть несохранённые изменения. Закрыть без сохранения?')
+    ) {
+      return;
+    }
+    onClose();
+  }, [hasUnsavedChanges, onClose]);
 
   useEffect(() => {
     if (!open) return;
     if (state.entity === 'task') setSelectedKind(state.kind ?? 'TASK');
+    setHasUnsavedChanges(false);
   }, [open, state]);
 
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') requestClose();
     };
     document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', onKeyDown);
@@ -100,7 +112,7 @@ export function CreateEntityModal({
       document.body.style.overflow = '';
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [onClose, open]);
+  }, [open, requestClose]);
 
   if (!open) return null;
 
@@ -112,7 +124,7 @@ export function CreateEntityModal({
       role="dialog"
       aria-modal="true"
       className="fixed inset-0 z-[10000] flex items-stretch justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-6"
-      onMouseDown={onClose}
+      onMouseDown={requestClose}
     >
       <div
         className="flex h-full w-full max-w-4xl flex-col overflow-hidden border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface,var(--panel))] shadow-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-3xl"
@@ -137,7 +149,7 @@ export function CreateEntityModal({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
             className="rounded-xl border border-[var(--line)] p-2 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)]"
             title="Закрыть"
           >
@@ -173,7 +185,14 @@ export function CreateEntityModal({
                   );
                 })}
               </div>
-              <TaskForm key={selectedKind} initialKind={selectedKind} showKindSelector={false} onDone={onClose} />
+              <TaskForm
+                key={selectedKind}
+                initialKind={selectedKind}
+                showKindSelector={false}
+                onDone={onClose}
+                onCancel={requestClose}
+                onDirtyChange={setHasUnsavedChanges}
+              />
             </div>
           )}
         </div>

@@ -2,11 +2,11 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckSquare, FileText, Lightbulb, Phone, Users, type LucideIcon } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { invalidateTaskCaches } from '@/lib/cache';
 import { priorityLabel, taskKindLabel } from '@/lib/labels';
-import { Task, TaskInput, TaskKind } from '@/lib/types';
+import { Task, TaskInput, TaskKind, TaskStatus } from '@/lib/types';
 import { ProjectCombobox } from './project-combobox';
 import { TimeStepSelect } from './time-step-select';
 
@@ -25,6 +25,13 @@ const dueModes: Array<{ value: DueMode; label: string; description: string }> = 
   { value: 'ON_DATE', label: 'В день', description: 'Нужно сделать в выбранный день' },
   { value: 'BEFORE_DATE', label: 'До', description: 'Дедлайн до даты или времени' },
   { value: 'EXACT_TIME', label: 'Точное время', description: 'Событие в конкретный момент' },
+];
+
+const statusActions: Array<{ value: TaskStatus; label: string; description: string }> = [
+  { value: 'NEW', label: 'Новая', description: 'Ещё не начата' },
+  { value: 'IN_PROGRESS', label: 'В работе', description: 'Сейчас выполняется' },
+  { value: 'COMPLETED', label: 'Выполнена', description: 'Можно убрать из активных' },
+  { value: 'CANCELLED', label: 'Отменена', description: 'Больше не актуальна' },
 ];
 
 function pad(value: number) {
@@ -71,22 +78,29 @@ export function TaskForm({
   task,
   projectId,
   onDone,
+  onCancel,
+  onDirtyChange,
   compact = false,
   initialKind = 'TASK',
   showKindSelector = true,
+  showStatusActions = true,
 }: {
   task?: Task;
   projectId?: string;
   onDone?: () => void;
+  onCancel?: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
   compact?: boolean;
   initialKind?: TaskKind;
   showKindSelector?: boolean;
+  showStatusActions?: boolean;
 }) {
   const queryClient = useQueryClient();
   const initialDue = useMemo(() => splitLocalDateTime(task?.dueAt), [task?.dueAt]);
   const [title, setTitle] = useState(task?.title ?? '');
   const [description, setDescription] = useState(task?.description ?? '');
   const [selectedProjectId, setSelectedProjectId] = useState(task?.project?.id ?? projectId ?? '');
+  const [status, setStatus] = useState<TaskStatus>(task?.status ?? 'NEW');
   const [priority, setPriority] = useState(task?.priority ?? 'NORMAL');
   const [kind, setKind] = useState<TaskKind>(task?.kind ?? initialKind);
   const [dueMode, setDueMode] = useState<DueMode>(initialDueMode(task));
@@ -98,6 +112,63 @@ export function TaskForm({
     task?.estimatedDurationMinutes?.toString() ?? '',
   );
   const titleError = submitAttempted && !title.trim();
+  const normalizedChecklistDrafts = checklistDrafts.map((item) => item.trim()).filter(Boolean);
+
+  const computedInitialSnapshot = useMemo(
+    () => JSON.stringify({
+      title: task?.title ?? '',
+      description: task?.description ?? '',
+      selectedProjectId: task?.project?.id ?? projectId ?? '',
+      status: task?.status ?? 'NEW',
+      priority: task?.priority ?? 'NORMAL',
+      kind: task?.kind ?? initialKind,
+      dueMode: initialDueMode(task),
+      dueDate: initialDue.date,
+      dueTime: initialDue.time,
+      estimatedDurationMinutes: task?.estimatedDurationMinutes?.toString() ?? '',
+      checklist: [] as string[],
+    }),
+    [initialDue.date, initialDue.time, initialKind, projectId, task],
+  );
+  const [baselineSnapshot, setBaselineSnapshot] = useState(computedInitialSnapshot);
+
+  const currentSnapshot = useMemo(
+    () => JSON.stringify({
+      title,
+      description,
+      selectedProjectId,
+      status,
+      priority,
+      kind,
+      dueMode,
+      dueDate,
+      dueTime,
+      estimatedDurationMinutes,
+      checklist: task ? [] : normalizedChecklistDrafts,
+    }),
+    [
+      description,
+      dueDate,
+      dueMode,
+      dueTime,
+      estimatedDurationMinutes,
+      kind,
+      normalizedChecklistDrafts,
+      priority,
+      selectedProjectId,
+      status,
+      task,
+      title,
+    ],
+  );
+
+  useEffect(() => {
+    setBaselineSnapshot(computedInitialSnapshot);
+  }, [computedInitialSnapshot]);
+
+  useEffect(() => {
+    onDirtyChange?.(currentSnapshot !== baselineSnapshot);
+  }, [currentSnapshot, baselineSnapshot, onDirtyChange]);
 
   const projects = useQuery({ queryKey: ['projects'], queryFn: api.projects });
   const mutation = useMutation({
@@ -107,6 +178,7 @@ export function TaskForm({
         title: title.trim(),
         description: description.trim() || null,
         projectId: selectedProjectId || null,
+        status,
         priority,
         kind,
         isFlexible: dueMode !== 'EXACT_TIME',
@@ -127,9 +199,12 @@ export function TaskForm({
     },
     onSuccess: async (savedTask) => {
       await invalidateTaskCaches(queryClient, savedTask.id);
+      setBaselineSnapshot(currentSnapshot);
+      onDirtyChange?.(false);
       if (!task) {
         setTitle('');
         setDescription('');
+        setStatus('NEW');
         setEstimatedDurationMinutes('');
         setDueMode('NONE');
         setDueDate('');
@@ -220,6 +295,34 @@ export function TaskForm({
           </select>
         </label>
       </div>
+
+      {showStatusActions ? (
+        <section className="grid gap-2">
+          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+            Статус
+          </span>
+          <div className="grid gap-2 sm:grid-cols-4">
+            {statusActions.map((item) => {
+              const active = status === item.value;
+              return (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setStatus(item.value)}
+                  className={`rounded-2xl border p-3 text-left transition active:scale-[0.98] ${
+                    active
+                      ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]'
+                      : 'border-[var(--line)] bg-[var(--background)]/45 text-[var(--muted)] hover:border-[var(--accent)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]'
+                  }`}
+                >
+                  <span className="block text-sm font-semibold">{item.label}</span>
+                  <span className="mt-1 block text-xs opacity-80">{item.description}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
 
       <label className="grid gap-1.5">
         <span className="text-xs font-semibold text-[var(--muted)]">Название *</span>
@@ -392,7 +495,7 @@ export function TaskForm({
         {onDone ? (
           <button
             type="button"
-            onClick={onDone}
+            onClick={onCancel ?? onDone}
             className="btn-base btn-secondary h-10"
           >
             Отмена
