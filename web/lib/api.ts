@@ -197,15 +197,7 @@ function extractErrorMessage(text: string, fallback = 'Не удалось вы�
 }
 
 export const api = {
-  me: () => request<{ id: string; email: string | null; timezone: string; sessionType?: 'OWNER' | 'AUDIT'; auditSessionId?: string | null }>('/api/me'),
-  activateAuditAccess: (token: string) =>
-    publicRequest<{ ok: true; expiresAt: string; sessionType: 'AUDIT'; auditIndexUrl: string }>('/api/audit/access', {
-      method: 'POST',
-      credentials: 'include',
-      body: JSON.stringify({ token }),
-    }),
-  revokeAuditSession: () =>
-    request<{ ok: true }>('/api/audit/logout', { method: 'POST' }),
+  me: () => request<{ id: string; email: string | null; timezone: string }>('/api/me'),
   dashboard: () => request<DashboardData>('/api/dashboard'),
   tasks: (query = '') => request<Task[]>(`/api/tasks${query}`),
   task: (id: string) => request<Task>(`/api/tasks/${id}`),

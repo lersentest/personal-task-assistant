@@ -3,14 +3,11 @@ export interface CurrentUser {
   authUserId: string;
   email: string | null;
   timezone: string;
-  sessionType?: 'OWNER' | 'AUDIT';
-  auditSessionId?: string | null;
 }
 
 export interface AuthenticatedRequest {
   headers: {
     authorization?: string;
-    cookie?: string;
   };
   user: CurrentUser;
 }

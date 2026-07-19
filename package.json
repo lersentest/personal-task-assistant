@@ -12,8 +12,6 @@
     "start": "node dist/main.js",
     "start:dev": "prisma generate && nest start --watch",
     "db:smoke": "node scripts/database-smoke.mjs",
-    "audit:create": "node scripts/create-audit-access.mjs",
-    "audit:revoke": "node scripts/revoke-audit-access.mjs",
     "openai:smoke": "node scripts/openai-smoke.mjs",
     "openai:audio-smoke": "node scripts/openai-audio-smoke.mjs",
     "prisma:generate": "prisma generate",

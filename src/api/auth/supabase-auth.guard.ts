@@ -14,7 +14,6 @@ import {
 } from 'crypto';
 import { performance } from 'node:perf_hooks';
 import { addRequestTiming, setRequestUserId } from '../../observability/request-context';
-import { AuditAccessService } from '../../audit-access/audit-access.service';
 import { AuthenticatedRequest, CurrentUser } from '../current-user';
 import { UsersService } from '../../users/users.service';
 
@@ -46,7 +45,6 @@ export class SupabaseAuthGuard implements CanActivate {
   constructor(
     private readonly config: ConfigService,
     private readonly users: UsersService,
-    private readonly auditAccess: AuditAccessService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -55,11 +53,7 @@ export class SupabaseAuthGuard implements CanActivate {
     try {
       const token = this.extractToken(request.headers.authorization);
       if (!token) {
-        const auditUser = await this.auditAccess.authenticateRequest(request);
-        if (!auditUser) throw new UnauthorizedException('Missing session');
-        request.user = auditUser;
-        setRequestUserId(auditUser.id);
-        return true;
+        throw new UnauthorizedException('Missing session');
       }
 
       const payload = await this.verifyToken(token);
@@ -83,8 +77,6 @@ export class SupabaseAuthGuard implements CanActivate {
         authUserId: payload.sub,
         email: payload.email ?? null,
         timezone: user.timezone,
-        sessionType: 'OWNER',
-        auditSessionId: null,
       };
       request.user = currentUser;
       setRequestUserId(currentUser.id);

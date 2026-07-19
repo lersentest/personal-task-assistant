@@ -168,45 +168,7 @@ model User {
   delegatedEvents DelegatedTaskEvent[]
   aiAnalyticsConversations AiAnalyticsConversation[]
   aiAnalyticsMessages      AiAnalyticsMessage[]
-  auditAccessGrants        AuditAccessGrant[]
-  auditSessions            AuditSession[]
-
   @@map("users")
-}
-
-model AuditAccessGrant {
-  id        String    @id @default(uuid()) @db.Uuid
-  ownerId   String    @map("owner_id") @db.Uuid
-  tokenHash String    @unique @map("token_hash") @db.VarChar(128)
-  label     String?   @db.VarChar(200)
-  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
-  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(3)
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
-
-  owner    User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  sessions AuditSession[]
-
-  @@index([ownerId, revokedAt, expiresAt])
-  @@map("audit_access_grants")
-}
-
-model AuditSession {
-  id          String    @id @default(uuid()) @db.Uuid
-  grantId     String    @map("grant_id") @db.Uuid
-  ownerId     String    @map("owner_id") @db.Uuid
-  sessionHash String    @unique @map("session_hash") @db.VarChar(128)
-  expiresAt   DateTime  @map("expires_at") @db.Timestamptz(3)
-  lastSeenAt  DateTime? @map("last_seen_at") @db.Timestamptz(3)
-  revokedAt   DateTime? @map("revoked_at") @db.Timestamptz(3)
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-
-  grant AuditAccessGrant @relation(fields: [grantId], references: [id], onDelete: Cascade)
-  owner User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-
-  @@index([ownerId, revokedAt, expiresAt])
-  @@index([grantId, revokedAt])
-  @@map("audit_sessions")
 }
 
 model Project {

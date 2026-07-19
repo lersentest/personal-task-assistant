@@ -3,12 +3,11 @@
 import { Session } from '@supabase/supabase-js';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { api } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 
 type GateState =
   | { status: 'loading' }
-  | { status: 'authenticated'; sessionType: 'OWNER' | 'AUDIT' }
+  | { status: 'authenticated' }
   | { status: 'anonymous' };
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
@@ -33,21 +32,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
     async function resolveAuthState() {
       if (session) {
-        setGate({ status: 'authenticated', sessionType: 'OWNER' });
+        setGate({ status: 'authenticated' });
         if (pathname === '/login') router.replace('/dashboard');
         return;
-      }
-
-      try {
-        const currentUser = await api.me();
-        if (cancelled) return;
-        if (currentUser.sessionType === 'AUDIT') {
-          setGate({ status: 'authenticated', sessionType: 'AUDIT' });
-          if (pathname === '/login') router.replace('/my-day');
-          return;
-        }
-      } catch {
-        // No Supabase session and no valid audit cookie.
       }
 
       if (cancelled) return;

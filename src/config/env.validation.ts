@@ -21,7 +21,6 @@ export interface AppEnvironment {
   PUBLIC_WEB_URL: string;
   SUPABASE_URL: string;
   SUPABASE_JWT_SECRET: string;
-  AUDIT_ACCESS_ENABLED: string;
 }
 
 const REQUIRED_KEYS = [
@@ -142,10 +141,5 @@ export function validateEnvironment(
       values.SUPABASE_JWT_SECRET.trim()
         ? values.SUPABASE_JWT_SECRET
         : '',
-    AUDIT_ACCESS_ENABLED:
-      typeof values.AUDIT_ACCESS_ENABLED === 'string' &&
-      values.AUDIT_ACCESS_ENABLED.trim()
-        ? values.AUDIT_ACCESS_ENABLED
-        : 'true',
   } as Record<string, unknown> & AppEnvironment;
 }

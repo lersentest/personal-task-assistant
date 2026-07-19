@@ -10,7 +10,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ExecutorsService } from '../executors/executors.service';
-import { assertNotAuditSession } from './audit-protection';
 import { SupabaseAuthGuard } from './auth/supabase-auth.guard';
 import { AuthenticatedRequest } from './current-user';
 import {
@@ -53,14 +52,12 @@ export class ExecutorsController {
 
   @Delete(':id')
   async remove(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
-    assertNotAuditSession(request);
     await this.executors.softDelete(request.user.id, id);
     return { ok: true };
   }
 
   @Post(':id/invite')
   invite(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
-    assertNotAuditSession(request);
     return this.executors.createInvite(request.user.id, id);
   }
 
@@ -69,7 +66,6 @@ export class ExecutorsController {
     @Req() request: AuthenticatedRequest,
     @Param('id') id: string,
   ) {
-    assertNotAuditSession(request);
     return this.executors.createInvite(request.user.id, id);
   }
 
@@ -78,7 +74,6 @@ export class ExecutorsController {
     @Req() request: AuthenticatedRequest,
     @Param('id') id: string,
   ) {
-    assertNotAuditSession(request);
     await this.executors.revokeInvite(request.user.id, id);
     return { ok: true };
   }
