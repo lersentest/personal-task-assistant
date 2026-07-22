@@ -5,6 +5,7 @@ import {
   CheckSquare,
   ClipboardList,
   FolderKanban,
+  Gamepad2,
   Home,
   LogOut,
   Menu,
@@ -38,6 +39,7 @@ const nav = [
   { href: '/executors', label: 'Исполнители', icon: Users },
   { href: '/search', label: 'Поиск', icon: Search },
   { href: '/files', label: 'Файлы', icon: FolderKanban },
+  { href: '/game', label: 'Игра', icon: Gamepad2 },
   { href: '/trash', label: 'Корзина', icon: Trash2 },
 ];
 

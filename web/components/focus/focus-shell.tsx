@@ -8,6 +8,7 @@ import {
   Command,
   FileText,
   FolderKanban,
+  Gamepad2,
   Home,
   Lightbulb,
   LogOut,
@@ -69,6 +70,7 @@ const sections = [
   {
     title: 'Система',
     items: [
+      { href: '/game', label: 'Игра', icon: Gamepad2 },
       { href: '/trash', label: 'Корзина', icon: Trash2 },
     ],
   },
