@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { createHash } from 'crypto';
 import { PrismaService } from '../database/prisma.service';
 import { ProjectsService } from '../projects/projects.service';
 import { TasksService } from '../tasks/tasks.service';
@@ -179,16 +180,13 @@ export class AttachmentsService {
       dataBase64: string;
     },
   ): Promise<AttachmentSummary> {
-    const task = await this.prisma.delegatedTask.findFirst({
-      where: {
-        publicAccessToken: token,
-        publicAccessRevokedAt: null,
-        deletedAt: null,
-        status: { notIn: ['CANCELLED'] },
-      },
-      include: { executor: true },
-    });
-    if (!task) throw new NotFoundException('Delegated task not found.');
+    const task = await this.getDelegatedTaskByPublicToken(
+      token,
+      'PUBLIC_TASK_FILE_UPLOADED',
+    );
+    if (task.status === 'CANCELLED') {
+      throw new BadRequestException('Cancelled delegated task cannot receive files.');
+    }
     return this.create(task.ownerId, task.ownerId, {
       delegatedTaskId: task.id,
       ...input,
@@ -204,15 +202,10 @@ export class AttachmentsService {
   }
 
   async getPublicDelegatedDownload(token: string, attachmentId: string) {
-    const task = await this.prisma.delegatedTask.findFirst({
-      where: {
-        publicAccessToken: token,
-        publicAccessRevokedAt: null,
-        deletedAt: null,
-      },
-      select: { id: true, ownerId: true },
-    });
-    if (!task) throw new NotFoundException('Delegated task not found.');
+    const task = await this.getDelegatedTaskByPublicToken(
+      token,
+      'PUBLIC_TASK_FILE_DOWNLOADED',
+    );
     const attachment = await this.prisma.attachment.findFirst({
       where: {
         id: attachmentId,
@@ -223,6 +216,63 @@ export class AttachmentsService {
     });
     if (!attachment) throw new NotFoundException('File not found.');
     return attachment;
+  }
+
+  private hashPublicToken(token: string): string {
+    return createHash('sha256').update(token, 'utf8').digest('hex');
+  }
+
+  private async getDelegatedTaskByPublicToken(
+    token: string,
+    eventType: string,
+  ) {
+    const tokenHash = this.hashPublicToken(token);
+    const link = await this.prisma.taskShareLink.findUnique({
+      where: { tokenHash },
+      include: {
+        delegatedTask: {
+          select: {
+            id: true,
+            ownerId: true,
+            status: true,
+            deletedAt: true,
+          },
+        },
+      },
+    });
+    const now = new Date();
+    if (
+      !link ||
+      link.revokedAt ||
+      (link.expiresAt && link.expiresAt <= now) ||
+      link.delegatedTask.deletedAt
+    ) {
+      await this.prisma.securityAuditEvent.create({
+        data: {
+          eventType,
+          outcome: 'DENIED',
+          metadata: { reason: !link ? 'not_found' : 'inactive_or_expired' },
+        },
+      });
+      throw new NotFoundException('Delegated task not found.');
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.taskShareLink.update({
+        where: { id: link.id },
+        data: { lastUsedAt: now },
+      }),
+      this.prisma.securityAuditEvent.create({
+        data: {
+          ownerId: link.ownerId,
+          taskShareLinkId: link.id,
+          delegatedTaskId: link.delegatedTaskId,
+          eventType,
+          outcome: 'SUCCESS',
+        },
+      }),
+    ]);
+    return link.delegatedTask;
   }
 
   async softDelete(ownerId: string, attachmentId: string): Promise<void> {

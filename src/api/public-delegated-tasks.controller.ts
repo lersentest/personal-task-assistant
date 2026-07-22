@@ -8,7 +8,10 @@ import {
   Res,
 } from '@nestjs/common';
 import { AttachmentsService } from '../attachments/attachments.service';
-import { DelegatedTasksService } from '../delegated-tasks/delegated-tasks.service';
+import {
+  DelegatedTaskDetails,
+  DelegatedTasksService,
+} from '../delegated-tasks/delegated-tasks.service';
 import {
   createAttachmentSchema,
   delegatedCommentSchema,
@@ -26,17 +29,19 @@ export class PublicDelegatedTasksController {
 
   @Get(':token')
   async get(@Param('token') token: string) {
-    return jsonSafe(await this.delegatedTasks.getByPublicToken(token));
+    return jsonSafe(this.toPublicTask(await this.delegatedTasks.getByPublicToken(token)));
   }
 
   @Post(':token/actions')
   async action(@Param('token') token: string, @Body() body: unknown) {
     const input = parseDto(publicDelegatedActionSchema, body);
     return jsonSafe(
-      await this.delegatedTasks.publicExecutorTransition(
-        token,
-        input.action,
-        input.message,
+      this.toPublicTask(
+        await this.delegatedTasks.publicExecutorTransition(
+          token,
+          input.action,
+          input.message,
+        ),
       ),
     );
   }
@@ -45,7 +50,9 @@ export class PublicDelegatedTasksController {
   async comment(@Param('token') token: string, @Body() body: unknown) {
     const input = parseDto(delegatedCommentSchema, body);
     return jsonSafe(
-      await this.delegatedTasks.publicExecutorComment(token, input.message),
+      this.toPublicTask(
+        await this.delegatedTasks.publicExecutorComment(token, input.message),
+      ),
     );
   }
 
@@ -82,5 +89,38 @@ export class PublicDelegatedTasksController {
       `attachment; filename="${encodeURIComponent(attachment.fileName)}"`,
     );
     response.send(Buffer.from(attachment.data));
+  }
+
+  private toPublicTask(task: DelegatedTaskDetails) {
+    return {
+      title: task.title,
+      description: task.description,
+      resultText: task.resultText,
+      status: task.status,
+      priority: task.priority,
+      dueAt: task.dueAt,
+      createdAt: task.createdAt,
+      executor: {
+        fullName: task.executor.fullName,
+      },
+      project: task.project
+        ? {
+            name: task.project.name,
+          }
+        : null,
+      comments: task.comments.map((comment) => ({
+        id: comment.id,
+        author: comment.author,
+        message: comment.message,
+        createdAt: comment.createdAt,
+      })),
+      attachments: task.attachments?.map((attachment) => ({
+        id: attachment.id,
+        fileName: attachment.fileName,
+        mimeType: attachment.mimeType,
+        sizeBytes: attachment.sizeBytes,
+        createdAt: attachment.createdAt,
+      })) ?? [],
+    };
   }
 }

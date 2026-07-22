@@ -135,6 +135,14 @@ export function DelegatedTaskDetailsModal({
       await invalidate();
     },
   });
+  const copyLink = useMutation({
+    mutationFn: () => api.delegatedTaskPublicLink(taskId),
+    onSuccess: async (link) => {
+      await navigator.clipboard?.writeText(link.url);
+      setMessage('Новая ссылка исполнителя скопирована.');
+      await invalidate();
+    },
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -161,12 +169,8 @@ export function DelegatedTaskDetailsModal({
 
   const data = task.data;
   const isClosed = data ? ['COMPLETED', 'CANCELLED'].includes(data.status) : false;
-  const publicUrl =
-    typeof window === 'undefined' || !data
-      ? ''
-      : `${window.location.origin}/public/delegated/${data.publicAccessToken}`;
   const actionError =
-    send.error || remind.error || cancel.error || accept.error || returnTask.error || comment.error;
+    send.error || remind.error || cancel.error || accept.error || returnTask.error || comment.error || copyLink.error;
 
   return (
     <EntityDrawer
@@ -268,13 +272,11 @@ export function DelegatedTaskDetailsModal({
                     <button
                       type="button"
                       className="btn-base btn-secondary w-full justify-center"
-                      onClick={() => {
-                        navigator.clipboard?.writeText(publicUrl);
-                        setMessage('Ссылка исполнителя скопирована.');
-                      }}
+                      disabled={copyLink.isPending}
+                      onClick={() => copyLink.mutate()}
                     >
                       <LinkIcon size={16} />
-                      Скопировать ссылку
+                      {copyLink.isPending ? 'Генерирую...' : 'Скопировать ссылку'}
                     </button>
                     {data.status === 'DRAFT' ? (
                       <button disabled={send.isPending} onClick={() => send.mutate()} className="btn-base btn-primary w-full justify-center">

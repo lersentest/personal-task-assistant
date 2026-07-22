@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { randomUUID } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import { Api, InlineKeyboard } from 'grammy';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../database/prisma.service';
@@ -12,6 +12,13 @@ import { ExecutorsService } from '../executors/executors.service';
 import { ProjectsService } from '../projects/projects.service';
 
 const DEFAULT_PUBLIC_WEB_URL = 'https://personal-task-assistant-ruby.vercel.app';
+const PUBLIC_SHARE_PERMISSIONS = [
+  'VIEW',
+  'COMMENT',
+  'FILE_UPLOAD',
+  'FILE_DOWNLOAD',
+  'STATUS_UPDATE',
+];
 
 const delegatedTaskInclude = {
   executor: true,
@@ -133,49 +140,47 @@ export class DelegatedTasksService {
 
   async publicLink(ownerId: string, taskId: string) {
     const task = await this.getOwned(ownerId, taskId);
+    const link = await this.createPublicShareLink(task, ownerId, 'PUBLIC_LINK_CREATED');
     return {
-      token: task.publicAccessToken,
-      revokedAt: task.publicAccessRevokedAt,
-      url: this.publicTaskUrl(task.publicAccessToken),
+      token: link.token,
+      revokedAt: link.revokedAt,
+      expiresAt: link.expiresAt,
+      url: this.publicTaskUrl(link.token),
     };
   }
 
   async regeneratePublicLink(ownerId: string, taskId: string) {
-    await this.getOwned(ownerId, taskId);
-    const updated = await this.prisma.delegatedTask.update({
-      where: { id: taskId },
-      data: {
-        publicAccessToken: randomUUID(),
-        publicAccessRevokedAt: null,
-      },
-      select: { publicAccessToken: true, publicAccessRevokedAt: true },
-    });
+    const task = await this.getOwned(ownerId, taskId);
+    const link = await this.createPublicShareLink(task, ownerId, 'PUBLIC_LINK_REGENERATED');
     return {
-      token: updated.publicAccessToken,
-      revokedAt: updated.publicAccessRevokedAt,
-      url: this.publicTaskUrl(updated.publicAccessToken),
+      token: link.token,
+      revokedAt: null,
+      expiresAt: null,
+      url: this.publicTaskUrl(link.token),
     };
   }
 
   async revokePublicLink(ownerId: string, taskId: string): Promise<void> {
     await this.getOwned(ownerId, taskId);
-    await this.prisma.delegatedTask.update({
-      where: { id: taskId },
-      data: { publicAccessRevokedAt: new Date() },
+    await this.prisma.$transaction(async (tx) => {
+      const now = new Date();
+      await tx.taskShareLink.updateMany({
+        where: { delegatedTaskId: taskId, revokedAt: null },
+        data: { revokedAt: now },
+      });
+      await tx.securityAuditEvent.create({
+        data: {
+          ownerId,
+          delegatedTaskId: taskId,
+          eventType: 'PUBLIC_LINK_REVOKED',
+          outcome: 'SUCCESS',
+        },
+      });
     });
   }
 
   async getByPublicToken(token: string): Promise<DelegatedTaskDetails> {
-    const task = await this.prisma.delegatedTask.findFirst({
-      where: {
-        publicAccessToken: token,
-        publicAccessRevokedAt: null,
-        deletedAt: null,
-      },
-      include: delegatedTaskInclude,
-    });
-    if (!task) throw new NotFoundException('Delegated task not found.');
-    return task;
+    return this.resolvePublicTaskByToken(token, 'PUBLIC_TASK_OPENED');
   }
 
   async getForExecutor(
@@ -304,11 +309,12 @@ export class DelegatedTasksService {
     if (!task.executor.telegramUserId || task.executor.connectionStatus !== 'CONNECTED') {
       throw new BadRequestException('Executor is not connected to Telegram.');
     }
+    const link = await this.createPublicShareLink(task, ownerId, 'PUBLIC_LINK_SENT_TO_EXECUTOR');
 
     await this.api.sendMessage(
       task.executor.telegramUserId.toString(),
       this.formatExecutorTask(task),
-      { reply_markup: this.executorKeyboard(task.id, 'SENT', task.publicAccessToken) },
+      { reply_markup: this.executorKeyboard(task.id, 'SENT', link.token) },
     );
 
     await this.prisma.$transaction(async (tx) => {
@@ -334,10 +340,11 @@ export class DelegatedTasksService {
     if (!task.executor.telegramUserId) {
       throw new BadRequestException('Executor is not connected to Telegram.');
     }
+    const link = await this.createPublicShareLink(task, ownerId, 'PUBLIC_LINK_SENT_TO_EXECUTOR');
     await this.api.sendMessage(
       task.executor.telegramUserId.toString(),
       ['Напоминание по задаче', '', this.formatExecutorTask(task)].join('\n'),
-      { reply_markup: this.executorKeyboard(task.id, task.status, task.publicAccessToken) },
+      { reply_markup: this.executorKeyboard(task.id, task.status, link.token) },
     );
     await this.prisma.$transaction(async (tx) => {
       await tx.delegatedTask.update({
@@ -367,10 +374,11 @@ export class DelegatedTasksService {
     if (!text) throw new BadRequestException('Comment is required.');
     await this.addComment(task.id, ownerId, task.executorId, 'OWNER', text);
     if (task.executor.telegramUserId) {
+      const link = await this.createPublicShareLink(task, ownerId, 'PUBLIC_LINK_SENT_TO_EXECUTOR');
       await this.api.sendMessage(
         task.executor.telegramUserId.toString(),
         [`Комментарий по задаче: ${task.title}`, '', text].join('\n'),
-        { reply_markup: this.executorKeyboard(task.id, task.status, task.publicAccessToken) },
+        { reply_markup: this.executorKeyboard(task.id, task.status, link.token) },
       );
     }
     return this.getOwned(ownerId, taskId);
@@ -548,12 +556,13 @@ export class DelegatedTasksService {
       });
     });
     if (task.executor.telegramUserId) {
+      const link = await this.createPublicShareLink(task, ownerId, 'PUBLIC_LINK_SENT_TO_EXECUTOR');
       await this.api.sendMessage(
         task.executor.telegramUserId.toString(),
         action === 'accept'
           ? `Задача принята владельцем: ${task.title}`
           : [`Задача возвращена в работу: ${task.title}`, '', text ?? 'Без комментария.'].join('\n'),
-        { reply_markup: this.executorKeyboard(task.id, status, task.publicAccessToken) },
+        { reply_markup: this.executorKeyboard(task.id, status, link.token) },
       );
     }
     return this.getOwned(ownerId, taskId);
@@ -597,6 +606,119 @@ export class DelegatedTasksService {
   ) {
     await this.prisma.delegatedTaskComment.create({
       data: { taskId, ownerId, executorId, author, message },
+    });
+  }
+
+  private generatePublicToken(): string {
+    return randomBytes(32).toString('base64url');
+  }
+
+  private hashPublicToken(token: string): string {
+    return createHash('sha256').update(token, 'utf8').digest('hex');
+  }
+
+  private async createPublicShareLink(
+    task: {
+      id: string;
+      ownerId: string;
+    },
+    createdById: string,
+    eventType: string,
+  ) {
+    const token = this.generatePublicToken();
+    const tokenHash = this.hashPublicToken(token);
+    await this.prisma.$transaction(async (tx) => {
+      const now = new Date();
+      await tx.taskShareLink.updateMany({
+        where: { delegatedTaskId: task.id, revokedAt: null },
+        data: { revokedAt: now },
+      });
+      const link = await tx.taskShareLink.create({
+        data: {
+          delegatedTaskId: task.id,
+          ownerId: task.ownerId,
+          createdById,
+          tokenHash,
+          permissions: PUBLIC_SHARE_PERMISSIONS,
+        },
+      });
+      await tx.securityAuditEvent.create({
+        data: {
+          ownerId: task.ownerId,
+          taskShareLinkId: link.id,
+          delegatedTaskId: task.id,
+          eventType,
+          outcome: 'SUCCESS',
+        },
+      });
+    });
+
+    return { token, revokedAt: null, expiresAt: null };
+  }
+
+  private async resolvePublicTaskByToken(
+    token: string,
+    eventType: string,
+  ): Promise<DelegatedTaskDetails> {
+    const tokenHash = this.hashPublicToken(token);
+    const link = await this.prisma.taskShareLink.findUnique({
+      where: { tokenHash },
+      include: {
+        delegatedTask: {
+          include: delegatedTaskInclude,
+        },
+      },
+    });
+    const now = new Date();
+    if (
+      !link ||
+      link.revokedAt ||
+      (link.expiresAt && link.expiresAt <= now) ||
+      link.delegatedTask.deletedAt
+    ) {
+      await this.writeSecurityAuditEvent({
+        eventType,
+        outcome: 'DENIED',
+        metadata: { reason: !link ? 'not_found' : 'inactive_or_expired' },
+      });
+      throw new NotFoundException('Delegated task not found.');
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.taskShareLink.update({
+        where: { id: link.id },
+        data: { lastUsedAt: now },
+      }),
+      this.prisma.securityAuditEvent.create({
+        data: {
+          ownerId: link.ownerId,
+          taskShareLinkId: link.id,
+          delegatedTaskId: link.delegatedTaskId,
+          eventType,
+          outcome: 'SUCCESS',
+        },
+      }),
+    ]);
+    return link.delegatedTask;
+  }
+
+  private async writeSecurityAuditEvent(input: {
+    ownerId?: string | null;
+    taskShareLinkId?: string | null;
+    delegatedTaskId?: string | null;
+    eventType: string;
+    outcome: string;
+    metadata?: Prisma.InputJsonValue;
+  }): Promise<void> {
+    await this.prisma.securityAuditEvent.create({
+      data: {
+        ownerId: input.ownerId ?? null,
+        taskShareLinkId: input.taskShareLinkId ?? null,
+        delegatedTaskId: input.delegatedTaskId ?? null,
+        eventType: input.eventType,
+        outcome: input.outcome,
+        metadata: input.metadata,
+      },
     });
   }
 

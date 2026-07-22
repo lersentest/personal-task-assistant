@@ -292,8 +292,6 @@ export interface DelegatedTask {
   completedAt: string | null;
   cancelledAt: string | null;
   lastReminderAt: string | null;
-  publicAccessToken: string;
-  publicAccessRevokedAt: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
