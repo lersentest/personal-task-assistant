@@ -250,7 +250,6 @@ export class TasksService {
         ? { deletedAt: { not: null } }
         : { deletedAt: null }),
       ...(options.projectId ? { projectId: options.projectId } : {}),
-      ...(options.unassigned ? { projectId: null } : {}),
       ...(options.status ? { status: options.status } : {}),
       ...(options.priority ? { priority: options.priority } : {}),
       ...(options.kind ? { kind: options.kind } : {}),
@@ -276,6 +275,18 @@ export class TasksService {
           }
         : {}),
     };
+
+    if (options.unassigned && !options.projectId) {
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+        {
+          OR: [
+            { projectId: null },
+            { project: { name: UNASSIGNED_PROJECT_NAME } },
+          ],
+        },
+      ];
+    }
 
     if (options.view === 'TODAY') {
       where.status = { in: [...ACTIVE_STATUSES] };

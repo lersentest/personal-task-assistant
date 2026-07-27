@@ -75,7 +75,12 @@ export const listTasksSchema = z.object({
   priority: taskPrioritySchema.optional(),
   kind: taskKindSchema.optional(),
   unassigned: z.coerce.boolean().optional(),
-  sort: z.enum(['dueAt', 'priority', 'createdAt', 'updatedAt']).optional(),
+  sort: z
+    .preprocess(
+      (value) => (value === 'due' ? 'dueAt' : value === 'created' ? 'createdAt' : value),
+      z.enum(['dueAt', 'priority', 'createdAt', 'updatedAt']),
+    )
+    .optional(),
   limit: z.coerce.number().int().min(1).max(100).default(40),
 });
 

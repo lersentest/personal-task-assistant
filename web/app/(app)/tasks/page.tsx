@@ -179,13 +179,13 @@ export default function TasksPage() {
             {priorityOptions.map((item) => <option key={item.label} value={item.value}>{item.label}</option>)}
           </select>
           <select
-            value={params.get('sort') ?? 'due'}
+            value={params.get('sort') ?? 'dueAt'}
             onChange={(event) => setParam('sort', event.target.value)}
             className="h-10 rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm"
           >
-            <option value="due">Сортировка: срок</option>
+            <option value="dueAt">Сортировка: срок</option>
             <option value="priority">Сортировка: приоритет</option>
-            <option value="created">Сортировка: создано</option>
+            <option value="createdAt">Сортировка: создано</option>
           </select>
           <button
             type="button"
