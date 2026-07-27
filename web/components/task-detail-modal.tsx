@@ -93,6 +93,7 @@ export function TaskDetailsModal({
       if (event.key === 'Escape') requestClose();
     };
     const previousOverflow = document.body.style.overflow;
+    window.scrollTo({ left: 0, top: window.scrollY });
     document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', onKeyDown);
     return () => {
@@ -109,11 +110,11 @@ export function TaskDetailsModal({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[10000] flex items-stretch justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-6"
+      className="fixed inset-0 z-[10000] flex max-w-full items-stretch justify-center overflow-x-hidden bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-6"
       onMouseDown={requestClose}
     >
       <div
-        className="flex h-full w-full max-w-4xl flex-col overflow-hidden border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface,var(--panel))] shadow-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-3xl"
+        className="flex h-full w-full min-w-0 max-w-[min(56rem,calc(100vw-2rem))] flex-col overflow-hidden border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface,var(--panel))] shadow-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-3xl"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <header className="flex items-start justify-between gap-4 border-b border-[var(--focus-border-soft,var(--line))] p-4 sm:p-6">
@@ -163,7 +164,7 @@ export function TaskDetailsModal({
           </div>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6">
           {task.isLoading && !data ? (
             <div className="rounded-2xl border border-dashed border-[var(--line)] p-8 text-center text-[var(--muted)]">
               Загружаю задачу…
