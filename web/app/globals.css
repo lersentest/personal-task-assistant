@@ -116,6 +116,25 @@ body {
   display: block;
 }
 
+.my-day-mobile-tabs {
+  display: grid;
+}
+
+.my-day-layout {
+  display: grid;
+  min-width: 0;
+  gap: 1rem;
+}
+
+.my-day-section {
+  display: none;
+  min-width: 0;
+}
+
+.my-day-section.is-active {
+  display: block;
+}
+
 @media (min-width: 768px) {
   .focus-desktop-search {
     display: flex;
@@ -140,6 +159,47 @@ body {
   .focus-mobile-bottom-nav,
   .focus-mobile-drawer-overlay {
     display: none;
+  }
+
+  .my-day-mobile-tabs {
+    display: none;
+  }
+
+  .my-day-section {
+    display: block;
+  }
+
+  .my-day-layout-focus {
+    grid-template-columns: 300px minmax(0, 1fr);
+  }
+
+  .my-day-layout-classic {
+    grid-template-columns: 320px minmax(0, 1fr);
+  }
+
+  .my-day-schedule-section {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .my-day-add-section {
+    grid-column: 1 / span 2;
+    grid-row: 2;
+  }
+}
+
+@media (min-width: 1536px) {
+  .my-day-layout-focus {
+    grid-template-columns: 300px minmax(0, 1fr) 300px;
+  }
+
+  .my-day-layout-classic {
+    grid-template-columns: 320px minmax(0, 1fr) 320px;
+  }
+
+  .my-day-add-section {
+    grid-column: 3;
+    grid-row: 1;
   }
 }
 

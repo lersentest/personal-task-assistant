@@ -1071,7 +1071,7 @@ export default function MyDayPage() {
         ) : null}
       </header>
 
-      <div className="mb-4 grid grid-cols-3 gap-2 lg:hidden">
+      <div className="my-day-mobile-tabs mb-4 grid-cols-3 gap-2">
         {[
           ['plan', 'План'],
           ['schedule', 'Расписание'],
@@ -1091,8 +1091,8 @@ export default function MyDayPage() {
         ))}
       </div>
 
-      <div className={isFocus ? 'grid min-w-0 gap-4 lg:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[300px_minmax(0,1fr)_300px]' : 'grid min-w-0 gap-4 lg:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[320px_minmax(0,1fr)_320px]'}>
-        <section className={`${mobileTab === 'plan' ? 'block' : 'hidden'} min-w-0 lg:block`}>
+      <div className={`my-day-layout ${isFocus ? 'my-day-layout-focus' : 'my-day-layout-classic'}`}>
+        <section className={`my-day-section ${mobileTab === 'plan' ? 'is-active' : ''}`}>
           <Panel title="Обязательно сегодня">
             {day.data?.unresolvedPreviousDays.length ? (
               <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
@@ -1126,7 +1126,7 @@ export default function MyDayPage() {
           </Panel>
         </section>
 
-        <section className={`${mobileTab === 'schedule' ? 'block' : 'hidden'} min-w-0 lg:block lg:col-start-2 lg:row-start-1`}>
+        <section className={`my-day-section my-day-schedule-section ${mobileTab === 'schedule' ? 'is-active' : ''}`}>
           <Panel title="План дня и временная шкала">
             <div
               onDragOver={(event) => event.preventDefault()}
@@ -1154,7 +1154,7 @@ export default function MyDayPage() {
           </Panel>
         </section>
 
-        <section className={`${mobileTab === 'add' ? 'block' : 'hidden'} min-w-0 lg:col-span-2 lg:block lg:row-start-2 2xl:col-span-1 2xl:col-start-3 2xl:row-start-1`}>
+        <section className={`my-day-section my-day-add-section ${mobileTab === 'add' ? 'is-active' : ''}`}>
           <Panel title="Можно добавить">
             <div className="mb-3 grid gap-2">
               <label className="flex items-center gap-2 rounded-lg border border-[var(--line)] px-3">
