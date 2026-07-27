@@ -269,6 +269,7 @@ function QueuePlanItemRow({
   const [time, setTime] = useState(formatTime(item.scheduledStartAt) || '09:00');
   const duration = roundDurationToStep(item.task.estimatedDurationMinutes ?? 30);
   const done = item.completedInPlanAt || item.task.status === 'COMPLETED';
+  const timeline = false;
   const checklistTotal = item.task.checklistItems?.length ?? 0;
   const checklistDone = item.task.checklistItems?.filter((checklistItem) => checklistItem.isCompleted).length ?? 0;
 
@@ -337,7 +338,40 @@ function QueuePlanItemRow({
           </button>
         </div>
       </div>
-      {editingTime ? (
+      {timeline ? (
+        <div className="absolute right-2 top-2 z-10 flex translate-y-1 gap-1 opacity-0 transition group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+          {!done ? (
+            <button
+              type="button"
+              onClick={onComplete}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-200 bg-[var(--panel)]/95 text-emerald-600 shadow-sm transition hover:bg-emerald-50 active:scale-95"
+              title="Выполнить"
+              aria-label="Выполнить"
+            >
+              <CheckCircle2 size={15} />
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={onUnschedule}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-blue-200 bg-[var(--panel)]/95 text-blue-600 shadow-sm transition hover:bg-blue-50 active:scale-95"
+            title="Убрать время"
+            aria-label="Убрать время"
+          >
+            <Clock size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-red-200 bg-[var(--panel)]/95 text-red-600 shadow-sm transition hover:bg-red-50 active:scale-95"
+            title="Убрать из дня"
+            aria-label="Убрать из дня"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      ) : null}
+      {!timeline && editingTime ? (
         <div className="mt-3 grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--background)] p-2">
           <TimeStepSelect value={time} onChange={setTime} minuteStep={15} />
           <select
@@ -400,6 +434,8 @@ function PlanItemCard({
   const [previewDuration, setPreviewDuration] = useState<number | null>(null);
   const duration = previewDuration ?? roundDurationToStep(item.task.estimatedDurationMinutes ?? 30);
   const done = item.completedInPlanAt || item.task.status === 'COMPLETED';
+  const isTinyTimeline = timeline && duration <= 30;
+  const isSmallTimeline = timeline && duration <= 60;
 
   useEffect(() => {
     setTime(formatTime(item.scheduledStartAt) || '09:00');
@@ -432,45 +468,51 @@ function PlanItemCard({
     window.addEventListener('pointerup', handleUp);
   }
 
+  const cardTone = done
+    ? 'border-emerald-200 bg-emerald-50 text-emerald-950 dark:bg-emerald-950/25 dark:text-emerald-100'
+    : item.scheduledStartAt
+      ? 'border-blue-200 bg-blue-50 dark:bg-blue-950/25'
+      : 'border-[var(--focus-border-soft,var(--line))] bg-[var(--focus-surface,var(--panel))]';
+  const cardPadding = timeline
+    ? isTinyTimeline
+      ? 'px-2.5 py-1.5'
+      : 'px-3 py-2'
+    : 'px-3 py-2.5';
+  const titleClass = timeline
+    ? `${isTinyTimeline ? 'line-clamp-1 text-[12px]' : 'line-clamp-2 text-sm'} text-left font-semibold leading-snug hover:text-[var(--focus-primary,var(--accent))]`
+    : isFocus
+      ? 'text-left text-sm font-semibold hover:text-[var(--focus-primary)]'
+      : 'text-left font-medium hover:text-[var(--accent)]';
+
   return (
     <article
       draggable
       onDragStart={(event) => event.dataTransfer.setData('text/plain', `item:${item.id}`)}
-      className={`group relative min-w-0 overflow-hidden border ${timeline ? 'h-full' : ''} ${
-        isFocus
-          ? `rounded-xl ${timeline ? 'px-3 py-2' : 'px-3 py-2.5'} shadow-none ${
-              done
-                ? 'border-emerald-200 bg-emerald-50 text-emerald-950 dark:bg-emerald-950/25 dark:text-emerald-100'
-                : item.scheduledStartAt
-                  ? 'border-blue-200 bg-blue-50 dark:bg-blue-950/25'
-                  : 'border-[var(--focus-border-soft)] bg-[var(--focus-surface)]'
-            }`
-          : `rounded-lg ${timeline ? 'p-2' : 'p-3'} shadow-sm ${
-              done
-                ? 'border-emerald-300 bg-emerald-50 text-emerald-950 dark:bg-emerald-950/25 dark:text-emerald-100'
-                : item.scheduledStartAt
-                  ? 'border-blue-300 bg-blue-50 dark:bg-blue-950/25'
-                  : 'border-[var(--line)] bg-[var(--panel)]'
-            }`
-      }`}
+      className={`group relative min-w-0 overflow-hidden rounded-xl border ${timeline ? 'h-full' : ''} ${cardPadding} ${isFocus ? 'shadow-none' : 'shadow-sm'} ${cardTone}`}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className={timeline ? 'min-w-0 pr-1' : 'flex items-start justify-between gap-3'}>
         <div className="min-w-0">
-          <TaskModalLink task={item.task} className={isFocus ? 'text-left text-sm font-semibold hover:text-[var(--focus-primary)]' : 'text-left font-medium hover:text-[var(--accent)]'}>
+          <TaskModalLink task={item.task} className={titleClass}>
             {item.task.title}
           </TaskModalLink>
-          <div className={isFocus ? 'mt-1.5 flex flex-wrap gap-1.5 text-[11px] text-[var(--focus-text-muted)]' : 'mt-2 flex flex-wrap gap-2 text-xs text-[var(--muted)]'}>
+          <div className={timeline ? `${isTinyTimeline ? 'mt-0.5' : 'mt-1'} flex min-w-0 items-center gap-1 truncate text-[11px] text-[var(--muted)]` : isFocus ? 'mt-1.5 flex flex-wrap gap-1.5 text-[11px] text-[var(--focus-text-muted)]' : 'mt-2 flex flex-wrap gap-2 text-xs text-[var(--muted)]'}>
             {item.scheduledStartAt ? (
-              <span className="inline-flex items-center gap-1">
-                <Clock size={13} />
+              <span className="inline-flex min-w-0 items-center gap-1 truncate">
+                {!isTinyTimeline ? <Clock size={13} /> : null}
                 {formatTime(item.scheduledStartAt)}–{formatTime(item.scheduledEndAt)}
               </span>
             ) : (
               <span>Без времени</span>
             )}
           </div>
-          {!timeline || duration >= 30 ? compactTaskMeta(item.task, duration) : null}
+          {timeline && isSmallTimeline ? (
+            <div className="mt-0.5 truncate text-[10px] font-medium text-[var(--muted)]">
+              {formatMinutes(duration)}
+            </div>
+          ) : null}
+          {!timeline || !isSmallTimeline ? compactTaskMeta(item.task, duration) : null}
         </div>
+        {!timeline ? (
         <div className="flex shrink-0 gap-1">
           {!done ? (
             <button onClick={onComplete} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-transparent text-emerald-600 transition hover:border-emerald-200 hover:bg-emerald-50 active:scale-95" title="Выполнить" aria-label="Выполнить">
@@ -488,8 +530,9 @@ function PlanItemCard({
             <Trash2 size={18} />
           </button>
         </div>
+        ) : null}
       </div>
-      {editingTime ? (
+      {!timeline && editingTime ? (
         <>
       <div className="mt-3 grid gap-2 rounded-xl border border-[var(--focus-border-soft,var(--line))] bg-[var(--focus-surface-secondary,var(--background))] p-2 sm:grid-cols-[1fr_1fr_auto_auto]">
         <TimeStepSelect
@@ -525,6 +568,39 @@ function PlanItemCard({
         </button>
       </div>
         </>
+      ) : null}
+      {timeline ? (
+        <div className="absolute right-2 top-2 z-10 flex translate-y-1 gap-1 opacity-0 transition group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+          {!done ? (
+            <button
+              type="button"
+              onClick={onComplete}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-200 bg-[var(--panel)]/95 text-emerald-600 shadow-sm transition hover:bg-emerald-50 active:scale-95"
+              title="Выполнить"
+              aria-label="Выполнить"
+            >
+              <CheckCircle2 size={15} />
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={onUnschedule}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-blue-200 bg-[var(--panel)]/95 text-blue-600 shadow-sm transition hover:bg-blue-50 active:scale-95"
+            title="Убрать время"
+            aria-label="Убрать время"
+          >
+            <Clock size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-red-200 bg-[var(--panel)]/95 text-red-600 shadow-sm transition hover:bg-red-50 active:scale-95"
+            title="Убрать из дня"
+            aria-label="Убрать из дня"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
       ) : null}
       {timeline ? (
         <div
