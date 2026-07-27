@@ -91,6 +91,58 @@ body {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+.focus-desktop-sidebar {
+  display: none;
+}
+
+.focus-desktop-offset {
+  padding-left: 0;
+}
+
+.focus-desktop-search {
+  display: none;
+}
+
+.focus-mobile-menu-button,
+.focus-mobile-search-button {
+  display: flex;
+}
+
+.focus-mobile-bottom-nav {
+  display: grid;
+}
+
+.focus-mobile-drawer-overlay {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .focus-desktop-search {
+    display: flex;
+  }
+
+  .focus-mobile-search-button {
+    display: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .focus-desktop-sidebar {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .focus-desktop-offset {
+    padding-left: 292px;
+  }
+
+  .focus-mobile-menu-button,
+  .focus-mobile-bottom-nav,
+  .focus-mobile-drawer-overlay {
+    display: none;
+  }
+}
+
 button,
 input,
 textarea,

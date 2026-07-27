@@ -375,7 +375,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[var(--focus-bg)] text-[var(--focus-text)]">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[292px] border-r border-[var(--focus-border-soft)] bg-[var(--focus-surface)]/96 px-4 py-5 shadow-[var(--focus-shadow)] backdrop-blur lg:flex lg:flex-col">
+      <aside className="focus-desktop-sidebar fixed inset-y-0 left-0 z-30 w-[292px] border-r border-[var(--focus-border-soft)] bg-[var(--focus-surface)]/96 px-4 py-5 shadow-[var(--focus-shadow)] backdrop-blur">
         <Link href="/my-day" className="mb-7 flex items-center gap-3 px-1">
           <span className="relative flex h-9 w-9 items-center justify-center rounded-2xl bg-[var(--focus-primary)] text-white shadow-sm">
             <CheckSquare size={19} />
@@ -468,21 +468,21 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className="min-w-0 max-w-full lg:pl-[292px]">
+      <div className="focus-desktop-offset min-w-0 max-w-full">
         <header className="sticky top-0 z-20 border-b border-[var(--focus-border-soft)] bg-[var(--focus-bg)]/88 px-4 py-3 backdrop-blur-xl lg:px-8">
           <div className="mx-auto flex max-w-[1600px] min-w-0 items-center gap-3">
             <button
               type="button"
               onClick={openMobileMenu}
               aria-label="Открыть меню"
-              className="flex min-h-11 items-center gap-2 rounded-xl border border-[var(--focus-border)] bg-[var(--focus-surface)] px-3 py-2 text-sm font-semibold text-[var(--focus-text-secondary)] lg:hidden"
+              className="focus-mobile-menu-button min-h-11 items-center gap-2 rounded-xl border border-[var(--focus-border)] bg-[var(--focus-surface)] px-3 py-2 text-sm font-semibold text-[var(--focus-text-secondary)]"
             >
               <Menu size={20} />
               <span className="sr-only sm:not-sr-only">Меню</span>
             </button>
             <button
               onClick={() => setPaletteOpen(true)}
-              className="hidden h-11 min-w-0 flex-1 items-center gap-3 rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] px-4 text-sm text-[var(--focus-text-muted)] shadow-sm transition hover:border-[var(--focus-primary)] md:flex"
+              className="focus-desktop-search h-11 min-w-0 flex-1 items-center gap-3 rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] px-4 text-sm text-[var(--focus-text-muted)] shadow-sm transition hover:border-[var(--focus-primary)]"
             >
               <Search size={18} />
               Поиск и команды
@@ -494,7 +494,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={() => setPaletteOpen(true)}
-                className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] text-[var(--focus-text-secondary)] shadow-sm transition hover:border-[var(--focus-primary)] hover:bg-[var(--focus-primary-soft)] md:hidden"
+                className="focus-mobile-search-button h-11 w-11 items-center justify-center rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] text-[var(--focus-text-secondary)] shadow-sm transition hover:border-[var(--focus-primary)] hover:bg-[var(--focus-primary-soft)]"
                 aria-label="Открыть поиск и команды"
               >
                 <Search size={18} />
@@ -532,7 +532,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-[var(--focus-border)] bg-[var(--focus-surface)] px-1 py-2 shadow-[var(--focus-shadow)] lg:hidden">
+      <nav className="focus-mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 grid-cols-5 border-t border-[var(--focus-border)] bg-[var(--focus-surface)] px-1 py-2 shadow-[var(--focus-shadow)]">
         {[
           { href: '/my-day', label: 'Мой день', icon: Sun },
           { href: '/calendar', label: 'Календарь', icon: CalendarDays },
@@ -587,7 +587,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
         role="dialog"
         aria-modal={mobileMenuOpen ? 'true' : undefined}
         aria-hidden={!mobileMenuOpen}
-        className={`fixed inset-0 z-[10020] bg-slate-950/45 backdrop-blur-sm transition-opacity duration-200 lg:hidden ${
+        className={`focus-mobile-drawer-overlay fixed inset-0 z-[10020] bg-slate-950/45 backdrop-blur-sm transition-opacity duration-200 ${
           mobileMenuOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
         }`}
         onClick={() => setMobileMenuOpen(false)}
