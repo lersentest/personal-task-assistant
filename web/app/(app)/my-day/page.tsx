@@ -441,6 +441,7 @@ function PlanItemCard({
   onUnschedule,
   onSchedule,
   onDuration,
+  onPreviewDuration,
   compact = false,
   timeline = false,
 }: {
@@ -451,6 +452,7 @@ function PlanItemCard({
   onUnschedule: () => void;
   onSchedule: (start: string, duration: number) => void;
   onDuration: (duration: number) => void;
+  onPreviewDuration?: (duration: number | null) => void;
   compact?: boolean;
   timeline?: boolean;
 }) {
@@ -480,12 +482,14 @@ function PlanItemCard({
       const deltaMinutes = ((moveEvent.clientY - startY) / timelineHourHeight) * 60;
       nextDuration = roundDurationToStep(initialDuration + deltaMinutes);
       setPreviewDuration(nextDuration);
+      onPreviewDuration?.(nextDuration);
     };
 
     const handleUp = () => {
       window.removeEventListener('pointermove', handleMove);
       window.removeEventListener('pointerup', handleUp);
       setPreviewDuration(null);
+      onPreviewDuration?.(null);
       if (nextDuration !== initialDuration) {
         onDuration(nextDuration);
       }
@@ -749,6 +753,7 @@ function TimelineBoard({
     label: string;
     hasConflict: boolean;
   } | null>(null);
+  const [resizePreviewDurations, setResizePreviewDurations] = useState<Record<string, number>>({});
   const layout = buildTimelineLayout(items);
   const totalHeight = (timelineEndHour - timelineStartHour) * timelineHourHeight;
   const hours = Array.from(
@@ -865,13 +870,18 @@ function TimelineBoard({
               {dragPreview.hasConflict ? ' · пересечение' : ''}
             </div>
           ) : null}
-          {layout.map(({ item, top, height, left, width }) => (
+          {layout.map(({ item, top, height, left, width }) => {
+            const previewDuration = resizePreviewDurations[item.id];
+            const previewHeight = previewDuration
+              ? Math.max(44, (previewDuration / 60) * timelineHourHeight)
+              : height;
+            return (
             <div
               key={item.id}
               className="absolute pr-1"
               style={{
                 top,
-                height,
+                height: previewHeight,
                 left: `${left}%`,
                 width: `${width}%`,
               }}
@@ -884,10 +894,22 @@ function TimelineBoard({
                 onUnschedule={() => onUnschedule(item.id)}
                 onSchedule={(start, duration) => onSchedule(item, start, duration)}
                 onDuration={(duration) => onDuration(item, duration)}
+                onPreviewDuration={(duration) =>
+                  setResizePreviewDurations((current) => {
+                    const next = { ...current };
+                    if (duration === null) {
+                      delete next[item.id];
+                    } else {
+                      next[item.id] = duration;
+                    }
+                    return next;
+                  })
+                }
                 timeline
               />
             </div>
-          ))}
+            );
+          })}
           {!layout.length ? (
             <div className="absolute inset-x-0 top-8 rounded-2xl border border-dashed border-[var(--line)] p-4 text-sm text-[var(--muted)]">
               Перетащи задачу на сетку — время округлится до ближайших 15 минут.
