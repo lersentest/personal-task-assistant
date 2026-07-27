@@ -122,6 +122,7 @@ export function DelegatedTaskForm({ onDone }: { onDone?: () => void }) {
         <span className="text-xs font-semibold text-[var(--muted)]">Срок</span>
         <input
           type="datetime-local"
+          step={900}
           className="h-12 w-full rounded-2xl border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface-secondary,var(--background))] px-4 py-2 outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)]"
           value={form.dueAt}
           onChange={(event) => setForm({ ...form, dueAt: event.target.value })}

@@ -21,7 +21,7 @@ import { api } from '@/lib/api';
 import { formatDueDate, taskKindLabel } from '@/lib/labels';
 import { DailyPlanItem, MyDayData, Task, TaskPriority } from '@/lib/types';
 
-const durationOptions = [15, 30, 45, 60, 90, 120, 180, 240];
+const durationOptions = [15, 30, 45, 60, 75, 90, 105, 120, 150, 180, 240];
 const timelineStartHour = 7;
 const timelineEndHour = 20;
 const timelineHourHeight = 72;
@@ -74,6 +74,10 @@ function roundToStep(minutes: number, step = timelineStepMinutes) {
     timelineStartHour * 60,
     Math.min((timelineEndHour * 60) - step, Math.round(minutes / step) * step),
   );
+}
+
+function roundDurationToStep(minutes: number, step = timelineStepMinutes) {
+  return Math.max(step, Math.min(12 * 60, Math.round(minutes / step) * step));
 }
 
 function timeFromMinutes(minutes: number) {
@@ -134,31 +138,56 @@ function TaskPill({
   action?: () => void;
   actionLabel?: string;
 }) {
-  const { interfaceMode } = useUiMode();
-  const isFocus = interfaceMode === 'focus';
+  const checklistTotal = task.checklistItems?.length ?? 0;
+  const checklistDone = task.checklistItems?.filter((item) => item.isCompleted).length ?? 0;
   return (
     <article
       draggable
       onDragStart={(event) => event.dataTransfer.setData('text/plain', `task:${task.id}`)}
-      className={isFocus ? 'rounded-xl border border-[var(--focus-border-soft)] bg-[var(--focus-surface)] px-3 py-2.5 transition hover:border-[var(--focus-primary)] hover:bg-[var(--focus-primary-soft)]' : 'rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3 shadow-sm'}
+      className="group rounded-2xl border border-[var(--focus-border-soft,var(--line))] bg-[var(--focus-surface,var(--panel))] px-2.5 py-2 transition hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]/45"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <TaskModalLink task={task} className={isFocus ? 'text-left text-sm font-semibold hover:text-[var(--focus-primary)]' : 'text-left font-medium hover:text-[var(--accent)]'}>
+      <div className="flex items-start gap-2.5">
+        <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full border-2 border-[var(--accent)] bg-[var(--panel)]" />
+        <div className="min-w-0 flex-1">
+          <TaskModalLink task={task} className="line-clamp-2 text-left text-[13px] font-semibold leading-snug hover:text-[var(--accent)]">
             {task.title}
           </TaskModalLink>
-          <div className="mt-1 text-xs text-[var(--muted)]">{formatDueDate(task.dueAt, task.dueDateType)}</div>
-          {compactTaskMeta(task, task.estimatedDurationMinutes ?? undefined)}
+          <div className="mt-0.5 truncate text-[10px] text-[var(--muted)]">
+            {task.dueAt ? formatDueDate(task.dueAt, task.dueDateType) : task.project?.name ?? 'Без проекта'}
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-1">
+            <TaskKindBadge kind={task.kind ?? 'TASK'} />
+            <PriorityBadge priority={task.priority} />
+            {task.estimatedDurationMinutes ? (
+              <span className="rounded-full bg-[var(--focus-surface-secondary,var(--background))] px-1.5 py-0.5 text-[10px] font-medium text-[var(--muted)]">
+                {formatMinutes(task.estimatedDurationMinutes)}
+              </span>
+            ) : null}
+            {task.project ? (
+              <span className="max-w-full truncate rounded-full bg-[var(--focus-surface-secondary,var(--background))] px-1.5 py-0.5 text-[10px] font-medium text-[var(--muted)]">
+                {task.project.name}
+              </span>
+            ) : null}
+            {checklistTotal ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--focus-surface-secondary,var(--background))] px-1.5 py-0.5 text-[10px] font-medium text-[var(--muted)]">
+                <ListChecks size={12} />
+                {checklistDone}/{checklistTotal}
+              </span>
+            ) : null}
+          </div>
         </div>
-        {action ? (
+      </div>
+      {action ? (
+        <div className="max-h-0 overflow-hidden opacity-0 transition-all duration-150 group-hover:mt-2 group-hover:max-h-10 group-hover:opacity-100 group-focus-within:mt-2 group-focus-within:max-h-10 group-focus-within:opacity-100">
           <button
+            type="button"
             onClick={action}
-            className={isFocus ? 'shrink-0 rounded-lg border border-[var(--focus-border)] bg-[var(--focus-surface)] px-2.5 py-1.5 text-xs font-medium hover:border-[var(--focus-primary)]' : 'rounded-md border border-[var(--line)] px-2 py-1 text-xs hover:bg-[var(--background)]'}
+            className="h-8 w-full rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2.5 text-xs font-medium text-[var(--accent)] transition hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]"
           >
             {actionLabel}
           </button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -238,7 +267,7 @@ function QueuePlanItemRow({
 }) {
   const [editingTime, setEditingTime] = useState(false);
   const [time, setTime] = useState(formatTime(item.scheduledStartAt) || '09:00');
-  const duration = item.task.estimatedDurationMinutes ?? 30;
+  const duration = roundDurationToStep(item.task.estimatedDurationMinutes ?? 30);
   const done = item.completedInPlanAt || item.task.status === 'COMPLETED';
   const checklistTotal = item.task.checklistItems?.length ?? 0;
   const checklistDone = item.task.checklistItems?.filter((checklistItem) => checklistItem.isCompleted).length ?? 0;
@@ -368,18 +397,46 @@ function PlanItemCard({
   const isFocus = interfaceMode === 'focus';
   const [time, setTime] = useState(formatTime(item.scheduledStartAt) || '09:00');
   const [editingTime, setEditingTime] = useState(false);
-  const duration = item.task.estimatedDurationMinutes ?? 30;
+  const [previewDuration, setPreviewDuration] = useState<number | null>(null);
+  const duration = previewDuration ?? roundDurationToStep(item.task.estimatedDurationMinutes ?? 30);
   const done = item.completedInPlanAt || item.task.status === 'COMPLETED';
 
   useEffect(() => {
     setTime(formatTime(item.scheduledStartAt) || '09:00');
   }, [item.scheduledStartAt]);
 
+  function startResize(event: React.PointerEvent<HTMLDivElement>) {
+    if (!timeline) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const startY = event.clientY;
+    const initialDuration = roundDurationToStep(item.task.estimatedDurationMinutes ?? 30);
+    let nextDuration = initialDuration;
+
+    const handleMove = (moveEvent: PointerEvent) => {
+      const deltaMinutes = ((moveEvent.clientY - startY) / timelineHourHeight) * 60;
+      nextDuration = roundDurationToStep(initialDuration + deltaMinutes);
+      setPreviewDuration(nextDuration);
+    };
+
+    const handleUp = () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+      setPreviewDuration(null);
+      if (nextDuration !== initialDuration) {
+        onDuration(nextDuration);
+      }
+    };
+
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+  }
+
   return (
     <article
       draggable
       onDragStart={(event) => event.dataTransfer.setData('text/plain', `item:${item.id}`)}
-      className={`group min-w-0 overflow-hidden border ${timeline ? 'h-full' : ''} ${
+      className={`group relative min-w-0 overflow-hidden border ${timeline ? 'h-full' : ''} ${
         isFocus
           ? `rounded-xl ${timeline ? 'px-3 py-2' : 'px-3 py-2.5'} shadow-none ${
               done
@@ -468,6 +525,16 @@ function PlanItemCard({
         </button>
       </div>
         </>
+      ) : null}
+      {timeline ? (
+        <div
+          role="separator"
+          aria-label="Изменить длительность"
+          onPointerDown={startResize}
+          className="absolute inset-x-3 bottom-1 h-2 cursor-ns-resize rounded-full opacity-0 transition group-hover:opacity-70 group-focus-within:opacity-70"
+        >
+          <div className="mx-auto mt-0.5 h-1 w-10 rounded-full bg-blue-400" />
+        </div>
       ) : null}
     </article>
   );
@@ -957,13 +1024,14 @@ export default function MyDayPage() {
   }
 
   function scheduleExistingItem(item: DailyPlanItem, time: string, duration: number) {
+    const roundedDuration = roundDurationToStep(duration);
     const start = dateTimeFor(date, time);
     scheduleItem.mutate({
       id: item.id,
       input: {
         scheduledStartAt: start,
-        scheduledEndAt: addMinutes(start, duration),
-        estimatedDurationMinutes: duration,
+        scheduledEndAt: addMinutes(start, roundedDuration),
+        estimatedDurationMinutes: roundedDuration,
       },
     });
   }
@@ -988,7 +1056,7 @@ export default function MyDayPage() {
       });
     } else if (value.startsWith('item:')) {
       const item = planItems.find((candidate) => candidate.id === value.slice(5));
-      const duration = item?.task.estimatedDurationMinutes ?? 30;
+      const duration = roundDurationToStep(item?.task.estimatedDurationMinutes ?? 30);
       scheduleItem.mutate({
         id: value.slice(5),
         input: {
@@ -1144,10 +1212,7 @@ export default function MyDayPage() {
               onUnschedule={(id) => unscheduleItem.mutate(id)}
               onSchedule={scheduleExistingItem}
               onDuration={(item, duration) =>
-                updateItem.mutate({
-                  id: item.id,
-                  input: { estimatedDurationMinutes: duration },
-                })
+                scheduleExistingItem(item, formatTime(item.scheduledStartAt) || '09:00', duration)
               }
               onDropAt={handleDropOnSlot}
             />

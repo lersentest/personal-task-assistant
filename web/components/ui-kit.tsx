@@ -2,6 +2,7 @@
 
 import { AlertCircle, CheckCircle2, Circle, Clock3, Loader2, X } from 'lucide-react';
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { priorityLabel, statusLabel } from '@/lib/labels';
 import type { TaskPriority, TaskStatus } from '@/lib/types';
 
@@ -139,7 +140,7 @@ export function EntityDrawer({
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -165,7 +166,8 @@ export function EntityDrawer({
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">{children}</div>
       </aside>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

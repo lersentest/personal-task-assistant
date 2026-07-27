@@ -5,7 +5,7 @@ export function TimeStepSelect({
   value,
   onChange,
   allowEmpty = false,
-  minuteStep = 5,
+  minuteStep = 15,
   className = '',
 }: {
   value: string;

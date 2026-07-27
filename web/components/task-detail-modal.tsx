@@ -1,9 +1,10 @@
 'use client';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ExternalLink, FolderKanban, Sparkles, X } from 'lucide-react';
+import { ExternalLink, FolderKanban, X } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '@/lib/api';
 import { taskKindLabel } from '@/lib/labels';
 import { Task, TaskKind } from '@/lib/types';
@@ -106,11 +107,11 @@ export function TaskDetailsModal({
 
   const data = task.data;
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[10000] flex max-w-full items-stretch justify-center overflow-x-hidden bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-6"
+      className="fixed inset-0 z-[10100] flex max-w-full items-stretch justify-center overflow-x-hidden bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-6"
       onMouseDown={requestClose}
     >
       <div
@@ -120,10 +121,6 @@ export function TaskDetailsModal({
         <header className="flex items-start justify-between gap-4 border-b border-[var(--focus-border-soft,var(--line))] p-4 sm:p-6">
           <div className="min-w-0">
             <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
-              <span className="inline-flex items-center gap-2 rounded-full bg-[var(--accent-soft)] px-3 py-1 font-semibold text-[var(--accent)]">
-                <Sparkles size={14} />
-                Редактирование
-              </span>
               <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-1 font-medium text-[var(--accent)]">
                 {data ? taskKindLabel[data.kind ?? 'TASK'] : 'Задача'}
               </span>
@@ -142,7 +139,7 @@ export function TaskDetailsModal({
               {data?.title ?? 'Загружаю задачу…'}
             </h2>
             <p className="mt-1 text-sm text-[var(--muted)]">
-              Измени задачу и нажми «Сохранить». При закрытии без сохранения система предупредит.
+              Можно изменить детали, чек-лист, срок и файлы.
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -204,6 +201,7 @@ export function TaskDetailsModal({
           ) : null}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
