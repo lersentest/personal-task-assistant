@@ -16,7 +16,7 @@ export function Page({
   const { interfaceMode } = useUiMode();
   if (interfaceMode === 'focus') {
     return (
-      <section className="focus-page">
+      <section className="focus-page min-w-0 max-w-full overflow-x-hidden">
         <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--focus-text-muted)]">
@@ -39,7 +39,7 @@ export function Page({
   }
 
   return (
-    <section className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <section className="mx-auto w-full max-w-7xl min-w-0 max-w-full overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8">
       <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>

@@ -75,8 +75,14 @@
   box-sizing: border-box;
 }
 
+html {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 body {
   margin: 0;
+  max-width: 100%;
   overflow-x: clip;
   background: var(--background);
   color: var(--foreground);

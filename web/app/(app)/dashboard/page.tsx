@@ -130,14 +130,14 @@ export default function DashboardPage() {
 
   return (
     <Page title={greeting.title} description={greeting.description}>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard icon={<CalendarDays size={20} />} label="Сегодня" value={dashboard.data?.summary.today ?? 0} href="/today" />
         <MetricCard icon={<AlertCircle size={20} />} label="Просрочено" value={dashboard.data?.summary.overdue ?? 0} href="/today" danger />
         <MetricCard icon={<Clock3 size={20} />} label="На 7 дней" value={dashboard.data?.summary.upcoming ?? 0} href="/tasks?view=UPCOMING" />
         <MetricCard icon={<CheckCircle2 size={20} />} label="Срочные" value={dashboard.data?.summary.urgent ?? 0} href="/tasks?priority=URGENT" warning />
       </div>
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-[0.95fr_1.05fr_0.95fr]">
+      <div className="mt-5 grid min-w-0 gap-5 xl:grid-cols-3">
         <FocusPanel title="Сегодня" badge={dashboard.data?.today.length ?? 0}>
           <div className="grid gap-2">
             {dashboard.data?.today.slice(0, 7).map((task) => <TaskCard key={task.id} task={task} />)}
@@ -162,7 +162,7 @@ export default function DashboardPage() {
         </FocusPanel>
       </div>
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_340px]">
+      <div className="mt-5 grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
         <FocusPanel title="Недавняя активность" badge={activity.length}>
           <div className="grid gap-3 md:grid-cols-4">
             {activity.slice(0, 4).map((item) => (
