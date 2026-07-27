@@ -624,6 +624,26 @@ type TimelineLayout = {
   width: number;
 };
 
+type QueueTone = 'red' | 'orange' | 'blue';
+
+const queueToneClasses: Record<QueueTone, { section: string; title: string; count: string }> = {
+  red: {
+    section: 'border-l-4 border-l-red-400 bg-red-50/45 px-2.5 py-2 dark:bg-red-950/10',
+    title: 'text-red-700 dark:text-red-200',
+    count: 'bg-red-100 text-red-700 dark:bg-red-950/45 dark:text-red-200',
+  },
+  orange: {
+    section: 'border-l-4 border-l-amber-400 bg-amber-50/55 px-2.5 py-2 dark:bg-amber-950/10',
+    title: 'text-amber-700 dark:text-amber-200',
+    count: 'bg-amber-100 text-amber-700 dark:bg-amber-950/45 dark:text-amber-200',
+  },
+  blue: {
+    section: 'border-l-4 border-l-blue-400 bg-blue-50/45 px-2.5 py-2 dark:bg-blue-950/10',
+    title: 'text-blue-700 dark:text-blue-200',
+    count: 'bg-blue-100 text-blue-700 dark:bg-blue-950/45 dark:text-blue-200',
+  },
+};
+
 function buildTimelineLayout(items: DailyPlanItem[]): TimelineLayout[] {
   const positioned = items
     .filter((item) => item.scheduledStartAt && item.scheduledEndAt)
@@ -695,6 +715,13 @@ function TimelineBoard({
   onDropAt: (event: React.DragEvent, time: string) => void;
 }) {
   const [now, setNow] = useState(() => new Date());
+  const [dragPreview, setDragPreview] = useState<{
+    time: string;
+    top: number;
+    height: number;
+    label: string;
+    hasConflict: boolean;
+  } | null>(null);
   const layout = buildTimelineLayout(items);
   const totalHeight = (timelineEndHour - timelineStartHour) * timelineHourHeight;
   const hours = Array.from(
@@ -713,12 +740,48 @@ function TimelineBoard({
     return () => window.clearInterval(id);
   }, []);
 
-  function handleDrop(event: React.DragEvent<HTMLDivElement>) {
-    event.preventDefault();
+  function getDragDuration(event: React.DragEvent<HTMLDivElement>) {
+    const value = event.dataTransfer.getData('text/plain');
+    if (value.startsWith('item:')) {
+      const item = items.find((candidate) => candidate.id === value.slice(5));
+      return roundDurationToStep(item?.task.estimatedDurationMinutes ?? 30);
+    }
+    return 30;
+  }
+
+  function getDragPreview(event: React.DragEvent<HTMLDivElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
     const minutes = roundToStep(timelineStartHour * 60 + ratio * (timelineEndHour - timelineStartHour) * 60);
-    onDropAt(event, timeFromMinutes(minutes));
+    const duration = getDragDuration(event);
+    const endMinutes = Math.min(timelineEndHour * 60, minutes + duration);
+    const previewHeight = Math.max(28, ((endMinutes - minutes) / 60) * timelineHourHeight);
+    const hasConflict = items.some((item) => {
+      if (!item.scheduledStartAt || !item.scheduledEndAt) return false;
+      const start = minutesOfDay(item.scheduledStartAt);
+      const end = minutesOfDay(item.scheduledEndAt);
+      return minutes < end && endMinutes > start;
+    });
+
+    return {
+      time: timeFromMinutes(minutes),
+      top: ((minutes - timelineStartHour * 60) / 60) * timelineHourHeight,
+      height: previewHeight,
+      label: `${timeFromMinutes(minutes)}–${timeFromMinutes(endMinutes)}`,
+      hasConflict,
+    };
+  }
+
+  function handleDragOver(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setDragPreview(getDragPreview(event));
+  }
+
+  function handleDrop(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const preview = getDragPreview(event);
+    setDragPreview(null);
+    onDropAt(event, preview.time);
   }
 
   return (
@@ -739,7 +802,8 @@ function TimelineBoard({
         })}
         <div
           className="absolute bottom-0 left-[66px] right-0 top-0"
-          onDragOver={(event) => event.preventDefault()}
+          onDragOver={handleDragOver}
+          onDragLeave={() => setDragPreview(null)}
           onDrop={handleDrop}
         >
           {Array.from({ length: (timelineEndHour - timelineStartHour) * 4 }, (_, index) => (
@@ -759,6 +823,19 @@ function TimelineBoard({
               </span>
               <div className="h-0.5 bg-red-500 shadow-[0_0_0_1px_rgba(239,68,68,0.15)]" />
               <span className="absolute -left-1 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-red-500" />
+            </div>
+          ) : null}
+          {dragPreview ? (
+            <div
+              className={`pointer-events-none absolute left-0 right-0 z-10 rounded-2xl border-2 border-dashed px-3 py-2 text-xs font-semibold shadow-sm ${
+                dragPreview.hasConflict
+                  ? 'border-amber-400 bg-amber-100/70 text-amber-800'
+                  : 'border-blue-400 bg-blue-100/75 text-blue-800'
+              }`}
+              style={{ top: dragPreview.top, height: dragPreview.height }}
+            >
+              {dragPreview.label}
+              {dragPreview.hasConflict ? ' · пересечение' : ''}
             </div>
           ) : null}
           {layout.map(({ item, top, height, left, width }) => (
@@ -1247,15 +1324,18 @@ export default function MyDayPage() {
               title="Просроченные"
               tasks={day.data?.mandatory.overdue ?? []}
               onAdd={addTaskToDay}
+              tone="red"
             />
             <TaskGroup
               title="Срок сегодня"
               tasks={day.data?.mandatory.dueToday ?? []}
               onAdd={addTaskToDay}
+              tone="orange"
             />
             <TaskItemGroup
               title="Запланировано без времени"
               items={unscheduledItems}
+              tone="blue"
               completeItem={(id) => completeItem.mutate(id)}
               removeItem={(id) => removeItem.mutate(id)}
               unscheduleItem={(id) => unscheduleItem.mutate(id)}
@@ -1429,17 +1509,20 @@ function TaskGroup({
   title,
   tasks,
   onAdd,
+  tone,
 }: {
   title: string;
   tasks: Task[];
   onAdd: (id: string) => void;
+  tone?: QueueTone;
 }) {
   if (!tasks.length) return null;
+  const styles = tone ? queueToneClasses[tone] : null;
   return (
-    <div className="mb-4">
-      <h3 className="mb-2 flex items-center justify-between text-sm font-medium text-[var(--muted)]">
+    <div className={`mb-4 rounded-2xl ${styles?.section ?? ''}`}>
+      <h3 className={`mb-2 flex items-center justify-between text-sm font-semibold ${styles?.title ?? 'text-[var(--muted)]'}`}>
         <span>{title}</span>
-        <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--accent)]">
+        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${styles?.count ?? 'bg-[var(--accent-soft)] text-[var(--accent)]'}`}>
           {tasks.length}
         </span>
       </h3>
@@ -1460,6 +1543,7 @@ function TaskGroup({
 function TaskItemGroup({
   title,
   items,
+  tone,
   completeItem,
   removeItem,
   unscheduleItem,
@@ -1468,6 +1552,7 @@ function TaskItemGroup({
 }: {
   title: string;
   items: DailyPlanItem[];
+  tone?: QueueTone;
   completeItem: (id: string) => void;
   removeItem: (id: string) => void;
   unscheduleItem: (id: string) => void;
@@ -1475,11 +1560,12 @@ function TaskItemGroup({
   updateDuration: (item: DailyPlanItem, duration: number) => void;
 }) {
   if (!items.length) return null;
+  const styles = tone ? queueToneClasses[tone] : null;
   return (
-    <div className="mb-4">
-      <h3 className="mb-2 flex items-center justify-between text-sm font-medium text-[var(--muted)]">
+    <div className={`mb-4 rounded-2xl ${styles?.section ?? ''}`}>
+      <h3 className={`mb-2 flex items-center justify-between text-sm font-semibold ${styles?.title ?? 'text-[var(--muted)]'}`}>
         <span>{title}</span>
-        <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--accent)]">
+        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${styles?.count ?? 'bg-[var(--accent-soft)] text-[var(--accent)]'}`}>
           {items.length}
         </span>
       </h3>
