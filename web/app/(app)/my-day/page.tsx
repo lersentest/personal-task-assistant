@@ -86,6 +86,33 @@ function timeFromMinutes(minutes: number) {
   return `${String(hours).padStart(2, '0')}:${String(rest).padStart(2, '0')}`;
 }
 
+let currentDragDuration = 30;
+
+function setCurrentDragDuration(duration: number) {
+  currentDragDuration = roundDurationToStep(duration);
+}
+
+function taskDragPayload(task: Task) {
+  const duration = roundDurationToStep(task.estimatedDurationMinutes ?? 30);
+  setCurrentDragDuration(duration);
+  return `task:${task.id}:${duration}`;
+}
+
+function itemDragPayload(item: DailyPlanItem) {
+  const duration = roundDurationToStep(item.task.estimatedDurationMinutes ?? 30);
+  setCurrentDragDuration(duration);
+  return `item:${item.id}:${duration}`;
+}
+
+function parseDragPayload(value: string) {
+  const [kind, id, rawDuration] = value.split(':');
+  return {
+    kind,
+    id,
+    duration: roundDurationToStep(Number(rawDuration) || currentDragDuration || 30),
+  };
+}
+
 function taskKindTone(kind: Task['kind']) {
   if (kind === 'CALL') return 'bg-sky-50 text-sky-700 dark:bg-sky-950/35 dark:text-sky-200';
   if (kind === 'MEETING') return 'bg-purple-50 text-purple-700 dark:bg-purple-950/35 dark:text-purple-200';
@@ -143,7 +170,7 @@ function TaskPill({
   return (
     <article
       draggable
-      onDragStart={(event) => event.dataTransfer.setData('text/plain', `task:${task.id}`)}
+      onDragStart={(event) => event.dataTransfer.setData('text/plain', taskDragPayload(task))}
       className="group rounded-2xl border border-[var(--focus-border-soft,var(--line))] bg-[var(--focus-surface,var(--panel))] px-2.5 py-2 transition hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]/45"
     >
       <div className="flex items-start gap-2.5">
@@ -206,7 +233,7 @@ function QueueTaskRow({
   return (
     <article
       draggable
-      onDragStart={(event) => event.dataTransfer.setData('text/plain', `task:${task.id}`)}
+      onDragStart={(event) => event.dataTransfer.setData('text/plain', taskDragPayload(task))}
       className="group rounded-2xl border border-[var(--focus-border-soft,var(--line))] bg-[var(--focus-surface,var(--panel))] px-2.5 py-2 transition hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]/45"
     >
       <div className="flex items-start gap-2.5">
@@ -280,7 +307,7 @@ function QueuePlanItemRow({
   return (
     <article
       draggable
-      onDragStart={(event) => event.dataTransfer.setData('text/plain', `item:${item.id}`)}
+      onDragStart={(event) => event.dataTransfer.setData('text/plain', itemDragPayload(item))}
       className={`group rounded-2xl border px-2.5 py-2 transition ${
         done
           ? 'border-emerald-200 bg-emerald-50/80 dark:bg-emerald-950/20'
@@ -487,7 +514,7 @@ function PlanItemCard({
   return (
     <article
       draggable
-      onDragStart={(event) => event.dataTransfer.setData('text/plain', `item:${item.id}`)}
+      onDragStart={(event) => event.dataTransfer.setData('text/plain', itemDragPayload(item))}
       className={`group relative min-w-0 overflow-hidden rounded-xl border ${timeline ? 'h-full' : ''} ${cardPadding} ${isFocus ? 'shadow-none' : 'shadow-sm'} ${cardTone}`}
     >
       <div className={timeline ? 'min-w-0 pr-1' : 'flex items-start justify-between gap-3'}>
@@ -741,12 +768,12 @@ function TimelineBoard({
   }, []);
 
   function getDragDuration(event: React.DragEvent<HTMLDivElement>) {
-    const value = event.dataTransfer.getData('text/plain');
-    if (value.startsWith('item:')) {
-      const item = items.find((candidate) => candidate.id === value.slice(5));
-      return roundDurationToStep(item?.task.estimatedDurationMinutes ?? 30);
+    const payload = parseDragPayload(event.dataTransfer.getData('text/plain'));
+    if (payload.kind === 'item') {
+      const item = items.find((candidate) => candidate.id === payload.id);
+      return roundDurationToStep(item?.task.estimatedDurationMinutes ?? payload.duration);
     }
-    return 30;
+    return payload.duration;
   }
 
   function getDragPreview(event: React.DragEvent<HTMLDivElement>) {
@@ -1192,26 +1219,28 @@ export default function MyDayPage() {
   function handleDropOnPlan(event: React.DragEvent) {
     event.preventDefault();
     const value = event.dataTransfer.getData('text/plain');
-    if (value.startsWith('task:')) addTaskToDay(value.slice(5));
+    const payload = parseDragPayload(value);
+    if (payload.kind === 'task' && payload.id) addTaskToDay(payload.id);
   }
 
   function handleDropOnSlot(event: React.DragEvent, time: string) {
     event.preventDefault();
-    const value = event.dataTransfer.getData('text/plain');
+    const payload = parseDragPayload(event.dataTransfer.getData('text/plain'));
     const start = dateTimeFor(date, time);
-    if (value.startsWith('task:')) {
+    if (payload.kind === 'task' && payload.id) {
+      const duration = payload.duration;
       addItem.mutate({
-        taskId: value.slice(5),
+        taskId: payload.id,
         date,
         scheduledStartAt: start,
-        scheduledEndAt: addMinutes(start, 30),
-        estimatedDurationMinutes: 30,
+        scheduledEndAt: addMinutes(start, duration),
+        estimatedDurationMinutes: duration,
       });
-    } else if (value.startsWith('item:')) {
-      const item = planItems.find((candidate) => candidate.id === value.slice(5));
-      const duration = roundDurationToStep(item?.task.estimatedDurationMinutes ?? 30);
+    } else if (payload.kind === 'item' && payload.id) {
+      const item = planItems.find((candidate) => candidate.id === payload.id);
+      const duration = roundDurationToStep(item?.task.estimatedDurationMinutes ?? payload.duration);
       scheduleItem.mutate({
-        id: value.slice(5),
+        id: payload.id,
         input: {
           scheduledStartAt: start,
           scheduledEndAt: addMinutes(start, duration),
