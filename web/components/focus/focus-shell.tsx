@@ -374,7 +374,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--focus-bg)] text-[var(--focus-text)] lg:grid lg:grid-cols-[292px_1fr]">
+    <div className="min-h-screen overflow-x-hidden bg-[var(--focus-bg)] text-[var(--focus-text)] lg:grid lg:grid-cols-[292px_minmax(0,1fr)]">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[292px] border-r border-[var(--focus-border-soft)] bg-[var(--focus-surface)]/96 px-4 py-5 shadow-[var(--focus-shadow)] backdrop-blur lg:flex lg:flex-col">
         <Link href="/my-day" className="mb-7 flex items-center gap-3 px-1">
           <span className="relative flex h-9 w-9 items-center justify-center rounded-2xl bg-[var(--focus-primary)] text-white shadow-sm">
@@ -468,9 +468,9 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className="lg:col-start-2">
+      <div className="min-w-0 lg:col-start-2">
         <header className="sticky top-0 z-20 border-b border-[var(--focus-border-soft)] bg-[var(--focus-bg)]/88 px-4 py-3 backdrop-blur-xl lg:px-8">
-          <div className="mx-auto flex max-w-[1600px] items-center gap-3">
+          <div className="mx-auto flex max-w-[1600px] min-w-0 items-center gap-3">
             <button
               type="button"
               onClick={openMobileMenu}
@@ -490,7 +490,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
                 <Command size={13} /> K
               </span>
             </button>
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex min-w-0 items-center gap-2">
               <button
                 type="button"
                 onClick={() => setPaletteOpen(true)}
@@ -527,7 +527,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[1600px] px-4 py-6 pb-24 lg:px-8">
+        <main className="mx-auto w-full max-w-[1600px] min-w-0 px-4 py-6 pb-24 lg:px-8">
           {children}
         </main>
       </div>

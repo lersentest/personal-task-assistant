@@ -1001,7 +1001,7 @@ export default function MyDayPage() {
   }
 
   return (
-    <div className={isFocus ? 'mx-auto max-w-[1500px] overflow-hidden' : 'mx-auto max-w-[1800px] p-4 sm:p-6'}>
+    <div className={isFocus ? 'mx-auto max-w-[1500px] min-w-0 overflow-hidden' : 'mx-auto max-w-[1800px] min-w-0 p-4 sm:p-6'}>
       <header className={isFocus ? 'mb-5' : 'mb-5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm'}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -1091,8 +1091,8 @@ export default function MyDayPage() {
         ))}
       </div>
 
-      <div className={isFocus ? 'grid gap-4 lg:grid-cols-[320px_minmax(520px,1fr)_320px]' : 'grid gap-4 lg:grid-cols-[340px_minmax(560px,1fr)_340px]'}>
-        <section className={`${mobileTab === 'plan' ? 'block' : 'hidden'} lg:block`}>
+      <div className={isFocus ? 'grid min-w-0 gap-4 lg:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[300px_minmax(0,1fr)_300px]' : 'grid min-w-0 gap-4 lg:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[320px_minmax(0,1fr)_320px]'}>
+        <section className={`${mobileTab === 'plan' ? 'block' : 'hidden'} min-w-0 lg:block`}>
           <Panel title="Обязательно сегодня">
             {day.data?.unresolvedPreviousDays.length ? (
               <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
@@ -1126,7 +1126,7 @@ export default function MyDayPage() {
           </Panel>
         </section>
 
-        <section className={`${mobileTab === 'schedule' ? 'block' : 'hidden'} lg:block lg:col-start-2 lg:row-start-1`}>
+        <section className={`${mobileTab === 'schedule' ? 'block' : 'hidden'} min-w-0 lg:block lg:col-start-2 lg:row-start-1`}>
           <Panel title="План дня и временная шкала">
             <div
               onDragOver={(event) => event.preventDefault()}
@@ -1154,7 +1154,7 @@ export default function MyDayPage() {
           </Panel>
         </section>
 
-        <section className={`${mobileTab === 'add' ? 'block' : 'hidden'} lg:block lg:col-start-3 lg:row-start-1`}>
+        <section className={`${mobileTab === 'add' ? 'block' : 'hidden'} min-w-0 lg:col-span-2 lg:block lg:row-start-2 2xl:col-span-1 2xl:col-start-3 2xl:row-start-1`}>
           <Panel title="Можно добавить">
             <div className="mb-3 grid gap-2">
               <label className="flex items-center gap-2 rounded-lg border border-[var(--line)] px-3">
