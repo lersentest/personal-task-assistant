@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Personal Voice Task</string>
+    <string name="widget_label">Новая задача</string>
+</resources>
