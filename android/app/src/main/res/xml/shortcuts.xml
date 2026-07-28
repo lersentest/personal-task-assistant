@@ -1,14 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
     <shortcut
         android:shortcutId="voice_capture"
         android:enabled="true"
-        android:icon="@drawable/ic_mic"
-        android:shortcutShortLabel="Голосовая задача"
-        android:shortcutLongLabel="Создать задачу голосом">
+        android:shortcutShortLabel="@string/shortcut_voice_task_short"
+        android:shortcutLongLabel="@string/shortcut_voice_task_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.personaltasks.voice"
-            android:targetClass="com.personaltasks.voice.VoiceCaptureActivity"
             android:data="taskassistant://voice-capture" />
     </shortcut>
 </shortcuts>
