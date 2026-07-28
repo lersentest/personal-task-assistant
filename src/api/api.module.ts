@@ -8,15 +8,18 @@ import { DashboardController } from './dashboard.controller';
 import { DelegatedTasksController } from './delegated-tasks.controller';
 import { ExecutorsController } from './executors.controller';
 import { MyDayController } from './my-day.controller';
+import { MobileAuthController } from './mobile-auth.controller';
 import { ProjectsController } from './projects.controller';
 import { PublicDelegatedTasksController } from './public-delegated-tasks.controller';
 import { TagsController } from './tags.controller';
 import { TasksController } from './tasks.controller';
 import { VoiceController } from './voice.controller';
+import { VoiceCommandController } from './voice-command.controller';
 import { ProjectsModule } from '../projects/projects.module';
 import { DelegatedTasksModule } from '../delegated-tasks/delegated-tasks.module';
 import { ExecutorsModule } from '../executors/executors.module';
 import { MyDayModule } from '../my-day/my-day.module';
+import { MobileAuthModule } from '../mobile-auth/mobile-auth.module';
 import { RemindersModule } from '../reminders/reminders.module';
 import { TagsModule } from '../tags/tags.module';
 import { TasksModule } from '../tasks/tasks.module';
@@ -36,6 +39,7 @@ import { VoiceModule } from '../voice/voice.module';
     ExecutorsModule,
     DelegatedTasksModule,
     MyDayModule,
+    MobileAuthModule,
     VoiceModule,
   ],
   controllers: [
@@ -49,7 +53,9 @@ import { VoiceModule } from '../voice/voice.module';
     ProjectsController,
     TagsController,
     AttachmentsController,
+    MobileAuthController,
     VoiceController,
+    VoiceCommandController,
   ],
 })
 export class ApiModule {}

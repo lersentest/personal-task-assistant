@@ -140,6 +140,38 @@ enum AiAnalyticsMessageRole {
   ASSISTANT
 }
 
+enum MobileDevicePlatform {
+  ANDROID
+  WEAR_OS
+}
+
+enum VoiceCommandSource {
+  ANDROID_APP
+  ANDROID_WIDGET
+  ANDROID_SIDE_BUTTON
+}
+
+enum MobileVoiceDraftStatus {
+  READY_FOR_CONFIRMATION
+  CONFIRMING
+  CONFIRMED
+  CANCELLED
+  EXPIRED
+  FAILED
+}
+
+enum MobileVoiceRequestType {
+  PREVIEW
+  CONFIRM
+  CANCEL
+}
+
+enum MobileVoiceRequestStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 model User {
   id             String   @id @default(uuid()) @db.Uuid
   telegramId     BigInt   @unique @map("telegram_id")
@@ -171,6 +203,9 @@ model User {
   securityAuditEvents SecurityAuditEvent[]
   aiAnalyticsConversations AiAnalyticsConversation[]
   aiAnalyticsMessages      AiAnalyticsMessage[]
+  mobileDeviceSessions     MobileDeviceSession[]
+  mobileVoiceDrafts        MobileVoiceDraft[]
+  mobileVoiceRequests      MobileVoiceRequest[]
   @@map("users")
 }
 
@@ -417,6 +452,7 @@ model Task {
   dailyPlanItems DailyPlanItem[]
   activityEvents ActivityEvent[]
   checklistItems TaskChecklistItem[]
+  mobileVoiceDrafts MobileVoiceDraft[]
 
   @@index([ownerId, status, deletedAt])
   @@index([ownerId, kind, deletedAt])
@@ -602,4 +638,74 @@ model AiAnalyticsMessage {
   @@index([conversationId, createdAt])
   @@index([ownerId, createdAt])
   @@map("ai_analytics_messages")
+}
+
+model MobileDeviceSession {
+  id            String               @id @default(uuid()) @db.Uuid
+  ownerId       String               @map("owner_id") @db.Uuid
+  platform      MobileDevicePlatform @default(ANDROID)
+  deviceName    String               @map("device_name") @db.VarChar(200)
+  tokenHash     String               @unique @map("token_hash") @db.VarChar(128)
+  lastUsedAt    DateTime?            @map("last_used_at") @db.Timestamptz(3)
+  revokedAt     DateTime?            @map("revoked_at") @db.Timestamptz(3)
+  createdAt     DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  owner    User                 @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  drafts   MobileVoiceDraft[]
+  requests MobileVoiceRequest[]
+
+  @@index([ownerId, revokedAt])
+  @@map("mobile_device_sessions")
+}
+
+model MobileVoiceDraft {
+  id                String                 @id @default(uuid()) @db.Uuid
+  ownerId           String                 @map("owner_id") @db.Uuid
+  deviceSessionId   String                 @map("device_session_id") @db.Uuid
+  clientCommandId   String                 @map("client_command_id") @db.VarChar(120)
+  source            VoiceCommandSource
+  status            MobileVoiceDraftStatus @default(READY_FOR_CONFIRMATION)
+  transcript        String                 @db.Text
+  taskPayload       Json                   @map("task_payload")
+  preview           Json
+  taskId            String?                @map("task_id") @db.Uuid
+  expiresAt         DateTime               @map("expires_at") @db.Timestamptz(3)
+  confirmedAt       DateTime?              @map("confirmed_at") @db.Timestamptz(3)
+  cancelledAt       DateTime?              @map("cancelled_at") @db.Timestamptz(3)
+  createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  owner         User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  deviceSession MobileDeviceSession @relation(fields: [deviceSessionId], references: [id], onDelete: Cascade)
+  task          Task?               @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  requests      MobileVoiceRequest[]
+
+  @@unique([deviceSessionId, clientCommandId])
+  @@index([ownerId, status, expiresAt])
+  @@index([taskId])
+  @@map("mobile_voice_drafts")
+}
+
+model MobileVoiceRequest {
+  id                String                   @id @default(uuid()) @db.Uuid
+  ownerId           String                   @map("owner_id") @db.Uuid
+  deviceSessionId   String                   @map("device_session_id") @db.Uuid
+  draftId           String?                  @map("draft_id") @db.Uuid
+  idempotencyKeyHash String                  @map("idempotency_key_hash") @db.VarChar(128)
+  requestType       MobileVoiceRequestType   @map("request_type")
+  status            MobileVoiceRequestStatus @default(PROCESSING)
+  response          Json?
+  errorCode         String?                  @map("error_code") @db.VarChar(80)
+  createdAt         DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  owner         User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  deviceSession MobileDeviceSession @relation(fields: [deviceSessionId], references: [id], onDelete: Cascade)
+  draft         MobileVoiceDraft?   @relation(fields: [draftId], references: [id], onDelete: SetNull)
+
+  @@unique([deviceSessionId, idempotencyKeyHash])
+  @@index([ownerId, requestType, createdAt])
+  @@index([draftId])
+  @@map("mobile_voice_requests")
 }

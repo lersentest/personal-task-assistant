@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Personal Voice Task</string>
+    <string name="widget_label">Новая задача</string>
+    <string name="shortcut_voice_task_short">Голосовая задача</string>
+    <string name="shortcut_voice_task_long">Создать задачу голосом</string>
+</resources>
