@@ -52,6 +52,7 @@ public class VoiceCaptureActivity extends Activity {
     private TextView timer;
     private WaveBarsView wave;
     private TextView close;
+    private OrbView currentOrb;
     private Button primary;
     private Button secondary;
     private Button cancel;
@@ -73,7 +74,9 @@ public class VoiceCaptureActivity extends Activity {
         @Override public void run() {
             if (!recording) return;
             timer.setText(formatDuration(System.currentTimeMillis() - startedAt));
-            if (wave != null) wave.nextFrame();
+            float level = readRecorderLevel();
+            if (wave != null) wave.setLevel(level);
+            if (currentOrb != null) currentOrb.setLevel(level);
             handler.postDelayed(this, 260);
         }
     };
@@ -167,11 +170,14 @@ public class VoiceCaptureActivity extends Activity {
         state = State.IDLE;
         detachActionButtons();
         content.removeAllViews();
+        content.setGravity(Gravity.CENTER_HORIZONTAL);
         title.setText("Новая задача");
         subtitle.setText("Нажмите и продиктуйте одну задачу");
         subtitle.setTextColor(Ui.MUTED);
 
         OrbView orb = new OrbView(this);
+        currentOrb = orb;
+        orb.setMode(OrbView.Mode.IDLE);
         orb.setOnClickListener(v -> startRecording());
         content.addView(orb, Ui.lp(Ui.dp(this, 230), Ui.dp(this, 230)));
 
@@ -195,11 +201,14 @@ public class VoiceCaptureActivity extends Activity {
         state = State.RECORDING;
         detachActionButtons();
         content.removeAllViews();
+        content.setGravity(Gravity.CENTER_HORIZONTAL);
         title.setText("Говорите…");
         subtitle.setText("● Запись   |   Задача записывается");
         subtitle.setTextColor(Ui.SUCCESS);
 
         OrbView orb = new OrbView(this);
+        currentOrb = orb;
+        orb.setMode(OrbView.Mode.RECORDING);
         content.addView(orb, Ui.lp(Ui.dp(this, 238), Ui.dp(this, 238)));
         Ui.pulse(orb);
 
@@ -233,6 +242,7 @@ public class VoiceCaptureActivity extends Activity {
         state = State.UPLOADING;
         detachActionButtons();
         content.removeAllViews();
+        content.setGravity(Gravity.CENTER_HORIZONTAL);
         title.setText("Обрабатываю");
         subtitle.setText("Секунду: превращаем голос в задачу");
         subtitle.setTextColor(Ui.MUTED);
@@ -240,6 +250,8 @@ public class VoiceCaptureActivity extends Activity {
         LinearLayout card = Ui.card(this, 24);
         card.setGravity(Gravity.CENTER_HORIZONTAL);
         OrbView orb = new OrbView(this);
+        currentOrb = orb;
+        orb.setMode(OrbView.Mode.PROCESSING);
         card.addView(orb, Ui.lp(Ui.dp(this, 150), Ui.dp(this, 150)));
         Ui.pulse(orb);
         TextView label = Ui.text(this, step, 24, Ui.TEXT, Typeface.BOLD);
@@ -248,6 +260,7 @@ public class VoiceCaptureActivity extends Activity {
         TextView details = Ui.subtitle(this, "Распознаём голос, выделяем дату, проект и приоритет.");
         details.setGravity(Gravity.CENTER);
         card.addView(details);
+        addProcessingSteps(card, step);
         content.addView(card, Ui.matchWrap());
         Ui.margin(card, 0, 76, 0, 24);
 
@@ -262,11 +275,23 @@ public class VoiceCaptureActivity extends Activity {
         AppPrefs.markSynced(this);
         detachActionButtons();
         content.removeAllViews();
+        content.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
         title.setText("Проверьте задачу");
         subtitle.setText("Создадим задачу только после подтверждения");
         subtitle.setTextColor(Ui.MUTED);
 
-        LinearLayout sheet = Ui.card(this, 18);
+        View topSpace = new View(this);
+        content.addView(topSpace, new LinearLayout.LayoutParams(1, 0, 1f));
+
+        LinearLayout sheet = Ui.glassCard(this, 18);
+        LinearLayout handleRow = Ui.row(this);
+        handleRow.setGravity(Gravity.CENTER);
+        TextView handle = new TextView(this);
+        handle.setMinHeight(Ui.dp(this, 5));
+        handle.setBackground(Ui.round(this, 0xFFD6DEEF, Ui.dp(this, 99), 0, 0));
+        handleRow.addView(handle, Ui.lp(Ui.dp(this, 74), Ui.dp(this, 5)));
+        sheet.addView(handleRow, Ui.matchWrap());
+        Ui.margin(handleRow, 0, 0, 0, 16);
         addPreviewRow(sheet, "T", "Название", p.optString("title", "Новая задача"), null);
         JSONObject display = p.optJSONObject("display");
         addPreviewRow(sheet, "□", "Дата и время", display == null ? "" : display.optString("dueAt"), null);
@@ -292,13 +317,14 @@ public class VoiceCaptureActivity extends Activity {
 
         cancel.setText("Отменить");
         content.addView(cancel, Ui.matchWrap());
-        Ui.fadeIn(content);
+        Ui.slideUp(sheet);
     }
 
     private void showSuccess() {
         state = State.SUCCESS;
         detachActionButtons();
         content.removeAllViews();
+        content.setGravity(Gravity.CENTER_HORIZONTAL);
         title.setText("Готово");
         subtitle.setText("Задача создана");
         subtitle.setTextColor(Ui.MUTED);
@@ -306,6 +332,7 @@ public class VoiceCaptureActivity extends Activity {
         LinearLayout card = Ui.card(this, 24);
         card.setGravity(Gravity.CENTER_HORIZONTAL);
         OrbView check = new OrbView(this);
+        currentOrb = check;
         check.setSuccess(true);
         card.addView(check, Ui.lp(Ui.dp(this, 180), Ui.dp(this, 180)));
         TextView label = Ui.text(this, "Задача создана", 28, Ui.TEXT, Typeface.BOLD);
@@ -326,6 +353,7 @@ public class VoiceCaptureActivity extends Activity {
         state = State.OFFLINE;
         detachActionButtons();
         content.removeAllViews();
+        content.setGravity(Gravity.CENTER_HORIZONTAL);
         title.setText("Запись сохранена");
         subtitle.setText("Отправим, когда появится интернет");
         subtitle.setTextColor(Ui.MUTED);
@@ -345,6 +373,7 @@ public class VoiceCaptureActivity extends Activity {
         state = State.ERROR;
         detachActionButtons();
         content.removeAllViews();
+        content.setGravity(Gravity.CENTER_HORIZONTAL);
         title.setText("Не получилось");
         subtitle.setText(humanError(message));
         subtitle.setTextColor(Ui.MUTED);
@@ -551,6 +580,37 @@ public class VoiceCaptureActivity extends Activity {
             row.addView(b);
         }
         parent.addView(row, Ui.matchWrap());
+    }
+
+    private void addProcessingSteps(LinearLayout parent, String currentStep) {
+        parent.addView(Ui.spacer(this, 18));
+        String[] steps = new String[]{"Сохраняем запись", "Отправляем", "Распознаём голос", "Формируем задачу"};
+        int active = 2;
+        if (currentStep != null && currentStep.contains("Созда")) active = 3;
+        if (currentStep != null && currentStep.contains("Провер")) active = 2;
+        for (int i = 0; i < steps.length; i++) {
+            LinearLayout row = Ui.row(this);
+            row.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 8));
+            String marker = i < active ? "✓" : (i == active ? "●" : "○");
+            int color = i < active ? Ui.SUCCESS : (i == active ? Ui.PRIMARY : 0xFFCBD5E1);
+            TextView dot = Ui.smallIconButton(this, marker, color, i <= active ? 0xFFEFF6FF : 0xFFF8FAFC);
+            row.addView(dot, Ui.lp(Ui.dp(this, 40), Ui.dp(this, 40)));
+            TextView text = Ui.text(this, steps[i], 16, i <= active ? Ui.TEXT : Ui.MUTED, i == active ? Typeface.BOLD : Typeface.NORMAL);
+            row.addView(text, Ui.matchWeight(1));
+            Ui.margin(text, 12, 0, 0, 0);
+            parent.addView(row, Ui.matchWrap());
+        }
+    }
+
+    private float readRecorderLevel() {
+        try {
+            if (recorder == null) return 0.12f;
+            int amp = recorder.getMaxAmplitude();
+            if (amp <= 0) return 0.10f;
+            return Math.min(1f, amp / 18000f);
+        } catch (Exception ignored) {
+            return 0.12f;
+        }
     }
 
     private String valueOr(String value, String fallback) {

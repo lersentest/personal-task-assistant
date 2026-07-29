@@ -50,7 +50,7 @@ public class SettingsActivity extends Activity {
     }
 
     private LinearLayout generalCard() {
-        LinearLayout card = Ui.card(this, 18);
+        LinearLayout card = Ui.glassCard(this, 18);
         card.addView(Ui.section(this, "Общие"));
 
         Switch sound = switchRow("Звук", "Включить звуковые эффекты", AppPrefs.soundEnabled(this));
@@ -63,7 +63,7 @@ public class SettingsActivity extends Activity {
     }
 
     private LinearLayout appearanceCard() {
-        LinearLayout card = Ui.card(this, 18);
+        LinearLayout card = Ui.glassCard(this, 18);
         card.addView(Ui.section(this, "Внешний вид"));
         LinearLayout row = Ui.row(this);
         String active = AppPrefs.themeMode(this);
@@ -90,15 +90,16 @@ public class SettingsActivity extends Activity {
     }
 
     private LinearLayout connectionCard() {
-        LinearLayout card = Ui.card(this, 18);
+        LinearLayout card = Ui.glassCard(this, 18);
         card.addView(Ui.section(this, "Подключение"));
         LinearLayout row = Ui.row(this);
+        boolean connected = !AppPrefs.deviceToken(this).isEmpty();
         OrbView mic = new OrbView(this);
+        mic.setMode(connected ? OrbView.Mode.IDLE : OrbView.Mode.OFFLINE);
         row.addView(mic, Ui.lp(Ui.dp(this, 88), Ui.dp(this, 88)));
 
         LinearLayout info = new LinearLayout(this);
         info.setOrientation(LinearLayout.VERTICAL);
-        boolean connected = !AppPrefs.deviceToken(this).isEmpty();
         info.addView(Ui.text(this, connected ? "Устройство готово к записи" : "Устройство не подключено", 18, Ui.TEXT, Typeface.BOLD));
         info.addView(Ui.chip(this, connected ? "Подключено" : "Не подключено", connected ? Ui.SUCCESS : Ui.DANGER, connected ? 0xFFD1FAE5 : 0xFFFFE4E6));
         info.addView(Ui.subtitle(this, "Последняя синхронизация: " + lastSyncText()));
@@ -109,7 +110,7 @@ public class SettingsActivity extends Activity {
     }
 
     private LinearLayout aboutCard() {
-        LinearLayout card = Ui.card(this, 18);
+        LinearLayout card = Ui.glassCard(this, 18);
         card.addView(Ui.section(this, "О приложении"));
         card.addView(Ui.text(this, "Голосовые задачи", 18, Ui.TEXT, Typeface.BOLD));
         card.addView(Ui.subtitle(this, "Версия 0.1.0\nТокен: " + AppPrefs.maskedToken(this)));
@@ -117,7 +118,7 @@ public class SettingsActivity extends Activity {
     }
 
     private LinearLayout developerCard() {
-        LinearLayout card = Ui.card(this, 18);
+        LinearLayout card = Ui.glassCard(this, 18);
         card.addView(Ui.section(this, "Для разработчиков"));
         card.addView(Ui.subtitle(this, "Здесь можно заменить backend URL и mobile device token."));
         card.addView(Ui.spacer(this, 12));

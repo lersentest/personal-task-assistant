@@ -71,9 +71,11 @@ public class MainActivity extends Activity {
         ));
 
         OrbView mic = new OrbView(this);
+        mic.setMode(OrbView.Mode.IDLE);
         mic.setContentDescription("Записать задачу голосом");
         mic.setOnClickListener(v -> openVoiceCapture("ANDROID_APP"));
         center.addView(mic, Ui.lp(Ui.dp(this, 238), Ui.dp(this, 238)));
+        Ui.pulse(mic);
 
         TextView cta = Ui.text(this, "Запишите задачу", 32, Ui.TEXT, Typeface.BOLD);
         cta.setGravity(Gravity.CENTER);
@@ -85,7 +87,7 @@ public class MainActivity extends Activity {
         center.addView(hint);
         Ui.margin(hint, 0, 6, 0, 0);
 
-        LinearLayout tip = Ui.card(this, 20);
+        LinearLayout tip = Ui.glassCard(this, 20);
         tip.addView(Ui.section(this, "Пример"));
         TextView example = Ui.text(this, "«Позвонить Роме завтра в 10 утра, обычный приоритет»", 20, Ui.TEXT, Typeface.BOLD);
         tip.addView(example);
