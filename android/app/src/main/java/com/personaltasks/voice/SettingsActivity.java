@@ -1,6 +1,7 @@
 package com.personaltasks.voice;
 
 import android.app.Activity;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.Gravity;
@@ -12,7 +13,14 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
 public class SettingsActivity extends Activity {
+    private EditText baseUrl;
+    private EditText token;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -21,79 +29,129 @@ public class SettingsActivity extends Activity {
         setContentView(Ui.scrollPage(this, root));
 
         LinearLayout header = Ui.row(this);
-        header.setLayoutParams(Ui.matchWrap());
         TextView title = Ui.title(this, "Настройки");
         header.addView(title, Ui.matchWeight(1));
         TextView close = Ui.iconButton(this, "×");
         close.setContentDescription("Закрыть настройки");
         close.setOnClickListener(v -> finish());
         header.addView(close);
-        root.addView(header);
+        root.addView(header, Ui.matchWrap());
+        root.addView(Ui.spacer(this, 22));
 
-        TextView subtitle = Ui.subtitle(this, "Подключение устройства, звук, вибрация и технические параметры.");
-        root.addView(subtitle);
-        root.addView(Ui.spacer(this, 20));
+        root.addView(generalCard(), Ui.matchWrap());
+        root.addView(Ui.spacer(this, 18));
+        root.addView(appearanceCard(), Ui.matchWrap());
+        root.addView(Ui.spacer(this, 18));
+        root.addView(connectionCard(), Ui.matchWrap());
+        root.addView(Ui.spacer(this, 18));
+        root.addView(aboutCard(), Ui.matchWrap());
+        root.addView(Ui.spacer(this, 18));
+        root.addView(developerCard(), Ui.matchWrap());
+    }
 
-        LinearLayout general = Ui.card(this, 18);
-        general.addView(Ui.text(this, "Общие", 18, Ui.TEXT, android.graphics.Typeface.BOLD));
-        general.addView(Ui.spacer(this, 10));
+    private LinearLayout generalCard() {
+        LinearLayout card = Ui.card(this, 18);
+        card.addView(Ui.section(this, "Общие"));
 
-        Switch sound = new Switch(this);
-        sound.setText("Звук после создания");
-        sound.setTextSize(16);
-        sound.setChecked(AppPrefs.soundEnabled(this));
-        general.addView(sound, Ui.matchWrap());
+        Switch sound = switchRow("Звук", "Включить звуковые эффекты", AppPrefs.soundEnabled(this));
+        Switch vibration = switchRow("Вибрация", "Короткая вибрация при ответе", AppPrefs.vibrationEnabled(this));
+        sound.setOnCheckedChangeListener((buttonView, isChecked) -> AppPrefs.saveGeneral(this, isChecked, vibration.isChecked()));
+        vibration.setOnCheckedChangeListener((buttonView, isChecked) -> AppPrefs.saveGeneral(this, sound.isChecked(), isChecked));
+        card.addView(sound, Ui.matchWrap());
+        card.addView(vibration, Ui.matchWrap());
+        return card;
+    }
 
-        Switch vibration = new Switch(this);
-        vibration.setText("Вибрация после создания");
-        vibration.setTextSize(16);
-        vibration.setChecked(AppPrefs.vibrationEnabled(this));
-        general.addView(vibration, Ui.matchWrap());
+    private LinearLayout appearanceCard() {
+        LinearLayout card = Ui.card(this, 18);
+        card.addView(Ui.section(this, "Внешний вид"));
+        LinearLayout row = Ui.row(this);
+        String active = AppPrefs.themeMode(this);
+        row.addView(themeButton("Системная", "system", active), Ui.matchWeight(1));
+        row.addView(themeButton("Светлая", "light", active), Ui.matchWeight(1));
+        row.addView(themeButton("Тёмная", "dark", active), Ui.matchWeight(1));
+        card.addView(row, Ui.matchWrap());
+        Ui.margin(row, 0, 14, 0, 10);
+        card.addView(Ui.subtitle(this, "Тема сохраняется локально. Полный dark-mode можно довести отдельным этапом."));
+        return card;
+    }
 
-        root.addView(general, Ui.matchWrap());
-        Ui.margin(general, 0, 0, 0, 14);
+    private TextView themeButton(String label, String mode, String active) {
+        boolean selected = mode.equals(active);
+        TextView tv = Ui.text(this, selected ? label + " ✓" : label, 15, selected ? Ui.PRIMARY : Ui.TEXT, Typeface.BOLD);
+        tv.setGravity(Gravity.CENTER);
+        tv.setPadding(Ui.dp(this, 8), Ui.dp(this, 18), Ui.dp(this, 8), Ui.dp(this, 18));
+        tv.setBackground(Ui.round(this, selected ? Ui.PRIMARY_SOFT : Ui.SURFACE_SOFT, Ui.dp(this, 18), selected ? Ui.PRIMARY : Ui.BORDER, 1));
+        tv.setOnClickListener(v -> {
+            AppPrefs.saveThemeMode(this, mode);
+            recreate();
+        });
+        return tv;
+    }
 
-        LinearLayout connection = Ui.card(this, 18);
-        connection.addView(Ui.text(this, "Подключение", 18, Ui.TEXT, android.graphics.Typeface.BOLD));
-        connection.addView(Ui.subtitle(this, "Токен хранится на устройстве. Полностью он показывается только в этом поле."));
-        connection.addView(Ui.spacer(this, 12));
+    private LinearLayout connectionCard() {
+        LinearLayout card = Ui.card(this, 18);
+        card.addView(Ui.section(this, "Подключение"));
+        LinearLayout row = Ui.row(this);
+        OrbView mic = new OrbView(this);
+        row.addView(mic, Ui.lp(Ui.dp(this, 88), Ui.dp(this, 88)));
 
-        TextView state = Ui.chip(this,
-                AppPrefs.deviceToken(this).isEmpty() ? "Не подключено" : "Подключено",
-                AppPrefs.deviceToken(this).isEmpty() ? Ui.DANGER : Ui.SUCCESS,
-                AppPrefs.deviceToken(this).isEmpty() ? 0xFFFFE4E6 : 0xFFD1FAE5
-        );
-        state.setGravity(Gravity.CENTER);
-        connection.addView(state, Ui.lp(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        connection.addView(Ui.spacer(this, 12));
+        LinearLayout info = new LinearLayout(this);
+        info.setOrientation(LinearLayout.VERTICAL);
+        boolean connected = !AppPrefs.deviceToken(this).isEmpty();
+        info.addView(Ui.text(this, connected ? "Устройство готово к записи" : "Устройство не подключено", 18, Ui.TEXT, Typeface.BOLD));
+        info.addView(Ui.chip(this, connected ? "Подключено" : "Не подключено", connected ? Ui.SUCCESS : Ui.DANGER, connected ? 0xFFD1FAE5 : 0xFFFFE4E6));
+        info.addView(Ui.subtitle(this, "Последняя синхронизация: " + lastSyncText()));
+        row.addView(info, Ui.matchWeight(1));
+        Ui.margin(info, 16, 0, 0, 0);
+        card.addView(row, Ui.matchWrap());
+        return card;
+    }
 
-        EditText baseUrl = input("Backend URL");
+    private LinearLayout aboutCard() {
+        LinearLayout card = Ui.card(this, 18);
+        card.addView(Ui.section(this, "О приложении"));
+        card.addView(Ui.text(this, "Голосовые задачи", 18, Ui.TEXT, Typeface.BOLD));
+        card.addView(Ui.subtitle(this, "Версия 0.1.0\nТокен: " + AppPrefs.maskedToken(this)));
+        return card;
+    }
+
+    private LinearLayout developerCard() {
+        LinearLayout card = Ui.card(this, 18);
+        card.addView(Ui.section(this, "Для разработчиков"));
+        card.addView(Ui.subtitle(this, "Здесь можно заменить backend URL и mobile device token."));
+        card.addView(Ui.spacer(this, 12));
+
+        baseUrl = input("Backend URL");
         baseUrl.setText(AppPrefs.baseUrl(this));
-        connection.addView(baseUrl, Ui.matchWrap());
+        card.addView(baseUrl, Ui.matchWrap());
         Ui.margin(baseUrl, 0, 0, 0, 10);
 
-        EditText token = input("Mobile device token");
+        token = input("Mobile device token");
         token.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
         token.setText(AppPrefs.deviceToken(this));
-        connection.addView(token, Ui.matchWrap());
+        card.addView(token, Ui.matchWrap());
 
-        root.addView(connection, Ui.matchWrap());
-        Ui.margin(connection, 0, 0, 0, 14);
-
-        LinearLayout about = Ui.card(this, 18);
-        about.addView(Ui.text(this, "О приложении", 18, Ui.TEXT, android.graphics.Typeface.BOLD));
-        about.addView(Ui.subtitle(this, "Personal Voice Task · 0.1.0\nAPI: " + AppPrefs.baseUrl(this) + "\nToken: " + AppPrefs.maskedToken(this)));
-        root.addView(about, Ui.matchWrap());
-        Ui.margin(about, 0, 0, 0, 20);
-
-        Button save = Ui.button(this, "Сохранить настройки", true);
+        Button save = Ui.button(this, "Сохранить подключение", true);
         save.setOnClickListener(v -> {
             AppPrefs.save(this, baseUrl.getText().toString(), token.getText().toString());
-            AppPrefs.saveGeneral(this, sound.isChecked(), vibration.isChecked());
+            AppPrefs.markSynced(this);
             Toast.makeText(this, "Настройки сохранены", Toast.LENGTH_SHORT).show();
-            finish();
+            recreate();
         });
-        root.addView(save, Ui.matchWrap());
+        card.addView(save, Ui.matchWrap());
+        Ui.margin(save, 0, 14, 0, 0);
+        return card;
+    }
+
+    private Switch switchRow(String title, String description, boolean checked) {
+        Switch sw = new Switch(this);
+        sw.setText(title + "\n" + description);
+        sw.setTextSize(16);
+        sw.setTextColor(Ui.TEXT);
+        sw.setChecked(checked);
+        sw.setPadding(0, Ui.dp(this, 14), 0, Ui.dp(this, 14));
+        return sw;
     }
 
     private EditText input(String hint) {
@@ -105,5 +163,11 @@ public class SettingsActivity extends Activity {
         edit.setPadding(Ui.dp(this, 14), 0, Ui.dp(this, 14), 0);
         edit.setBackground(Ui.round(this, Ui.SURFACE, Ui.dp(this, 16), Ui.BORDER, 1));
         return edit;
+    }
+
+    private String lastSyncText() {
+        long value = AppPrefs.lastSyncAt(this);
+        if (value <= 0) return "ещё не было";
+        return new SimpleDateFormat("сегодня, HH:mm", Locale.getDefault()).format(new Date(value));
     }
 }

@@ -2,6 +2,7 @@ package com.personaltasks.voice;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.ViewGroup;
@@ -9,7 +10,12 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 public class MainActivity extends Activity {
+    static final String EXTRA_SOURCE = "source";
+    static final String EXTRA_AUTO_START = "autoStart";
+
     private TextView queueBanner;
+    private TextView connectionChip;
+    private TextView connectionText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -20,6 +26,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        updateConnection();
         updateQueueBanner();
     }
 
@@ -28,47 +35,47 @@ public class MainActivity extends Activity {
         setContentView(root);
 
         LinearLayout header = Ui.row(this);
-        header.setLayoutParams(Ui.matchWrap());
         LinearLayout titles = new LinearLayout(this);
         titles.setOrientation(LinearLayout.VERTICAL);
-        TextView title = Ui.text(this, "Новая задача", 25, Ui.TEXT, android.graphics.Typeface.BOLD);
-        TextView subtitle = Ui.subtitle(this, AppPrefs.deviceToken(this).isEmpty() ? "Подключите устройство в настройках" : "Голосовое создание готово");
-        titles.addView(title);
-        titles.addView(subtitle);
+        titles.addView(Ui.title(this, "Новая задача"));
+        LinearLayout status = Ui.row(this);
+        connectionChip = Ui.chip(this, "", Ui.SUCCESS, 0xFFE7F9F0);
+        connectionText = Ui.subtitle(this, "");
+        status.addView(connectionChip);
+        status.addView(connectionText);
+        Ui.margin(connectionText, 12, 0, 0, 0);
+        titles.addView(status);
+        Ui.margin(status, 0, 6, 0, 0);
         header.addView(titles, Ui.matchWeight(1));
 
         TextView settings = Ui.iconButton(this, "⚙");
         settings.setContentDescription("Открыть настройки");
         settings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
         header.addView(settings);
-        root.addView(header);
+        root.addView(header, Ui.matchWrap());
 
         queueBanner = Ui.subtitle(this, "");
         queueBanner.setGravity(Gravity.CENTER);
         queueBanner.setPadding(Ui.dp(this, 14), Ui.dp(this, 10), Ui.dp(this, 14), Ui.dp(this, 10));
-        queueBanner.setBackground(Ui.round(this, Ui.PRIMARY_SOFT, Ui.dp(this, 16), 0, 0));
+        queueBanner.setBackground(Ui.round(this, 0xFFFFFBEB, Ui.dp(this, 16), 0xFFFCD34D, 1));
         root.addView(queueBanner, Ui.matchWrap());
-        Ui.margin(queueBanner, 0, 20, 0, 8);
+        Ui.margin(queueBanner, 0, 18, 0, 0);
 
         LinearLayout center = new LinearLayout(this);
         center.setOrientation(LinearLayout.VERTICAL);
         center.setGravity(Gravity.CENTER);
-        center.setLayoutParams(new LinearLayout.LayoutParams(
+        root.addView(center, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 0,
                 1f
         ));
 
-        TextView mic = Ui.text(this, "🎙", 58, android.graphics.Color.WHITE, android.graphics.Typeface.NORMAL);
-        mic.setGravity(Gravity.CENTER);
+        OrbView mic = new OrbView(this);
         mic.setContentDescription("Записать задачу голосом");
-        mic.setMinWidth(Ui.dp(this, 156));
-        mic.setMinHeight(Ui.dp(this, 156));
-        mic.setBackground(Ui.round(this, Ui.PRIMARY, Ui.dp(this, 999), Ui.PRIMARY, 1));
         mic.setOnClickListener(v -> openVoiceCapture("ANDROID_APP"));
-        center.addView(mic, new LinearLayout.LayoutParams(Ui.dp(this, 156), Ui.dp(this, 156)));
+        center.addView(mic, Ui.lp(Ui.dp(this, 238), Ui.dp(this, 238)));
 
-        TextView cta = Ui.text(this, "Записать задачу", 24, Ui.TEXT, android.graphics.Typeface.BOLD);
+        TextView cta = Ui.text(this, "Запишите задачу", 32, Ui.TEXT, Typeface.BOLD);
         cta.setGravity(Gravity.CENTER);
         center.addView(cta);
         Ui.margin(cta, 0, 22, 0, 0);
@@ -76,20 +83,37 @@ public class MainActivity extends Activity {
         TextView hint = Ui.subtitle(this, "Нажмите и продиктуйте одну задачу.\nПеред созданием покажем, что распознали.");
         hint.setGravity(Gravity.CENTER);
         center.addView(hint);
-        Ui.margin(hint, 0, 8, 0, 0);
+        Ui.margin(hint, 0, 6, 0, 0);
 
-        root.addView(center);
-
-        LinearLayout tip = Ui.card(this, 16);
-        tip.addView(Ui.text(this, "Пример", 14, Ui.MUTED, android.graphics.Typeface.BOLD));
-        tip.addView(Ui.text(this, "«Позвонить Роме завтра в 10 утра, обычный приоритет»", 16, Ui.TEXT, android.graphics.Typeface.NORMAL));
+        LinearLayout tip = Ui.card(this, 20);
+        tip.addView(Ui.section(this, "Пример"));
+        TextView example = Ui.text(this, "«Позвонить Роме завтра в 10 утра, обычный приоритет»", 20, Ui.TEXT, Typeface.BOLD);
+        tip.addView(example);
+        Ui.margin(example, 0, 10, 0, 0);
+        LinearLayout chips = Ui.row(this);
+        chips.addView(Ui.chip(this, "Завтра в 10:00", Ui.PRIMARY, Ui.PRIMARY_SOFT));
+        TextView priority = Ui.chip(this, "Обычный приоритет", Ui.PRIMARY, Ui.PRIMARY_SOFT);
+        chips.addView(priority);
+        Ui.margin(priority, 10, 0, 0, 0);
+        tip.addView(chips);
+        Ui.margin(chips, 0, 14, 0, 0);
         root.addView(tip, Ui.matchWrap());
+        Ui.margin(tip, 0, 0, 0, 14);
     }
 
     private void openVoiceCapture(String source) {
         Intent intent = new Intent(this, VoiceCaptureActivity.class);
-        intent.putExtra("source", source);
+        intent.putExtra(EXTRA_SOURCE, source);
+        intent.putExtra(EXTRA_AUTO_START, true);
         startActivity(intent);
+    }
+
+    private void updateConnection() {
+        boolean connected = !AppPrefs.deviceToken(this).isEmpty();
+        connectionChip.setText(connected ? "● Подключено" : "● Не подключено");
+        connectionChip.setTextColor(connected ? Ui.SUCCESS : Ui.DANGER);
+        connectionChip.setBackground(Ui.round(this, connected ? 0xFFE7F9F0 : 0xFFFFE4E6, Ui.dp(this, 999), 0, 0));
+        connectionText.setText(connected ? "Устройство готово к записи" : "Откройте настройки");
     }
 
     private void updateQueueBanner() {
@@ -100,7 +124,7 @@ public class MainActivity extends Activity {
                     queueBanner.setVisibility(android.view.View.GONE);
                 } else {
                     queueBanner.setVisibility(android.view.View.VISIBLE);
-                    queueBanner.setText(count + " команд" + suffix(count) + " ожида" + (count == 1 ? "ет" : "ют") + " отправки");
+                    queueBanner.setText("В очереди " + count + " голосов" + suffix(count) + ". Отправим, когда появится интернет.");
                 }
             });
         }).start();
@@ -109,8 +133,8 @@ public class MainActivity extends Activity {
     private String suffix(int count) {
         int mod10 = count % 10;
         int mod100 = count % 100;
-        if (mod10 == 1 && mod100 != 11) return "а";
-        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return "ы";
-        return "";
+        if (mod10 == 1 && mod100 != 11) return "ая команда";
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return "ые команды";
+        return "ых команд";
     }
 }

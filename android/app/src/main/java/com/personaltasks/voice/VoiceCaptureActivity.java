@@ -21,7 +21,6 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
 import androidx.work.Constraints;
@@ -32,6 +31,9 @@ import androidx.work.WorkManager;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -46,11 +48,9 @@ public class VoiceCaptureActivity extends Activity {
     private LinearLayout content;
     private TextView title;
     private TextView subtitle;
-    private TextView mic;
     private TextView timer;
-    private TextView status;
-    private LinearLayout waveform;
-    private LinearLayout previewCard;
+    private WaveBarsView wave;
+    private TextView close;
     private Button primary;
     private Button secondary;
     private Button cancel;
@@ -65,37 +65,45 @@ public class VoiceCaptureActivity extends Activity {
     private String draftId;
     private JSONObject lastPreview;
     private boolean recording;
+    private boolean pendingAutoStart;
     private State state = State.IDLE;
 
     private final Runnable timerTick = new Runnable() {
         @Override public void run() {
             if (!recording) return;
             timer.setText(formatDuration(System.currentTimeMillis() - startedAt));
-            animateBars();
-            handler.postDelayed(this, 500);
+            if (wave != null) wave.nextFrame();
+            handler.postDelayed(this, 260);
         }
     };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        source = getIntent().getStringExtra("source");
+        source = getIntent().getStringExtra(MainActivity.EXTRA_SOURCE);
         if (source == null && getIntent().getData() != null) source = "ANDROID_SIDE_BUTTON";
         if (source == null) source = "ANDROID_APP";
+        pendingAutoStart = getIntent().getBooleanExtra(MainActivity.EXTRA_AUTO_START, true);
         drawBase();
         showIdle();
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, 10);
-        }
+        if (pendingAutoStart) handler.postDelayed(this::startRecording, 280);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         handler.removeCallbacks(timerTick);
-        if (recorder != null) {
-            try { recorder.release(); } catch (Exception ignored) {}
-            recorder = null;
+        releaseRecorder(false);
+        io.shutdownNow();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 10 && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if (pendingAutoStart) startRecording();
+        } else {
+            showError("Нет доступа к микрофону");
         }
     }
 
@@ -104,21 +112,19 @@ public class VoiceCaptureActivity extends Activity {
         setContentView(root);
 
         LinearLayout header = Ui.row(this);
-        header.setLayoutParams(Ui.matchWrap());
         LinearLayout headings = new LinearLayout(this);
         headings.setOrientation(LinearLayout.VERTICAL);
         title = Ui.title(this, "Голосовая задача");
-        subtitle = Ui.subtitle(this, "Создайте одну задачу голосом");
+        subtitle = Ui.subtitle(this, "Создадим задачу только после подтверждения");
         headings.addView(title);
         headings.addView(subtitle);
         header.addView(headings, Ui.matchWeight(1));
 
-        TextView close = Ui.iconButton(this, "×");
+        close = Ui.iconButton(this, "×");
         close.setContentDescription("Закрыть");
         close.setOnClickListener(v -> cancelFlow());
         header.addView(close);
-        root.addView(header);
-        root.addView(Ui.spacer(this, 18));
+        root.addView(header, Ui.matchWrap());
 
         content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
@@ -129,40 +135,36 @@ public class VoiceCaptureActivity extends Activity {
                 1f
         ));
 
-        primary = Ui.button(this, "Записать задачу", true);
-        secondary = Ui.button(this, "Записать заново", false);
-        cancel = Ui.button(this, "Отмена", false);
+        primary = Ui.button(this, "", true);
+        secondary = Ui.button(this, "", false);
+        cancel = Ui.button(this, "Отменить", false);
         cancel.setOnClickListener(v -> cancelFlow());
     }
 
     private void showIdle() {
         state = State.IDLE;
         content.removeAllViews();
-        title.setText("Голосовая задача");
+        title.setText("Новая задача");
         subtitle.setText("Нажмите и продиктуйте одну задачу");
+        subtitle.setTextColor(Ui.MUTED);
 
-        mic = bigMic("🎙", Ui.PRIMARY);
-        mic.setOnClickListener(v -> startRecording());
-        content.addView(mic);
+        OrbView orb = new OrbView(this);
+        orb.setOnClickListener(v -> startRecording());
+        content.addView(orb, Ui.lp(Ui.dp(this, 230), Ui.dp(this, 230)));
 
-        TextView main = Ui.text(this, "Записать задачу", 26, Ui.TEXT, Typeface.BOLD);
-        main.setGravity(Gravity.CENTER);
-        content.addView(main);
-        Ui.margin(main, 0, 22, 0, 0);
+        TextView cta = Ui.text(this, "Запишите задачу", 32, Ui.TEXT, Typeface.BOLD);
+        cta.setGravity(Gravity.CENTER);
+        content.addView(cta);
+        Ui.margin(cta, 0, 22, 0, 0);
 
-        TextView hint = Ui.subtitle(this, "Например: «купить хлеб сегодня до 18:00»");
+        TextView hint = Ui.subtitle(this, "Перед созданием покажем, что распознали.");
         hint.setGravity(Gravity.CENTER);
         content.addView(hint);
-        Ui.margin(hint, 0, 8, 0, 24);
+        Ui.margin(hint, 0, 4, 0, 26);
 
         primary.setText("Начать запись");
-        primary.setEnabled(true);
         primary.setOnClickListener(v -> startRecording());
         content.addView(primary, Ui.matchWrap());
-        Ui.margin(primary, 0, 0, 0, 10);
-
-        cancel.setText("Отмена");
-        content.addView(cancel, Ui.matchWrap());
         Ui.fadeIn(content);
     }
 
@@ -170,88 +172,93 @@ public class VoiceCaptureActivity extends Activity {
         state = State.RECORDING;
         content.removeAllViews();
         title.setText("Говорите…");
-        subtitle.setText("Когда закончите, нажмите «Завершить»");
+        subtitle.setText("● Запись   |   Задача записывается");
+        subtitle.setTextColor(Ui.SUCCESS);
 
-        mic = bigMic("●", Ui.DANGER);
-        content.addView(mic);
-        Ui.pulse(mic);
+        OrbView orb = new OrbView(this);
+        content.addView(orb, Ui.lp(Ui.dp(this, 238), Ui.dp(this, 238)));
+        Ui.pulse(orb);
 
-        timer = Ui.text(this, "00:00", 42, Ui.TEXT, Typeface.BOLD);
+        timer = Ui.text(this, "00:00", 44, Ui.TEXT, Typeface.NORMAL);
         timer.setGravity(Gravity.CENTER);
         content.addView(timer);
-        Ui.margin(timer, 0, 18, 0, 12);
+        Ui.margin(timer, 0, 24, 0, 4);
 
-        waveform = waveform();
-        content.addView(waveform, Ui.lp(ViewGroup.LayoutParams.WRAP_CONTENT, Ui.dp(this, 52)));
-        Ui.margin(waveform, 0, 0, 0, 26);
+        wave = new WaveBarsView(this);
+        content.addView(wave, Ui.lp(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 42)));
+        Ui.margin(wave, 44, 0, 44, 22);
 
-        primary.setText("Завершить");
-        primary.setEnabled(true);
+        TextView hint = Ui.subtitle(this, "Когда закончите, нажмите «Завершить»");
+        hint.setGravity(Gravity.CENTER);
+        content.addView(hint);
+        Ui.margin(hint, 0, 0, 0, 26);
+
+        LinearLayout buttons = Ui.row(this);
+        primary.setText("■  Завершить");
         primary.setOnClickListener(v -> stopAndPreview());
-        content.addView(primary, Ui.matchWrap());
-        Ui.margin(primary, 0, 0, 0, 10);
-
-        cancel.setText("Отменить");
-        content.addView(cancel, Ui.matchWrap());
+        secondary.setText("Отменить");
+        secondary.setOnClickListener(v -> cancelFlow());
+        buttons.addView(primary, Ui.matchWeight(1));
+        buttons.addView(secondary, Ui.matchWeight(1));
+        Ui.margin(secondary, 12, 0, 0, 0);
+        content.addView(buttons, Ui.matchWrap());
         Ui.fadeIn(content);
     }
 
     private void showProcessing(String step) {
         state = State.UPLOADING;
         content.removeAllViews();
-        title.setText("Обработка записи");
-        subtitle.setText("Секунду, превращаем голос в задачу");
+        title.setText("Обрабатываю");
+        subtitle.setText("Секунду: превращаем голос в задачу");
+        subtitle.setTextColor(Ui.MUTED);
 
         LinearLayout card = Ui.card(this, 24);
         card.setGravity(Gravity.CENTER_HORIZONTAL);
-        TextView icon = Ui.text(this, "↻", 48, Ui.PRIMARY, Typeface.BOLD);
-        icon.setGravity(Gravity.CENTER);
-        card.addView(icon);
-        TextView label = Ui.text(this, step, 22, Ui.TEXT, Typeface.BOLD);
+        OrbView orb = new OrbView(this);
+        card.addView(orb, Ui.lp(Ui.dp(this, 150), Ui.dp(this, 150)));
+        Ui.pulse(orb);
+        TextView label = Ui.text(this, step, 24, Ui.TEXT, Typeface.BOLD);
         label.setGravity(Gravity.CENTER);
         card.addView(label);
-        TextView details = Ui.subtitle(this, "Отправляем запись · распознаём голос · формируем задачу");
+        TextView details = Ui.subtitle(this, "Распознаём голос, выделяем дату, проект и приоритет.");
         details.setGravity(Gravity.CENTER);
         card.addView(details);
         content.addView(card, Ui.matchWrap());
-        Ui.margin(card, 0, 80, 0, 24);
-
-        secondary.setText("Отмена");
-        secondary.setOnClickListener(v -> cancelFlow());
-        content.addView(secondary, Ui.matchWrap());
-        Ui.fadeIn(content);
+        Ui.margin(card, 0, 76, 0, 24);
     }
 
     private void showPreview(JSONObject p) {
         state = State.PREVIEW;
         lastPreview = p;
+        AppPrefs.markSynced(this);
         content.removeAllViews();
         title.setText("Проверьте задачу");
-        subtitle.setText("Задача будет создана только после подтверждения");
+        subtitle.setText("Создадим задачу только после подтверждения");
+        subtitle.setTextColor(Ui.MUTED);
 
-        previewCard = Ui.card(this, 20);
-        String taskTitle = p.optString("title", "Новая задача");
-        previewCard.addView(Ui.text(this, taskTitle, 24, Ui.TEXT, Typeface.BOLD));
-        addField(previewCard, "Проект", p.optString("projectName"));
+        LinearLayout sheet = Ui.card(this, 18);
+        addPreviewRow(sheet, "T", "Название", p.optString("title", "Новая задача"), null);
         JSONObject display = p.optJSONObject("display");
-        addField(previewCard, "Срок", display == null ? "" : display.optString("dueAt"));
-        addField(previewCard, "Приоритет", readablePriority(p.optString("priority")));
-        addField(previewCard, "Тип", p.optString("type"));
-        addField(previewCard, "Описание", p.optString("description"));
-        content.addView(previewCard, Ui.matchWrap());
-        Ui.margin(previewCard, 0, 0, 0, 18);
+        addPreviewRow(sheet, "□", "Дата и время", display == null ? "" : display.optString("dueAt"), null);
+        addPreviewRow(sheet, "⚑", "Приоритет", readablePriority(p.optString("priority")), readablePriority(p.optString("priority")));
+        addPreviewRow(sheet, "▣", "Проект", valueOr(p.optString("projectName"), "Без проекта"), valueOr(p.optString("projectName"), "Нет"));
+        addPreviewRow(sheet, "○", "Тип", readableType(p.optString("type")), null);
+        String description = p.optString("description");
+        if (description != null && !description.trim().isEmpty() && !"null".equalsIgnoreCase(description)) {
+            addPreviewRow(sheet, "≡", "Описание", description, null);
+        }
+        content.addView(sheet, Ui.matchWrap());
+        Ui.margin(sheet, 0, 32, 0, 22);
 
-        primary.setText("Создать задачу");
-        primary.setEnabled(true);
+        primary.setText("✓  Создать задачу");
         primary.setOnClickListener(v -> confirm());
         content.addView(primary, Ui.matchWrap());
-        Ui.margin(primary, 0, 0, 0, 10);
+        Ui.margin(primary, 0, 0, 0, 12);
 
-        secondary.setText("Записать заново");
-        secondary.setEnabled(true);
+        secondary.setText("↻  Записать заново");
         secondary.setOnClickListener(v -> reRecord());
         content.addView(secondary, Ui.matchWrap());
-        Ui.margin(secondary, 0, 0, 0, 10);
+        Ui.margin(secondary, 0, 0, 0, 12);
 
         cancel.setText("Отменить");
         content.addView(cancel, Ui.matchWrap());
@@ -263,12 +270,14 @@ public class VoiceCaptureActivity extends Activity {
         content.removeAllViews();
         title.setText("Готово");
         subtitle.setText("Задача создана");
+        subtitle.setTextColor(Ui.MUTED);
 
         LinearLayout card = Ui.card(this, 24);
         card.setGravity(Gravity.CENTER_HORIZONTAL);
-        TextView check = bigMic("✓", Ui.SUCCESS);
-        card.addView(check);
-        TextView label = Ui.text(this, "Задача создана", 25, Ui.TEXT, Typeface.BOLD);
+        OrbView check = new OrbView(this);
+        check.setSuccess(true);
+        card.addView(check, Ui.lp(Ui.dp(this, 180), Ui.dp(this, 180)));
+        TextView label = Ui.text(this, "Задача создана", 28, Ui.TEXT, Typeface.BOLD);
         label.setGravity(Gravity.CENTER);
         card.addView(label);
         if (lastPreview != null) {
@@ -277,23 +286,25 @@ public class VoiceCaptureActivity extends Activity {
             card.addView(task);
         }
         content.addView(card, Ui.matchWrap());
-        Ui.margin(card, 0, 70, 0, 20);
+        Ui.margin(card, 0, 76, 0, 20);
         successSignal();
-        handler.postDelayed(this::finish, 1800);
+        handler.postDelayed(this::finish, 1700);
     }
 
     private void showOfflineSaved() {
         state = State.OFFLINE;
         content.removeAllViews();
         title.setText("Запись сохранена");
-        subtitle.setText("Отправим её, когда появится интернет");
+        subtitle.setText("Отправим, когда появится интернет");
+        subtitle.setTextColor(Ui.MUTED);
+
         LinearLayout card = Ui.card(this, 22);
-        card.addView(Ui.text(this, "Нет интернета", 22, Ui.TEXT, Typeface.BOLD));
-        card.addView(Ui.subtitle(this, "Команда сохранена в очереди. После восстановления связи появится уведомление с preview."));
+        card.addView(Ui.text(this, "Команда в очереди", 24, Ui.TEXT, Typeface.BOLD));
+        card.addView(Ui.subtitle(this, "Приложение попробует отправить её автоматически. После обработки появится уведомление с предпросмотром."));
         content.addView(card, Ui.matchWrap());
-        Ui.margin(card, 0, 60, 0, 20);
+        Ui.margin(card, 0, 70, 0, 22);
+
         primary.setText("Закрыть");
-        primary.setEnabled(true);
         primary.setOnClickListener(v -> finish());
         content.addView(primary, Ui.matchWrap());
     }
@@ -303,30 +314,33 @@ public class VoiceCaptureActivity extends Activity {
         content.removeAllViews();
         title.setText("Не получилось");
         subtitle.setText(humanError(message));
+        subtitle.setTextColor(Ui.MUTED);
 
         LinearLayout card = Ui.card(this, 20);
         card.setBackground(Ui.round(this, 0xFFFFF1F2, Ui.dp(this, 22), 0xFFFECACA, 1));
-        card.addView(Ui.text(this, "Попробуйте записать команду ещё раз", 20, Ui.TEXT, Typeface.BOLD));
+        card.addView(Ui.text(this, "Попробуйте записать ещё раз", 22, Ui.TEXT, Typeface.BOLD));
         card.addView(Ui.subtitle(this, "Говорите одной фразой: что сделать, когда и насколько срочно."));
         content.addView(card, Ui.matchWrap());
-        Ui.margin(card, 0, 30, 0, 18);
+        Ui.margin(card, 0, 50, 0, 20);
 
         primary.setText("Записать заново");
-        primary.setEnabled(true);
         primary.setOnClickListener(v -> startRecording());
         content.addView(primary, Ui.matchWrap());
-        Ui.margin(primary, 0, 0, 0, 10);
+        Ui.margin(primary, 0, 0, 0, 12);
 
         cancel.setText("Закрыть");
         content.addView(cancel, Ui.matchWrap());
     }
 
     private void startRecording() {
+        pendingAutoStart = false;
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            pendingAutoStart = true;
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, 10);
             return;
         }
         try {
+            subtitle.setTextColor(Ui.MUTED);
             clientCommandId = UUID.randomUUID().toString();
             previewKey = UUID.randomUUID().toString();
             confirmKey = UUID.randomUUID().toString();
@@ -353,20 +367,22 @@ public class VoiceCaptureActivity extends Activity {
 
     private void stopAndPreview() {
         handler.removeCallbacks(timerTick);
-        try { recorder.stop(); } catch (Exception ignored) {}
-        try { recorder.release(); } catch (Exception ignored) {}
-        recorder = null;
-        recording = false;
-        long duration = Math.max(500, System.currentTimeMillis() - startedAt);
-        showProcessing("Отправляем запись");
+        releaseRecorder(true);
+        long duration = System.currentTimeMillis() - startedAt;
+        if (duration < 900) {
+            showError("Запись слишком короткая");
+            return;
+        }
+        final long previewDuration = Math.max(900, duration);
+        showProcessing("Проверяем запись");
         if (!isOnline()) {
-            saveOffline(duration);
+            saveOffline(previewDuration);
             return;
         }
         io.execute(() -> {
             try {
                 ApiClient api = new ApiClient(AppPrefs.baseUrl(this), AppPrefs.deviceToken(this));
-                JSONObject response = api.preview(audioFile, clientCommandId, previewKey, source, duration);
+                JSONObject response = api.preview(audioFile, clientCommandId, previewKey, source, previewDuration);
                 draftId = response.optString("draftId", null);
                 JSONObject p = response.getJSONObject("preview");
                 runOnUiThread(() -> showPreview(p));
@@ -391,13 +407,7 @@ public class VoiceCaptureActivity extends Activity {
     }
 
     private void cancelFlow() {
-        if (recording) {
-            handler.removeCallbacks(timerTick);
-            try { recorder.stop(); } catch (Exception ignored) {}
-            try { recorder.release(); } catch (Exception ignored) {}
-            recorder = null;
-            recording = false;
-        }
+        releaseRecorder(true);
         if (draftId == null) {
             finish();
             return;
@@ -422,6 +432,17 @@ public class VoiceCaptureActivity extends Activity {
         } else {
             startRecording();
         }
+    }
+
+    private void releaseRecorder(boolean stop) {
+        if (recorder == null) return;
+        handler.removeCallbacks(timerTick);
+        if (stop) {
+            try { recorder.stop(); } catch (Exception ignored) {}
+        }
+        try { recorder.release(); } catch (Exception ignored) {}
+        recorder = null;
+        recording = false;
     }
 
     private void saveOffline(long durationMs) {
@@ -461,55 +482,37 @@ public class VoiceCaptureActivity extends Activity {
         }
     }
 
-    private TextView bigMic(String label, int color) {
-        TextView tv = Ui.text(this, label, 58, android.graphics.Color.WHITE, Typeface.BOLD);
-        tv.setGravity(Gravity.CENTER);
-        tv.setMinWidth(Ui.dp(this, 150));
-        tv.setMinHeight(Ui.dp(this, 150));
-        tv.setBackground(Ui.round(this, color, Ui.dp(this, 999), color, 1));
-        return tv;
-    }
-
-    private LinearLayout waveform() {
-        LinearLayout row = Ui.row(this);
-        row.setGravity(Gravity.CENTER);
-        for (int i = 0; i < 7; i++) {
-            TextView bar = new TextView(this);
-            bar.setBackground(Ui.round(this, Ui.PRIMARY, Ui.dp(this, 999), 0, 0));
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(Ui.dp(this, 8), Ui.dp(this, 18 + (i % 3) * 10));
-            lp.setMargins(Ui.dp(this, 4), 0, Ui.dp(this, 4), 0);
-            row.addView(bar, lp);
-        }
-        return row;
-    }
-
-    private void animateBars() {
-        if (waveform == null || !Ui.animationsEnabled(this)) return;
-        long tick = System.currentTimeMillis() / 250;
-        for (int i = 0; i < waveform.getChildCount(); i++) {
-            View bar = waveform.getChildAt(i);
-            ViewGroup.LayoutParams lp = bar.getLayoutParams();
-            lp.height = Ui.dp(this, 16 + (int) ((tick + i * 7) % 4) * 9);
-            bar.setLayoutParams(lp);
-        }
-    }
-
-    private void addField(LinearLayout card, String label, String value) {
+    private void addPreviewRow(LinearLayout parent, String icon, String label, String value, String badge) {
         if (value == null || value.trim().isEmpty() || "null".equalsIgnoreCase(value) || "[]".equals(value)) return;
         LinearLayout row = Ui.row(this);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        TextView l = Ui.text(this, label, 13, Ui.MUTED, Typeface.BOLD);
-        TextView v = Ui.text(this, value, 16, Ui.TEXT, Typeface.NORMAL);
-        v.setGravity(Gravity.RIGHT);
-        row.addView(l, Ui.matchWeight(0.8f));
-        row.addView(v, Ui.matchWeight(1.2f));
-        card.addView(row, Ui.matchWrap());
-        Ui.margin(row, 0, 12, 0, 0);
+        row.setPadding(0, Ui.dp(this, 10), 0, Ui.dp(this, 10));
+
+        TextView ico = Ui.text(this, icon, 24, Ui.PRIMARY, Typeface.BOLD);
+        ico.setGravity(Gravity.CENTER);
+        ico.setBackground(Ui.round(this, Ui.PRIMARY_SOFT, Ui.dp(this, 14), 0, 0));
+        row.addView(ico, Ui.lp(Ui.dp(this, 56), Ui.dp(this, 56)));
+
+        LinearLayout texts = new LinearLayout(this);
+        texts.setOrientation(LinearLayout.VERTICAL);
+        texts.addView(Ui.subtitle(this, label));
+        texts.addView(Ui.text(this, value, 18, Ui.TEXT, Typeface.BOLD));
+        row.addView(texts, Ui.matchWeight(1));
+        Ui.margin(texts, 16, 0, 0, 0);
+
+        if (badge != null && !badge.equals(value)) {
+            TextView b = Ui.chip(this, badge, Ui.PRIMARY, Ui.PRIMARY_SOFT);
+            row.addView(b);
+        }
+        parent.addView(row, Ui.matchWrap());
+    }
+
+    private String valueOr(String value, String fallback) {
+        return value == null || value.trim().isEmpty() || "null".equalsIgnoreCase(value) ? fallback : value;
     }
 
     private String readablePriority(String raw) {
-        if (raw == null) return "";
-        switch (raw.toUpperCase()) {
+        if (raw == null) return "Обычный";
+        switch (raw.toUpperCase(Locale.ROOT)) {
             case "URGENT": return "Срочный";
             case "HIGH": return "Высокий";
             case "LOW": return "Низкий";
@@ -517,16 +520,33 @@ public class VoiceCaptureActivity extends Activity {
         }
     }
 
+    private String readableType(String raw) {
+        if (raw == null) return "Задача";
+        switch (raw.toUpperCase(Locale.ROOT)) {
+            case "CALL": return "Звонок";
+            case "MEETING": return "Встреча";
+            case "IDEA": return "Идея";
+            case "NOTE": return "Заметка";
+            default: return "Задача";
+        }
+    }
+
     private String humanError(String raw) {
         if (raw == null) return "Попробуйте ещё раз";
-        if (raw.contains("must describe one new task")) return "Не удалось понять одну конкретную задачу";
+        if (raw.contains("must describe one new task")) return "Команда должна описывать одну конкретную задачу";
         if (raw.contains("401") || raw.contains("Unauthorized")) return "Проверьте подключение устройства в настройках";
         if (raw.contains("timeout") || raw.contains("Unable to resolve")) return "Сервис временно недоступен";
+        if (raw.contains("Нет доступа")) return raw;
         return "Не удалось распознать или создать задачу";
     }
 
     private String formatDuration(long ms) {
         long sec = ms / 1000;
-        return String.format(java.util.Locale.US, "%02d:%02d", sec / 60, sec % 60);
+        return String.format(Locale.US, "%02d:%02d", sec / 60, sec % 60);
+    }
+
+    @SuppressWarnings("unused")
+    private String shortTime(long ms) {
+        return new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date(ms));
     }
 }

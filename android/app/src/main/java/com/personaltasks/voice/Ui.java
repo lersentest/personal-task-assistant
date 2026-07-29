@@ -18,15 +18,18 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 final class Ui {
-    static final int BG = Color.rgb(248, 250, 252);
+    static final int BG = Color.rgb(245, 248, 253);
     static final int SURFACE = Color.WHITE;
+    static final int SURFACE_SOFT = Color.rgb(248, 251, 255);
     static final int PRIMARY = Color.rgb(37, 99, 235);
+    static final int CYAN = Color.rgb(34, 211, 238);
     static final int PRIMARY_SOFT = Color.rgb(219, 234, 254);
-    static final int TEXT = Color.rgb(15, 23, 42);
-    static final int MUTED = Color.rgb(100, 116, 139);
-    static final int BORDER = Color.rgb(226, 232, 240);
-    static final int DANGER = Color.rgb(220, 38, 38);
-    static final int SUCCESS = Color.rgb(5, 150, 105);
+    static final int TEXT = Color.rgb(10, 23, 52);
+    static final int MUTED = Color.rgb(103, 116, 142);
+    static final int BORDER = Color.rgb(224, 231, 241);
+    static final int DANGER = Color.rgb(239, 68, 68);
+    static final int SUCCESS = Color.rgb(16, 185, 129);
+    static final int WARNING = Color.rgb(245, 158, 11);
 
     private Ui() {}
 
@@ -37,7 +40,7 @@ final class Ui {
     static LinearLayout page(Context c) {
         LinearLayout root = new LinearLayout(c);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(c, 20), dp(c, 20), dp(c, 20), dp(c, 20));
+        root.setPadding(dp(c, 24), dp(c, 52), dp(c, 24), dp(c, 34));
         root.setBackgroundColor(BG);
         return root;
     }
@@ -71,19 +74,25 @@ final class Ui {
     }
 
     static TextView title(Context c, String value) {
-        return text(c, value, 28, TEXT, Typeface.BOLD);
+        return text(c, value, 34, TEXT, Typeface.BOLD);
     }
 
     static TextView subtitle(Context c, String value) {
-        TextView tv = text(c, value, 15, MUTED, Typeface.NORMAL);
-        tv.setLineSpacing(dp(c, 2), 1f);
+        TextView tv = text(c, value, 16, MUTED, Typeface.NORMAL);
+        tv.setLineSpacing(dp(c, 3), 1f);
+        return tv;
+    }
+
+    static TextView section(Context c, String value) {
+        TextView tv = text(c, value.toUpperCase(), 14, PRIMARY, Typeface.BOLD);
+        tv.setLetterSpacing(0.06f);
         return tv;
     }
 
     static TextView chip(Context c, String value, int fg, int bg) {
-        TextView chip = text(c, value, 13, fg, Typeface.BOLD);
+        TextView chip = text(c, value, 14, fg, Typeface.BOLD);
         chip.setGravity(Gravity.CENTER);
-        chip.setPadding(dp(c, 10), dp(c, 5), dp(c, 10), dp(c, 5));
+        chip.setPadding(dp(c, 12), dp(c, 6), dp(c, 12), dp(c, 6));
         chip.setBackground(round(c, bg, dp(c, 999), 0, 0));
         return chip;
     }
@@ -92,8 +101,8 @@ final class Ui {
         LinearLayout card = new LinearLayout(c);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dp(c, paddingDp), dp(c, paddingDp), dp(c, paddingDp), dp(c, paddingDp));
-        card.setBackground(round(c, SURFACE, dp(c, 24), BORDER, 1));
-        if (Build.VERSION.SDK_INT >= 21) card.setElevation(dp(c, 2));
+        card.setBackground(round(c, SURFACE, dp(c, 28), BORDER, 1));
+        if (Build.VERSION.SDK_INT >= 21) card.setElevation(dp(c, 4));
         return card;
     }
 
@@ -101,21 +110,22 @@ final class Ui {
         Button b = new Button(c);
         b.setText(label);
         b.setAllCaps(false);
-        b.setTextSize(16);
-        b.setMinHeight(dp(c, 52));
-        b.setTextColor(primary ? Color.WHITE : TEXT);
+        b.setTextSize(17);
+        b.setMinHeight(dp(c, 58));
+        b.setTextColor(primary ? Color.WHITE : PRIMARY);
         b.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        b.setBackground(round(c, primary ? PRIMARY : SURFACE, dp(c, 16), primary ? PRIMARY : BORDER, 1));
-        b.setPadding(dp(c, 14), 0, dp(c, 14), 0);
+        b.setBackground(primary ? gradient(c, PRIMARY, CYAN, dp(c, 18)) : round(c, 0xEEF4F8FF, dp(c, 18), 0, 0));
+        b.setPadding(dp(c, 16), 0, dp(c, 16), 0);
         return b;
     }
 
     static TextView iconButton(Context c, String value) {
-        TextView tv = text(c, value, 22, TEXT, Typeface.NORMAL);
+        TextView tv = text(c, value, 30, TEXT, Typeface.NORMAL);
         tv.setGravity(Gravity.CENTER);
-        tv.setMinWidth(dp(c, 48));
-        tv.setMinHeight(dp(c, 48));
-        tv.setBackground(round(c, SURFACE, dp(c, 16), BORDER, 1));
+        tv.setMinWidth(dp(c, 58));
+        tv.setMinHeight(dp(c, 58));
+        tv.setBackground(round(c, SURFACE, dp(c, 999), BORDER, 1));
+        if (Build.VERSION.SDK_INT >= 21) tv.setElevation(dp(c, 3));
         return tv;
     }
 
@@ -155,6 +165,12 @@ final class Ui {
         return d;
     }
 
+    static GradientDrawable gradient(Context c, int start, int end, int radiusPx) {
+        GradientDrawable d = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[]{start, end});
+        d.setCornerRadius(radiusPx);
+        return d;
+    }
+
     static boolean animationsEnabled(Context c) {
         try {
             return Settings.Global.getFloat(c.getContentResolver(), Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f;
@@ -166,11 +182,11 @@ final class Ui {
     static void pulse(View view) {
         if (!animationsEnabled(view.getContext())) return;
         ScaleAnimation scale = new ScaleAnimation(
-                1f, 1.08f, 1f, 1.08f,
+                1f, 1.05f, 1f, 1.05f,
                 Animation.RELATIVE_TO_SELF, 0.5f,
                 Animation.RELATIVE_TO_SELF, 0.5f
         );
-        scale.setDuration(820);
+        scale.setDuration(900);
         scale.setRepeatMode(Animation.REVERSE);
         scale.setRepeatCount(Animation.INFINITE);
         view.startAnimation(scale);
@@ -179,7 +195,7 @@ final class Ui {
     static void fadeIn(View view) {
         if (!animationsEnabled(view.getContext())) return;
         AlphaAnimation anim = new AlphaAnimation(0f, 1f);
-        anim.setDuration(220);
+        anim.setDuration(180);
         view.startAnimation(anim);
     }
 }

@@ -9,6 +9,8 @@ final class AppPrefs {
     private static final String KEY_DEVICE_TOKEN = "device_token";
     private static final String KEY_SOUND = "sound_enabled";
     private static final String KEY_VIBRATION = "vibration_enabled";
+    private static final String KEY_THEME = "theme_mode";
+    private static final String KEY_LAST_SYNC = "last_sync_at";
     private static final String DEFAULT_BASE_URL = "https://telegram-bot-production-056f.up.railway.app";
 
     static SharedPreferences prefs(Context context) {
@@ -45,9 +47,26 @@ final class AppPrefs {
                 .apply();
     }
 
+    static String themeMode(Context context) {
+        return prefs(context).getString(KEY_THEME, "system");
+    }
+
+    static void saveThemeMode(Context context, String mode) {
+        prefs(context).edit().putString(KEY_THEME, mode).apply();
+    }
+
+    static void markSynced(Context context) {
+        prefs(context).edit().putLong(KEY_LAST_SYNC, System.currentTimeMillis()).apply();
+    }
+
+    static long lastSyncAt(Context context) {
+        return prefs(context).getLong(KEY_LAST_SYNC, 0L);
+    }
+
     static String maskedToken(Context context) {
         String token = deviceToken(context);
-        if (token.length() < 14) return token.isEmpty() ? "Не подключено" : "••••";
+        if (token.isEmpty()) return "Не подключено";
+        if (token.length() < 14) return "••••";
         return token.substring(0, 8) + "…" + token.substring(token.length() - 6);
     }
 }

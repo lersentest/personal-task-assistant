@@ -12,7 +12,9 @@ public class VoiceWidgetProvider extends AppWidgetProvider {
     public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
         for (int id : ids) {
             Intent intent = new Intent(context, VoiceCaptureActivity.class);
-            intent.putExtra("source", "ANDROID_WIDGET");
+            intent.putExtra(MainActivity.EXTRA_SOURCE, "ANDROID_WIDGET");
+            intent.putExtra(MainActivity.EXTRA_AUTO_START, true);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
             PendingIntent pending = PendingIntent.getActivity(
                     context,
                     id,
@@ -21,6 +23,7 @@ public class VoiceWidgetProvider extends AppWidgetProvider {
             );
             RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.voice_widget);
             views.setOnClickPendingIntent(R.id.widget_root, pending);
+            views.setOnClickPendingIntent(R.id.widget_mic, pending);
             manager.updateAppWidget(id, views);
         }
     }
