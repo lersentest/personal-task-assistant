@@ -21,6 +21,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
 import androidx.work.Constraints;
@@ -94,7 +95,15 @@ public class VoiceCaptureActivity extends Activity {
         super.onDestroy();
         handler.removeCallbacks(timerTick);
         releaseRecorder(false);
-        io.shutdownNow();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (state == State.UPLOADING || state == State.CONFIRMING) {
+            Toast.makeText(this, "Дождитесь завершения обработки", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        cancelFlow();
     }
 
     @Override
@@ -225,6 +234,10 @@ public class VoiceCaptureActivity extends Activity {
         card.addView(details);
         content.addView(card, Ui.matchWrap());
         Ui.margin(card, 0, 76, 0, 24);
+
+        TextView wait = Ui.subtitle(this, "Не закрывайте экран, пока идёт распознавание.");
+        wait.setGravity(Gravity.CENTER);
+        content.addView(wait);
     }
 
     private void showPreview(JSONObject p) {
@@ -320,6 +333,10 @@ public class VoiceCaptureActivity extends Activity {
         card.setBackground(Ui.round(this, 0xFFFFF1F2, Ui.dp(this, 22), 0xFFFECACA, 1));
         card.addView(Ui.text(this, "Попробуйте записать ещё раз", 22, Ui.TEXT, Typeface.BOLD));
         card.addView(Ui.subtitle(this, "Говорите одной фразой: что сделать, когда и насколько срочно."));
+        TextView raw = Ui.subtitle(this, shortError(message));
+        raw.setTextColor(Ui.DANGER);
+        card.addView(raw);
+        Ui.margin(raw, 0, 10, 0, 0);
         content.addView(card, Ui.matchWrap());
         Ui.margin(card, 0, 50, 0, 20);
 
@@ -367,8 +384,12 @@ public class VoiceCaptureActivity extends Activity {
 
     private void stopAndPreview() {
         handler.removeCallbacks(timerTick);
-        releaseRecorder(true);
+        boolean stopped = releaseRecorder(true);
         long duration = System.currentTimeMillis() - startedAt;
+        if (!stopped || audioFile == null || !audioFile.exists() || audioFile.length() < 1024) {
+            showError("Запись не сохранилась. Проверьте доступ к микрофону и попробуйте ещё раз.");
+            return;
+        }
         if (duration < 900) {
             showError("Запись слишком короткая");
             return;
@@ -383,8 +404,8 @@ public class VoiceCaptureActivity extends Activity {
             try {
                 ApiClient api = new ApiClient(AppPrefs.baseUrl(this), AppPrefs.deviceToken(this));
                 JSONObject response = api.preview(audioFile, clientCommandId, previewKey, source, previewDuration);
-                draftId = response.optString("draftId", null);
-                JSONObject p = response.getJSONObject("preview");
+                draftId = extractDraftId(response);
+                JSONObject p = extractPreview(response);
                 runOnUiThread(() -> showPreview(p));
             } catch (Exception e) {
                 runOnUiThread(() -> showError(e.getMessage()));
@@ -407,6 +428,10 @@ public class VoiceCaptureActivity extends Activity {
     }
 
     private void cancelFlow() {
+        if (state == State.UPLOADING || state == State.CONFIRMING) {
+            Toast.makeText(this, "Дождитесь завершения обработки", Toast.LENGTH_SHORT).show();
+            return;
+        }
         releaseRecorder(true);
         if (draftId == null) {
             finish();
@@ -434,15 +459,17 @@ public class VoiceCaptureActivity extends Activity {
         }
     }
 
-    private void releaseRecorder(boolean stop) {
-        if (recorder == null) return;
+    private boolean releaseRecorder(boolean stop) {
+        if (recorder == null) return true;
         handler.removeCallbacks(timerTick);
+        boolean stopped = true;
         if (stop) {
-            try { recorder.stop(); } catch (Exception ignored) {}
+            try { recorder.stop(); } catch (Exception ignored) { stopped = false; }
         }
         try { recorder.release(); } catch (Exception ignored) {}
         recorder = null;
         recording = false;
+        return stopped;
     }
 
     private void saveOffline(long durationMs) {
@@ -534,10 +561,41 @@ public class VoiceCaptureActivity extends Activity {
     private String humanError(String raw) {
         if (raw == null) return "Попробуйте ещё раз";
         if (raw.contains("must describe one new task")) return "Команда должна описывать одну конкретную задачу";
+        if (raw.contains("Запись слишком короткая")) return "Запись получилась слишком короткой";
+        if (raw.contains("не сохранилась")) return "Android не сохранил аудиофайл";
         if (raw.contains("401") || raw.contains("Unauthorized")) return "Проверьте подключение устройства в настройках";
         if (raw.contains("timeout") || raw.contains("Unable to resolve")) return "Сервис временно недоступен";
         if (raw.contains("Нет доступа")) return raw;
         return "Не удалось распознать или создать задачу";
+    }
+
+    private String shortError(String raw) {
+        if (raw == null || raw.trim().isEmpty()) return "";
+        String compact = raw.replace('\n', ' ').replace('\r', ' ').trim();
+        if (compact.length() > 220) compact = compact.substring(0, 220) + "…";
+        return compact;
+    }
+
+    private String extractDraftId(JSONObject response) {
+        String id = response.optString("draftId", null);
+        if (id != null && !id.trim().isEmpty() && !"null".equalsIgnoreCase(id)) return id;
+        JSONObject data = response.optJSONObject("data");
+        if (data != null) {
+            id = data.optString("draftId", null);
+            if (id != null && !id.trim().isEmpty() && !"null".equalsIgnoreCase(id)) return id;
+        }
+        return null;
+    }
+
+    private JSONObject extractPreview(JSONObject response) throws Exception {
+        JSONObject preview = response.optJSONObject("preview");
+        if (preview != null) return preview;
+        JSONObject data = response.optJSONObject("data");
+        if (data != null) {
+            preview = data.optJSONObject("preview");
+            if (preview != null) return preview;
+        }
+        return response;
     }
 
     private String formatDuration(long ms) {
