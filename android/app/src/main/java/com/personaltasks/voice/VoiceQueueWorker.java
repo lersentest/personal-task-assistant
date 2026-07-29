@@ -2,7 +2,9 @@ package com.personaltasks.voice;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Build;
 
 import androidx.annotation.NonNull;
@@ -51,12 +53,20 @@ public class VoiceQueueWorker extends Worker {
         NotificationManager manager = (NotificationManager) getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
         String channelId = "voice_preview";
         if (Build.VERSION.SDK_INT >= 26) {
-            manager.createNotificationChannel(new NotificationChannel(channelId, "Voice previews", NotificationManager.IMPORTANCE_DEFAULT));
+            manager.createNotificationChannel(new NotificationChannel(channelId, "Голосовые задачи", NotificationManager.IMPORTANCE_DEFAULT));
         }
+        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+        PendingIntent pending = PendingIntent.getActivity(
+                getApplicationContext(),
+                1001,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
         manager.notify(1001, new NotificationCompat.Builder(getApplicationContext(), channelId)
                 .setSmallIcon(android.R.drawable.ic_btn_speak_now)
                 .setContentTitle("Задача распознана")
-                .setContentText("Открой приложение и подтверди создание.")
+                .setContentText("Откройте приложение и подтвердите создание.")
+                .setContentIntent(pending)
                 .setAutoCancel(true)
                 .build());
     }

@@ -17,4 +17,7 @@ public interface VoiceCommandDao {
 
     @Query("SELECT * FROM voice_commands WHERE status IN ('RECORDED','WAITING_FOR_NETWORK','FAILED') ORDER BY createdAt ASC")
     List<VoiceCommandEntity> pendingPreview();
+
+    @Query("SELECT COUNT(*) FROM voice_commands WHERE status IN ('RECORDED','WAITING_FOR_NETWORK','FAILED','UPLOADING')")
+    int pendingCount();
 }
