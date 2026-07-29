@@ -1,6 +1,7 @@
 package com.personaltasks.voice;
 
 import android.content.Context;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -35,6 +36,12 @@ final class Ui {
     static final int DANGER = Color.rgb(239, 68, 68);
     static final int SUCCESS = Color.rgb(16, 185, 129);
     static final int WARNING = Color.rgb(245, 158, 11);
+    static final int DARK_BG = Color.rgb(8, 16, 35);
+    static final int DARK_SURFACE = Color.rgb(17, 27, 51);
+    static final int DARK_SURFACE_SOFT = Color.rgb(24, 38, 68);
+    static final int DARK_TEXT = Color.rgb(239, 246, 255);
+    static final int DARK_MUTED = Color.rgb(148, 163, 184);
+    static final int DARK_BORDER = Color.rgb(49, 68, 103);
 
     private Ui() {}
 
@@ -42,11 +49,35 @@ final class Ui {
         return Math.round(value * c.getResources().getDisplayMetrics().density);
     }
 
+    static boolean isDark(Context c) {
+        String mode = AppPrefs.themeMode(c);
+        if ("dark".equals(mode)) return true;
+        if ("light".equals(mode)) return false;
+        return (c.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
+                == Configuration.UI_MODE_NIGHT_YES;
+    }
+
+    static int textColor(Context c) { return isDark(c) ? DARK_TEXT : TEXT; }
+    static int mutedColor(Context c) { return isDark(c) ? DARK_MUTED : MUTED; }
+    static int surfaceColor(Context c) { return isDark(c) ? DARK_SURFACE : SURFACE; }
+    static int softSurfaceColor(Context c) { return isDark(c) ? DARK_SURFACE_SOFT : SURFACE_SOFT; }
+    static int borderColor(Context c) { return isDark(c) ? DARK_BORDER : BORDER; }
+
+    private static int themedColor(Context c, int color) {
+        if (!isDark(c)) return color;
+        if (color == TEXT) return DARK_TEXT;
+        if (color == MUTED) return DARK_MUTED;
+        if (color == SURFACE || color == 0xF4FFFFFF || color == 0xF8FFFFFF) return DARK_SURFACE;
+        if (color == SURFACE_SOFT || color == 0xF4F8FBFF) return DARK_SURFACE_SOFT;
+        if (color == BG) return DARK_BG;
+        return color;
+    }
+
     static LinearLayout page(Context c) {
         LinearLayout root = new LinearLayout(c);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setClipToPadding(false);
-        root.setPadding(dp(c, 24), dp(c, 50), dp(c, 24), dp(c, 28));
+        root.setPadding(dp(c, 24), dp(c, 46), dp(c, 24), dp(c, 30));
         root.setBackground(pageBackground(c));
         return root;
     }
@@ -74,7 +105,7 @@ final class Ui {
         TextView tv = new TextView(c);
         tv.setText(value);
         tv.setTextSize(sp);
-        tv.setTextColor(color);
+        tv.setTextColor(themedColor(c, color));
         tv.setTypeface(Typeface.DEFAULT, style);
         tv.setIncludeFontPadding(true);
         return tv;
@@ -124,7 +155,7 @@ final class Ui {
 
     static LinearLayout glassCard(Context c, int paddingDp) {
         LinearLayout card = card(c, paddingDp);
-        card.setBackground(round(c, 0xF4FFFFFF, dp(c, 30), BORDER, 1));
+        card.setBackground(round(c, isDark(c) ? 0xE61B2A4A : 0xF4FFFFFF, dp(c, 30), borderColor(c), 1));
         return card;
     }
 
@@ -134,9 +165,9 @@ final class Ui {
         b.setAllCaps(false);
         b.setTextSize(17);
         b.setMinHeight(dp(c, 58));
-        b.setTextColor(primary ? Color.WHITE : PRIMARY);
+        b.setTextColor(primary ? Color.WHITE : (isDark(c) ? 0xFF93C5FD : PRIMARY));
         b.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        b.setBackground(primary ? gradient(c, PRIMARY, CYAN, dp(c, 20)) : round(c, 0xF4F8FBFF, dp(c, 20), BORDER, 1));
+        b.setBackground(primary ? gradient(c, PRIMARY, CYAN, dp(c, 20)) : round(c, isDark(c) ? 0xFF172542 : 0xF4F8FBFF, dp(c, 20), borderColor(c), 1));
         b.setPadding(dp(c, 16), 0, dp(c, 16), 0);
         if (Build.VERSION.SDK_INT >= 21) b.setElevation(primary ? dp(c, 7) : dp(c, 3));
         addPressScale(b);
@@ -148,7 +179,7 @@ final class Ui {
         tv.setGravity(Gravity.CENTER);
         tv.setMinWidth(dp(c, 58));
         tv.setMinHeight(dp(c, 58));
-        tv.setBackground(round(c, 0xF8FFFFFF, dp(c, 999), BORDER, 1));
+        tv.setBackground(round(c, isDark(c) ? 0xEE182642 : 0xF8FFFFFF, dp(c, 999), borderColor(c), 1));
         if (Build.VERSION.SDK_INT >= 21) tv.setElevation(dp(c, 6));
         addPressScale(tv);
         return tv;
@@ -159,7 +190,7 @@ final class Ui {
         tv.setGravity(Gravity.CENTER);
         tv.setMinWidth(dp(c, 44));
         tv.setMinHeight(dp(c, 44));
-        tv.setBackground(round(c, bg, dp(c, 16), BORDER, 1));
+        tv.setBackground(round(c, isDark(c) && bg == 0xFFF8FAFC ? DARK_SURFACE_SOFT : bg, dp(c, 16), borderColor(c), 1));
         if (Build.VERSION.SDK_INT >= 21) tv.setElevation(dp(c, 3));
         addPressScale(tv);
         return tv;
@@ -195,9 +226,9 @@ final class Ui {
 
     static GradientDrawable round(Context c, int color, int radiusPx, int strokeColor, int strokeDp) {
         GradientDrawable d = new GradientDrawable();
-        d.setColor(color);
+        d.setColor(themedColor(c, color));
         d.setCornerRadius(radiusPx);
-        if (strokeDp > 0) d.setStroke(dp(c, strokeDp), strokeColor);
+        if (strokeDp > 0) d.setStroke(dp(c, strokeDp), themedColor(c, strokeColor));
         return d;
     }
 
@@ -214,12 +245,15 @@ final class Ui {
     }
 
     static GradientDrawable pageBackground(Context c) {
+        if (isDark(c)) {
+            return new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0xFF0B1328, DARK_BG, 0xFF111D38});
+        }
         return new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0xFFFFFFFF, BG, 0xFFEFF5FF});
     }
 
     static LayerDrawable cardBackground(Context c, int radiusPx) {
-        GradientDrawable shadow = round(c, 0x180B1739, radiusPx, 0, 0);
-        GradientDrawable surface = round(c, 0xF8FFFFFF, radiusPx, BORDER, 1);
+        GradientDrawable shadow = round(c, isDark(c) ? 0x44000000 : 0x180B1739, radiusPx, 0, 0);
+        GradientDrawable surface = round(c, isDark(c) ? 0xF0182644 : 0xF8FFFFFF, radiusPx, borderColor(c), 1);
         LayerDrawable layer = new LayerDrawable(new android.graphics.drawable.Drawable[]{shadow, surface});
         layer.setLayerInset(0, 0, dp(c, 3), 0, 0);
         layer.setLayerInset(1, 0, 0, 0, dp(c, 3));

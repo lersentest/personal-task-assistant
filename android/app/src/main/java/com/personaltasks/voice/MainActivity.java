@@ -59,7 +59,7 @@ public class MainActivity extends Activity {
         queueBanner.setPadding(Ui.dp(this, 14), Ui.dp(this, 10), Ui.dp(this, 14), Ui.dp(this, 10));
         queueBanner.setBackground(Ui.round(this, 0xFFFFFBEB, Ui.dp(this, 16), 0xFFFCD34D, 1));
         root.addView(queueBanner, Ui.matchWrap());
-        Ui.margin(queueBanner, 0, 18, 0, 0);
+        Ui.margin(queueBanner, 0, 14, 0, 0);
 
         LinearLayout center = new LinearLayout(this);
         center.setOrientation(LinearLayout.VERTICAL);
@@ -74,22 +74,23 @@ public class MainActivity extends Activity {
         mic.setMode(OrbView.Mode.IDLE);
         mic.setContentDescription("Записать задачу голосом");
         mic.setOnClickListener(v -> openVoiceCapture("ANDROID_APP"));
-        center.addView(mic, Ui.lp(Ui.dp(this, 238), Ui.dp(this, 238)));
+        center.addView(mic, Ui.lp(Ui.dp(this, 260), Ui.dp(this, 260)));
         Ui.pulse(mic);
 
-        TextView cta = Ui.text(this, "Запишите задачу", 32, Ui.TEXT, Typeface.BOLD);
+        TextView cta = Ui.text(this, "Запишите задачу", 34, Ui.TEXT, Typeface.BOLD);
         cta.setGravity(Gravity.CENTER);
         center.addView(cta);
-        Ui.margin(cta, 0, 22, 0, 0);
+        Ui.margin(cta, 0, 18, 0, 0);
 
         TextView hint = Ui.subtitle(this, "Нажмите и продиктуйте одну задачу.\nПеред созданием покажем, что распознали.");
         hint.setGravity(Gravity.CENTER);
         center.addView(hint);
-        Ui.margin(hint, 0, 6, 0, 0);
+        Ui.margin(hint, 0, 4, 0, 0);
 
         LinearLayout tip = Ui.glassCard(this, 20);
         tip.addView(Ui.section(this, "Пример"));
         TextView example = Ui.text(this, "«Позвонить Роме завтра в 10 утра, обычный приоритет»", 20, Ui.TEXT, Typeface.BOLD);
+        example.setLineSpacing(Ui.dp(this, 3), 1f);
         tip.addView(example);
         Ui.margin(example, 0, 10, 0, 0);
         LinearLayout chips = Ui.row(this);
@@ -100,7 +101,7 @@ public class MainActivity extends Activity {
         tip.addView(chips);
         Ui.margin(chips, 0, 14, 0, 0);
         root.addView(tip, Ui.matchWrap());
-        Ui.margin(tip, 0, 0, 0, 14);
+        Ui.margin(tip, 0, 0, 0, 18);
     }
 
     private void openVoiceCapture(String source) {

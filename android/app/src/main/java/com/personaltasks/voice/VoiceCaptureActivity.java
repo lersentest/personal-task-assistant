@@ -172,14 +172,15 @@ public class VoiceCaptureActivity extends Activity {
         content.removeAllViews();
         content.setGravity(Gravity.CENTER_HORIZONTAL);
         title.setText("Новая задача");
-        subtitle.setText("Нажмите и продиктуйте одну задачу");
-        subtitle.setTextColor(Ui.MUTED);
+        subtitle.setText(connectionLabel());
+        subtitle.setTextColor(AppPrefs.deviceToken(this).isEmpty() ? Ui.DANGER : Ui.SUCCESS);
 
         OrbView orb = new OrbView(this);
         currentOrb = orb;
         orb.setMode(OrbView.Mode.IDLE);
         orb.setOnClickListener(v -> startRecording());
-        content.addView(orb, Ui.lp(Ui.dp(this, 230), Ui.dp(this, 230)));
+        content.addView(orb, Ui.lp(Ui.dp(this, 260), Ui.dp(this, 260)));
+        Ui.pulse(orb);
 
         TextView cta = Ui.text(this, "Запишите задачу", 32, Ui.TEXT, Typeface.BOLD);
         cta.setGravity(Gravity.CENTER);
@@ -189,11 +190,7 @@ public class VoiceCaptureActivity extends Activity {
         TextView hint = Ui.subtitle(this, "Перед созданием покажем, что распознали.");
         hint.setGravity(Gravity.CENTER);
         content.addView(hint);
-        Ui.margin(hint, 0, 4, 0, 26);
-
-        primary.setText("Начать запись");
-        primary.setOnClickListener(v -> startRecording());
-        content.addView(primary, Ui.matchWrap());
+        Ui.margin(hint, 0, 4, 0, 0);
         Ui.fadeIn(content);
     }
 
@@ -209,10 +206,10 @@ public class VoiceCaptureActivity extends Activity {
         OrbView orb = new OrbView(this);
         currentOrb = orb;
         orb.setMode(OrbView.Mode.RECORDING);
-        content.addView(orb, Ui.lp(Ui.dp(this, 238), Ui.dp(this, 238)));
+        content.addView(orb, Ui.lp(Ui.dp(this, 280), Ui.dp(this, 280)));
         Ui.pulse(orb);
 
-        timer = Ui.text(this, "00:00", 44, Ui.TEXT, Typeface.NORMAL);
+        timer = Ui.text(this, "00:00", 48, Ui.TEXT, Typeface.NORMAL);
         timer.setGravity(Gravity.CENTER);
         content.addView(timer);
         Ui.margin(timer, 0, 24, 0, 4);
@@ -262,7 +259,7 @@ public class VoiceCaptureActivity extends Activity {
         card.addView(details);
         addProcessingSteps(card, step);
         content.addView(card, Ui.matchWrap());
-        Ui.margin(card, 0, 76, 0, 24);
+        Ui.margin(card, 0, 48, 0, 22);
 
         TextView wait = Ui.subtitle(this, "Не закрывайте экран, пока идёт распознавание.");
         wait.setGravity(Gravity.CENTER);
@@ -329,22 +326,20 @@ public class VoiceCaptureActivity extends Activity {
         subtitle.setText("Задача создана");
         subtitle.setTextColor(Ui.MUTED);
 
-        LinearLayout card = Ui.card(this, 24);
-        card.setGravity(Gravity.CENTER_HORIZONTAL);
         OrbView check = new OrbView(this);
         currentOrb = check;
         check.setSuccess(true);
-        card.addView(check, Ui.lp(Ui.dp(this, 180), Ui.dp(this, 180)));
+        content.addView(check, Ui.lp(Ui.dp(this, 220), Ui.dp(this, 220)));
         TextView label = Ui.text(this, "Задача создана", 28, Ui.TEXT, Typeface.BOLD);
         label.setGravity(Gravity.CENTER);
-        card.addView(label);
+        content.addView(label);
+        Ui.margin(label, 0, 20, 0, 0);
         if (lastPreview != null) {
             TextView task = Ui.subtitle(this, lastPreview.optString("title", ""));
             task.setGravity(Gravity.CENTER);
-            card.addView(task);
+            content.addView(task);
+            Ui.margin(task, 0, 8, 0, 0);
         }
-        content.addView(card, Ui.matchWrap());
-        Ui.margin(card, 0, 76, 0, 20);
         successSignal();
         handler.postDelayed(this::finish, 1700);
     }
@@ -379,7 +374,7 @@ public class VoiceCaptureActivity extends Activity {
         subtitle.setTextColor(Ui.MUTED);
 
         LinearLayout card = Ui.card(this, 20);
-        card.setBackground(Ui.round(this, 0xFFFFF1F2, Ui.dp(this, 22), 0xFFFECACA, 1));
+        card.setBackground(Ui.round(this, Ui.isDark(this) ? 0xFF311827 : 0xFFFFF1F2, Ui.dp(this, 22), Ui.isDark(this) ? 0xFF7F1D1D : 0xFFFECACA, 1));
         card.addView(Ui.text(this, "Попробуйте записать ещё раз", 22, Ui.TEXT, Typeface.BOLD));
         card.addView(Ui.subtitle(this, "Говорите одной фразой: что сделать, когда и насколько срочно."));
         TextView raw = Ui.subtitle(this, shortError(message));
@@ -615,6 +610,13 @@ public class VoiceCaptureActivity extends Activity {
 
     private String valueOr(String value, String fallback) {
         return value == null || value.trim().isEmpty() || "null".equalsIgnoreCase(value) ? fallback : value;
+    }
+
+    private String connectionLabel() {
+        if (AppPrefs.deviceToken(this).isEmpty()) {
+            return "● Не подключено   |   Откройте настройки";
+        }
+        return "● Подключено   |   Устройство готово к записи";
     }
 
     private String readablePriority(String raw) {

@@ -5,6 +5,7 @@ import android.graphics.Typeface;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
@@ -72,7 +73,7 @@ public class SettingsActivity extends Activity {
         row.addView(themeButton("Тёмная", "dark", active), Ui.matchWeight(1));
         card.addView(row, Ui.matchWrap());
         Ui.margin(row, 0, 14, 0, 10);
-        card.addView(Ui.subtitle(this, "Тема сохраняется локально. Полный dark-mode можно довести отдельным этапом."));
+        card.addView(Ui.subtitle(this, "Тема сохраняется локально и применяется к основным экранам приложения."));
         return card;
     }
 
@@ -120,18 +121,26 @@ public class SettingsActivity extends Activity {
     private LinearLayout developerCard() {
         LinearLayout card = Ui.glassCard(this, 18);
         card.addView(Ui.section(this, "Для разработчиков"));
-        card.addView(Ui.subtitle(this, "Здесь можно заменить backend URL и mobile device token."));
+        card.addView(Ui.subtitle(this, "Технические параметры скрыты, чтобы токен случайно не светился на экране."));
         card.addView(Ui.spacer(this, 12));
+
+        Button reveal = Ui.button(this, "Показать подключение", false);
+        card.addView(reveal, Ui.matchWrap());
+        Ui.margin(reveal, 0, 0, 0, 12);
+
+        LinearLayout fields = new LinearLayout(this);
+        fields.setOrientation(LinearLayout.VERTICAL);
+        fields.setVisibility(View.GONE);
 
         baseUrl = input("Backend URL");
         baseUrl.setText(AppPrefs.baseUrl(this));
-        card.addView(baseUrl, Ui.matchWrap());
+        fields.addView(baseUrl, Ui.matchWrap());
         Ui.margin(baseUrl, 0, 0, 0, 10);
 
         token = input("Mobile device token");
         token.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
         token.setText(AppPrefs.deviceToken(this));
-        card.addView(token, Ui.matchWrap());
+        fields.addView(token, Ui.matchWrap());
 
         Button save = Ui.button(this, "Сохранить подключение", true);
         save.setOnClickListener(v -> {
@@ -140,8 +149,14 @@ public class SettingsActivity extends Activity {
             Toast.makeText(this, "Настройки сохранены", Toast.LENGTH_SHORT).show();
             recreate();
         });
-        card.addView(save, Ui.matchWrap());
+        fields.addView(save, Ui.matchWrap());
         Ui.margin(save, 0, 14, 0, 0);
+        card.addView(fields, Ui.matchWrap());
+
+        reveal.setOnClickListener(v -> {
+            fields.setVisibility(fields.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE);
+            reveal.setText(fields.getVisibility() == View.VISIBLE ? "Скрыть подключение" : "Показать подключение");
+        });
         return card;
     }
 
@@ -149,7 +164,7 @@ public class SettingsActivity extends Activity {
         Switch sw = new Switch(this);
         sw.setText(title + "\n" + description);
         sw.setTextSize(16);
-        sw.setTextColor(Ui.TEXT);
+        sw.setTextColor(Ui.textColor(this));
         sw.setChecked(checked);
         sw.setPadding(0, Ui.dp(this, 14), 0, Ui.dp(this, 14));
         return sw;
@@ -162,6 +177,8 @@ public class SettingsActivity extends Activity {
         edit.setSingleLine(true);
         edit.setMinHeight(Ui.dp(this, 56));
         edit.setPadding(Ui.dp(this, 14), 0, Ui.dp(this, 14), 0);
+        edit.setTextColor(Ui.textColor(this));
+        edit.setHintTextColor(Ui.mutedColor(this));
         edit.setBackground(Ui.round(this, Ui.SURFACE, Ui.dp(this, 16), Ui.BORDER, 1));
         return edit;
     }
