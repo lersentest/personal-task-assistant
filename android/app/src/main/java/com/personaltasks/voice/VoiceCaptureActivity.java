@@ -150,8 +150,22 @@ public class VoiceCaptureActivity extends Activity {
         cancel.setOnClickListener(v -> cancelFlow());
     }
 
+    private void detachActionButtons() {
+        detachFromParent(primary);
+        detachFromParent(secondary);
+        detachFromParent(cancel);
+    }
+
+    private void detachFromParent(View view) {
+        if (view == null) return;
+        if (view.getParent() instanceof ViewGroup) {
+            ((ViewGroup) view.getParent()).removeView(view);
+        }
+    }
+
     private void showIdle() {
         state = State.IDLE;
+        detachActionButtons();
         content.removeAllViews();
         title.setText("Новая задача");
         subtitle.setText("Нажмите и продиктуйте одну задачу");
@@ -179,6 +193,7 @@ public class VoiceCaptureActivity extends Activity {
 
     private void showRecording() {
         state = State.RECORDING;
+        detachActionButtons();
         content.removeAllViews();
         title.setText("Говорите…");
         subtitle.setText("● Запись   |   Задача записывается");
@@ -216,6 +231,7 @@ public class VoiceCaptureActivity extends Activity {
 
     private void showProcessing(String step) {
         state = State.UPLOADING;
+        detachActionButtons();
         content.removeAllViews();
         title.setText("Обрабатываю");
         subtitle.setText("Секунду: превращаем голос в задачу");
@@ -244,6 +260,7 @@ public class VoiceCaptureActivity extends Activity {
         state = State.PREVIEW;
         lastPreview = p;
         AppPrefs.markSynced(this);
+        detachActionButtons();
         content.removeAllViews();
         title.setText("Проверьте задачу");
         subtitle.setText("Создадим задачу только после подтверждения");
@@ -280,6 +297,7 @@ public class VoiceCaptureActivity extends Activity {
 
     private void showSuccess() {
         state = State.SUCCESS;
+        detachActionButtons();
         content.removeAllViews();
         title.setText("Готово");
         subtitle.setText("Задача создана");
@@ -306,6 +324,7 @@ public class VoiceCaptureActivity extends Activity {
 
     private void showOfflineSaved() {
         state = State.OFFLINE;
+        detachActionButtons();
         content.removeAllViews();
         title.setText("Запись сохранена");
         subtitle.setText("Отправим, когда появится интернет");
@@ -324,6 +343,7 @@ public class VoiceCaptureActivity extends Activity {
 
     private void showError(String message) {
         state = State.ERROR;
+        detachActionButtons();
         content.removeAllViews();
         title.setText("Не получилось");
         subtitle.setText(humanError(message));
