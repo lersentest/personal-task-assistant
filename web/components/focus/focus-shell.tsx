@@ -15,6 +15,7 @@ import {
   Menu,
   Mic,
   Moon,
+  Newspaper,
   Phone,
   Plus,
   Search,
@@ -63,6 +64,7 @@ const sections = [
     title: 'Библиотека',
     items: [
       { href: '/executors', label: 'Исполнители', icon: Users },
+      { href: '/news', label: 'Новости', icon: Newspaper },
       { href: '/search', label: 'Поиск', icon: Search },
       { href: '/files', label: 'Файлы', icon: Archive },
     ],

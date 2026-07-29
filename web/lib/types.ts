@@ -14,6 +14,25 @@ export type DelegatedTaskStatus =
   | 'RETURNED'
   | 'COMPLETED'
   | 'CANCELLED';
+export type NewsCategory =
+  | 'STONE_INDUSTRY'
+  | 'STONE_MACHINERY'
+  | 'CONSTRUCTION'
+  | 'SWISS_CONSTRUCTION'
+  | 'ARCHITECTURE'
+  | 'INTERIOR_DESIGN'
+  | 'MATERIALS'
+  | 'BUSINESS_MARKET'
+  | 'EVENTS';
+export type NewsSourceType = 'RSS' | 'WEB' | 'X' | 'INSTAGRAM';
+export type NewsSourceStatus =
+  | 'WORKING'
+  | 'DEGRADED'
+  | 'DISABLED'
+  | 'REQUIRES_API'
+  | 'UNSUPPORTED'
+  | 'ERROR';
+export type NewsRunStatus = 'QUEUED' | 'RUNNING' | 'SUCCESS' | 'PARTIAL' | 'FAILED' | 'COOLDOWN';
 
 export interface Project {
   id: string;
@@ -32,6 +51,67 @@ export interface Project {
     completed: number;
     total: number;
   };
+}
+
+export interface NewsItem {
+  id: string;
+  rank: number;
+  title: string;
+  originalTitle: string;
+  summary: string;
+  keyFacts: string[];
+  category: NewsCategory;
+  tags: string[];
+  sourceName: string;
+  url: string;
+  publishedAt: string | null;
+  language: string;
+  relevanceScore: number;
+  qualityScore: number;
+  summaryBasis: 'FULL_TEXT' | 'EXCERPT' | 'SOCIAL_POST';
+  warning: string | null;
+}
+
+export interface NewsRun {
+  id: string;
+  status: NewsRunStatus;
+  runType: 'SCHEDULED' | 'MANUAL' | 'SOURCE_TEST' | 'SEED';
+  message: string | null;
+  itemsFound: number;
+  itemsAdded: number;
+  sourcesChecked: number;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+}
+
+export interface NewsTodayData {
+  date: string;
+  status: NewsRunStatus;
+  lastUpdateAt: string | null;
+  summary: string | null;
+  run: NewsRun | null;
+  sourcesCount: number;
+  items: NewsItem[];
+}
+
+export interface NewsSource {
+  id: string;
+  scope: 'SYSTEM' | 'TENANT';
+  name: string;
+  sourceType: NewsSourceType;
+  category: NewsCategory;
+  homepageUrl: string;
+  feedUrl: string | null;
+  language: string;
+  country: string | null;
+  priority: number;
+  enabled: boolean;
+  status: NewsSourceStatus;
+  statusMessage: string | null;
+  lastAttemptAt: string | null;
+  lastSuccessAt: string | null;
+  consecutiveErrors: number;
 }
 
 export interface TagLink {

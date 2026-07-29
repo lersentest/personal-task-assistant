@@ -10,6 +10,9 @@ import {
   Executor,
   ExecutorInput,
   MyDayData,
+  NewsRun,
+  NewsSource,
+  NewsTodayData,
   Project,
   ProjectInput,
   Task,
@@ -291,6 +294,32 @@ export const api = {
     }),
   calendar: () => request<Task[]>('/api/calendar'),
   search: (query = '') => request<{ tasks: Task[]; delegatedTasks: DelegatedTask[]; projects: Project[]; files: Attachment[] }>(`/api/search${query}`),
+  newsToday: (date?: string) =>
+    request<NewsTodayData>(`/api/news/today${date ? `?date=${date}` : ''}`),
+  refreshNews: () =>
+    request<NewsRun>('/api/news/refresh', { method: 'POST' }),
+  newsRun: (id: string) => request<NewsRun>(`/api/news/runs/${id}`),
+  newsSources: () => request<NewsSource[]>('/api/news/sources'),
+  updateNewsSource: (id: string, input: { enabled?: boolean; priority?: number }) =>
+    request<NewsSource>(`/api/news/sources/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
+  createNewsSource: (input: {
+    name: string;
+    homepageUrl: string;
+    feedUrl?: string;
+    category?: string;
+    language?: string;
+    country?: string;
+    priority?: number;
+  }) =>
+    request<NewsSource>('/api/news/sources', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  testNewsSource: (id: string) =>
+    request<NewsSource>(`/api/news/sources/${id}/test`, { method: 'POST' }),
   aiAnalyticsConversation: () =>
     request<AiChatConversation>('/api/ai-analytics/conversation'),
   sendAiAnalyticsMessage: (input: { conversationId?: string | null; content: string }) =>

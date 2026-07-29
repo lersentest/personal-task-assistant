@@ -16,6 +16,10 @@ export interface AppEnvironment {
   AI_ANALYTICS_CACHED_INPUT_PRICE_PER_1M_USD: string;
   AI_ANALYTICS_OUTPUT_PRICE_PER_1M_USD: string;
   DB_SLOW_QUERY_WARNING_MS: string;
+  NEWS_MANUAL_COOLDOWN_MINUTES: string;
+  NEWS_MAX_SOURCES_PER_RUN: string;
+  NEWS_X_ENABLED: string;
+  NEWS_INSTAGRAM_ENABLED: string;
   PORT: string;
   FRONTEND_ORIGINS: string;
   PUBLIC_WEB_URL: string;
@@ -119,6 +123,26 @@ export function validateEnvironment(
       values.DB_SLOW_QUERY_WARNING_MS.trim()
         ? values.DB_SLOW_QUERY_WARNING_MS
         : '3000',
+    NEWS_MANUAL_COOLDOWN_MINUTES:
+      typeof values.NEWS_MANUAL_COOLDOWN_MINUTES === 'string' &&
+      values.NEWS_MANUAL_COOLDOWN_MINUTES.trim()
+        ? values.NEWS_MANUAL_COOLDOWN_MINUTES
+        : '10',
+    NEWS_MAX_SOURCES_PER_RUN:
+      typeof values.NEWS_MAX_SOURCES_PER_RUN === 'string' &&
+      values.NEWS_MAX_SOURCES_PER_RUN.trim()
+        ? values.NEWS_MAX_SOURCES_PER_RUN
+        : '12',
+    NEWS_X_ENABLED:
+      typeof values.NEWS_X_ENABLED === 'string' &&
+      values.NEWS_X_ENABLED.trim()
+        ? values.NEWS_X_ENABLED
+        : 'false',
+    NEWS_INSTAGRAM_ENABLED:
+      typeof values.NEWS_INSTAGRAM_ENABLED === 'string' &&
+      values.NEWS_INSTAGRAM_ENABLED.trim()
+        ? values.NEWS_INSTAGRAM_ENABLED
+        : 'false',
     PORT:
       typeof values.PORT === 'string' && values.PORT.trim()
         ? values.PORT

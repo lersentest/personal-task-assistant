@@ -172,6 +172,61 @@ enum MobileVoiceRequestStatus {
   FAILED
 }
 
+enum NewsSourceScope {
+  SYSTEM
+  TENANT
+}
+
+enum NewsSourceType {
+  RSS
+  WEB
+  X
+  INSTAGRAM
+}
+
+enum NewsCategory {
+  STONE_INDUSTRY
+  STONE_MACHINERY
+  CONSTRUCTION
+  SWISS_CONSTRUCTION
+  ARCHITECTURE
+  INTERIOR_DESIGN
+  MATERIALS
+  BUSINESS_MARKET
+  EVENTS
+}
+
+enum NewsSourceStatus {
+  WORKING
+  DEGRADED
+  DISABLED
+  REQUIRES_API
+  UNSUPPORTED
+  ERROR
+}
+
+enum NewsRunType {
+  SCHEDULED
+  MANUAL
+  SOURCE_TEST
+  SEED
+}
+
+enum NewsRunStatus {
+  QUEUED
+  RUNNING
+  SUCCESS
+  PARTIAL
+  FAILED
+  COOLDOWN
+}
+
+enum NewsSummaryBasis {
+  FULL_TEXT
+  EXCERPT
+  SOCIAL_POST
+}
+
 model User {
   id             String   @id @default(uuid()) @db.Uuid
   telegramId     BigInt   @unique @map("telegram_id")
@@ -206,6 +261,10 @@ model User {
   mobileDeviceSessions     MobileDeviceSession[]
   mobileVoiceDrafts        MobileVoiceDraft[]
   mobileVoiceRequests      MobileVoiceRequest[]
+  newsSources              NewsSource[]
+  newsItems                NewsItem[]
+  newsEditions             NewsEdition[]
+  newsRuns                 NewsRun[]
   @@map("users")
 }
 
@@ -638,6 +697,127 @@ model AiAnalyticsMessage {
   @@index([conversationId, createdAt])
   @@index([ownerId, createdAt])
   @@map("ai_analytics_messages")
+}
+
+model NewsSource {
+  id                String           @id @default(uuid()) @db.Uuid
+  scope             NewsSourceScope  @default(SYSTEM)
+  tenantId          String?          @map("tenant_id") @db.Uuid
+  endpointHash      String           @unique @map("endpoint_hash") @db.VarChar(64)
+  name              String           @db.VarChar(255)
+  sourceType        NewsSourceType   @map("source_type")
+  category          NewsCategory
+  homepageUrl       String           @map("homepage_url") @db.Text
+  feedUrl           String?          @map("feed_url") @db.Text
+  language          String           @db.VarChar(12)
+  country           String?          @db.VarChar(12)
+  priority          Int              @default(3)
+  enabled           Boolean          @default(true)
+  status            NewsSourceStatus @default(WORKING)
+  statusMessage     String?          @map("status_message") @db.Text
+  keywords          String[]         @default([])
+  excludeWords      String[]         @default([]) @map("exclude_words")
+  lastAttemptAt     DateTime?        @map("last_attempt_at") @db.Timestamptz(3)
+  lastSuccessAt     DateTime?        @map("last_success_at") @db.Timestamptz(3)
+  consecutiveErrors Int              @default(0) @map("consecutive_errors")
+  deletedAt         DateTime?        @map("deleted_at") @db.Timestamptz(3)
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant User?      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items  NewsItem[]
+
+  @@index([tenantId, enabled, status])
+  @@index([sourceType, enabled, status])
+  @@map("news_sources")
+}
+
+model NewsItem {
+  id                String           @id @default(uuid()) @db.Uuid
+  tenantId          String?          @map("tenant_id") @db.Uuid
+  sourceId          String           @map("source_id") @db.Uuid
+  normalizedUrlHash String           @unique @map("normalized_url_hash") @db.VarChar(64)
+  externalId        String?          @map("external_id") @db.VarChar(500)
+  originalUrl       String           @map("original_url") @db.Text
+  canonicalUrl      String           @map("canonical_url") @db.Text
+  titleOriginal     String           @map("title_original") @db.Text
+  titleRu           String           @map("title_ru") @db.Text
+  summaryRu         String           @map("summary_ru") @db.Text
+  keyFacts          String[]         @default([]) @map("key_facts")
+  category          NewsCategory
+  tags              String[]         @default([])
+  language          String           @db.VarChar(12)
+  publishedAt       DateTime?        @map("published_at") @db.Timestamptz(3)
+  sourceName        String           @map("source_name") @db.VarChar(255)
+  summaryBasis      NewsSummaryBasis @default(EXCERPT) @map("summary_basis")
+  relevanceScore    Int              @default(0) @map("relevance_score")
+  qualityScore      Int              @default(0) @map("quality_score")
+  contentSufficient Boolean          @default(false) @map("content_sufficient")
+  warning           String?          @db.Text
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  source       NewsSource        @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  tenant       User?             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  editionItems NewsEditionItem[]
+
+  @@index([sourceId, externalId])
+  @@index([publishedAt])
+  @@map("news_items")
+}
+
+model NewsEdition {
+  id          String        @id @default(uuid()) @db.Uuid
+  tenantId    String        @map("tenant_id") @db.Uuid
+  editionDate DateTime      @map("edition_date") @db.Date
+  version     Int           @default(1)
+  status      NewsRunStatus @default(SUCCESS)
+  summary     String?       @db.Text
+  lastRunId   String?       @map("last_run_id") @db.Uuid
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant User              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  run    NewsRun?          @relation(fields: [lastRunId], references: [id], onDelete: SetNull)
+  items  NewsEditionItem[]
+
+  @@unique([tenantId, editionDate, version])
+  @@index([tenantId, editionDate])
+  @@map("news_editions")
+}
+
+model NewsEditionItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  editionId String   @map("edition_id") @db.Uuid
+  itemId    String   @map("item_id") @db.Uuid
+  rank      Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  edition NewsEdition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  item    NewsItem    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([editionId, itemId])
+  @@index([editionId, rank])
+  @@map("news_edition_items")
+}
+
+model NewsRun {
+  id             String        @id @default(uuid()) @db.Uuid
+  tenantId       String        @map("tenant_id") @db.Uuid
+  runType        NewsRunType   @map("run_type")
+  status         NewsRunStatus @default(QUEUED)
+  startedAt      DateTime?     @map("started_at") @db.Timestamptz(3)
+  finishedAt     DateTime?     @map("finished_at") @db.Timestamptz(3)
+  message        String?       @db.Text
+  itemsFound     Int           @default(0) @map("items_found")
+  itemsAdded     Int           @default(0) @map("items_added")
+  sourcesChecked Int           @default(0) @map("sources_checked")
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant   User          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  editions NewsEdition[]
+
+  @@index([tenantId, status, createdAt])
+  @@map("news_runs")
 }
 
 model MobileDeviceSession {

@@ -12,6 +12,7 @@ import { ExecutorsModule } from './executors/executors.module';
 import { ProjectsModule } from './projects/projects.module';
 import { RemindersModule } from './reminders/reminders.module';
 import { MyDayModule } from './my-day/my-day.module';
+import { NewsModule } from './news/news.module';
 import { RequestTimingInterceptor } from './observability/request-timing.interceptor';
 import { TagsModule } from './tags/tags.module';
 import { TasksModule } from './tasks/tasks.module';
@@ -35,6 +36,7 @@ import { UsersModule } from './users/users.module';
     ProjectsModule,
     TasksModule,
     MyDayModule,
+    NewsModule,
     TagsModule,
     RemindersModule,
     TelegramModule,
