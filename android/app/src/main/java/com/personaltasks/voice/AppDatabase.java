@@ -10,7 +10,7 @@ public abstract class AppDatabase extends RoomDatabase {
     private static volatile AppDatabase instance;
     public abstract VoiceCommandDao voiceCommands();
 
-    static AppDatabase get(Context context) {
+    public static AppDatabase get(Context context) {
         if (instance == null) {
             synchronized (AppDatabase.class) {
                 if (instance == null) {

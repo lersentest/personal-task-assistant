@@ -13,16 +13,16 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
-final class ApiClient {
+public final class ApiClient {
     private final String baseUrl;
     private final String token;
 
-    ApiClient(String baseUrl, String token) {
+    public ApiClient(String baseUrl, String token) {
         this.baseUrl = baseUrl.replaceAll("/+$", "");
         this.token = token;
     }
 
-    JSONObject preview(File audio, String clientCommandId, String idempotencyKey, String source, long durationMs) throws Exception {
+    public JSONObject preview(File audio, String clientCommandId, String idempotencyKey, String source, long durationMs) throws Exception {
         String boundary = "----pta-" + System.currentTimeMillis();
         HttpURLConnection c = open("/api/voice-command/preview");
         c.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
@@ -44,13 +44,13 @@ final class ApiClient {
         return readJson(c);
     }
 
-    JSONObject confirm(String draftId, String idempotencyKey) throws Exception {
+    public JSONObject confirm(String draftId, String idempotencyKey) throws Exception {
         return postJson("/api/voice-command/confirm", new JSONObject()
                 .put("draftId", draftId)
                 .put("idempotencyKey", idempotencyKey));
     }
 
-    JSONObject cancel(String draftId, String idempotencyKey) throws Exception {
+    public JSONObject cancel(String draftId, String idempotencyKey) throws Exception {
         return postJson("/api/voice-command/cancel", new JSONObject()
                 .put("draftId", draftId)
                 .put("idempotencyKey", idempotencyKey));
