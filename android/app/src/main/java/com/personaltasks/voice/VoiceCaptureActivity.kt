@@ -115,7 +115,7 @@ class VoiceCaptureActivity : ComponentActivity() {
     @Composable
     private fun CaptureScreen() {
         VoicePage(scroll = state == FlowState.PREVIEW || state == FlowState.ERROR) {
-            Header(headerTitle, headerSubtitle, action = { RoundIcon("×", onClick = { cancelFlow() }) })
+            Header(headerTitle, headerSubtitle, action = { RoundIcon("×", onClick = { cancelFlow() }, size = 48.dp) })
             when (state) {
                 FlowState.IDLE -> IdleContent()
                 FlowState.RECORDING -> RecordingContent()
@@ -130,23 +130,23 @@ class VoiceCaptureActivity : ComponentActivity() {
 
     @Composable
     private fun IdleContent() {
-        Column(Modifier.fillMaxWidth().padding(top = 56.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            OrbButton(onClick = { startRecording() })
-            Spacer(Modifier.height(22.dp))
-            Text("Запишите задачу", color = Vd.ink, fontSize = 34.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
-            Text("Нажмите и продиктуйте одну задачу.\nПеред созданием покажем результат.", color = Vd.muted, fontSize = 18.sp, lineHeight = 25.sp, textAlign = TextAlign.Center)
+        Column(Modifier.fillMaxWidth().padding(top = 34.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            OrbButton(onClick = { startRecording() }, size = 230.dp)
+            Spacer(Modifier.height(16.dp))
+            Text("Запишите задачу", color = Vd.ink, fontSize = 30.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+            Text("Нажмите и продиктуйте одну задачу.\nПеред созданием покажем результат.", color = Vd.muted, fontSize = 16.sp, lineHeight = 22.sp, textAlign = TextAlign.Center)
         }
     }
 
     @Composable
     private fun RecordingContent() {
-        Column(Modifier.fillMaxWidth().padding(top = 24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            OrbButton(recording = true, level = level)
-            Text(timerText, color = Vd.ink, fontSize = 50.sp, fontWeight = FontWeight.Light)
+        Column(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            OrbButton(recording = true, level = level, size = 230.dp)
+            Text(timerText, color = Vd.ink, fontSize = 44.sp, fontWeight = FontWeight.Light)
             TinyWave(Modifier.padding(horizontal = 42.dp), active = true)
+            Spacer(Modifier.height(12.dp))
+            Text("Когда закончите, нажмите «Завершить»", color = Vd.muted, fontSize = 15.sp, textAlign = TextAlign.Center)
             Spacer(Modifier.height(18.dp))
-            Text("Когда закончите, нажмите «Завершить»", color = Vd.muted, fontSize = 17.sp, textAlign = TextAlign.Center)
-            Spacer(Modifier.height(24.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                 GradientButton("■  Завершить", Modifier.weight(1f)) { stopAndPreview() }
                 SoftButton("Отменить", Modifier.weight(1f)) { cancelFlow() }
@@ -156,24 +156,24 @@ class VoiceCaptureActivity : ComponentActivity() {
 
     @Composable
     private fun ProcessingContent() {
-        Column(Modifier.fillMaxWidth().padding(top = 82.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            OrbButton(processing = true, size = 170.dp)
-            Spacer(Modifier.height(24.dp))
-            GlassCard(radius = 30.dp) {
-                Text(processingStep, color = Vd.ink, fontSize = 28.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-                Spacer(Modifier.height(8.dp))
-                Text("Распознаём голос, выделяем дату, проект и приоритет.", color = Vd.muted, fontSize = 18.sp, lineHeight = 25.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        Column(Modifier.fillMaxWidth().padding(top = 48.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            OrbButton(processing = true, size = 150.dp)
+            Spacer(Modifier.height(18.dp))
+            GlassCard(radius = 28.dp, padding = 18.dp) {
+                Text(processingStep, color = Vd.ink, fontSize = 24.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(6.dp))
+                Text("Распознаём голос, выделяем дату, проект и приоритет.", color = Vd.muted, fontSize = 16.sp, lineHeight = 22.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
             }
-            Spacer(Modifier.height(28.dp))
-            Text("Не закрывайте экран, пока идёт распознавание.", color = Vd.muted, fontSize = 17.sp, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(20.dp))
+            Text("Не закрывайте экран, пока идёт распознавание.", color = Vd.muted, fontSize = 15.sp, textAlign = TextAlign.Center)
         }
     }
 
     @Composable
     private fun PreviewContent() {
         val p = preview ?: JSONObject()
-        Column(Modifier.fillMaxWidth().padding(top = 26.dp), verticalArrangement = Arrangement.Bottom) {
-            GlassCard(radius = 30.dp) {
+        Column(Modifier.fillMaxWidth().padding(top = 16.dp), verticalArrangement = Arrangement.Bottom) {
+            GlassCard(radius = 28.dp, padding = 16.dp) {
                 PreviewRow("T", "Название", p.optString("title", "Новая задача"))
                 PreviewRow("□", "Дата и время", p.optJSONObject("display")?.optString("dueAt").orEmpty())
                 PreviewRow("⚑", "Приоритет", readablePriority(p.optString("priority")), readablePriority(p.optString("priority")))
@@ -182,9 +182,9 @@ class VoiceCaptureActivity : ComponentActivity() {
                 val description = p.optString("description")
                 if (description.isNotBlank() && description != "null") PreviewRow("≡", "Описание", description)
             }
-            Spacer(Modifier.height(22.dp))
+            Spacer(Modifier.height(16.dp))
             GradientButton("✓  Создать задачу", Modifier.fillMaxWidth()) { confirm() }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
             SoftButton("↻  Записать заново", Modifier.fillMaxWidth()) { reRecord() }
             Spacer(Modifier.height(8.dp))
             SoftButton("Отменить", Modifier.fillMaxWidth()) { cancelFlow() }

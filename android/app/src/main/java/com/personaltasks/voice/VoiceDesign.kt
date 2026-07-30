@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,6 +37,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -45,26 +49,47 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 object Vd {
-    val ink = Color(0xFF07152F)
-    val muted = Color(0xFF738198)
+    var dark = false
+    val ink get() = if (dark) Color(0xFFEAF1FF) else Color(0xFF07152F)
+    val muted get() = if (dark) Color(0xFF9CA9BE) else Color(0xFF738198)
     val blue = Color(0xFF1F78FF)
     val cyan = Color(0xFF20D6F7)
     val green = Color(0xFF16C784)
     val red = Color(0xFFFF426B)
-    val line = Color(0xFFE3E9F5)
-    val panel = Color(0xF5FFFFFF)
+    val line get() = if (dark) Color(0xFF243149) else Color(0xFFE3E9F5)
+    val panel get() = if (dark) Color(0xF51A2538) else Color(0xF5FFFFFF)
+    val surface get() = if (dark) Color(0xFF10192A) else Color(0xFFF9FBFF)
+    val surface2 get() = if (dark) Color(0xFF07101F) else Color(0xFFEFF6FF)
+    val control get() = if (dark) Color(0xE6223046) else Color.White.copy(alpha = .84f)
+    val border get() = if (dark) Color(0x334F6B95) else Color.White.copy(alpha = .88f)
 }
 
 @Composable
 fun VoicePage(modifier: Modifier = Modifier, scroll: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
+    val context = LocalContext.current
+    val systemDark = isSystemInDarkTheme()
+    Vd.dark = when (AppPrefs.themeMode(context)) {
+        "dark" -> true
+        "light" -> false
+        else -> systemDark
+    }
+    val safe = WindowInsets.safeDrawing.asPaddingValues()
     Box(modifier.fillMaxSize()) {
         VoiceBackgroundCanvas()
-        val base = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 30.dp)
+        val base = Modifier
+            .fillMaxSize()
+            .padding(
+                start = 24.dp,
+                end = 24.dp,
+                top = safe.calculateTopPadding() + 18.dp,
+                bottom = safe.calculateBottomPadding() + 18.dp
+            )
         if (scroll) Column(base.verticalScroll(rememberScrollState()), content = content) else Column(base, content = content)
     }
 }
@@ -72,9 +97,9 @@ fun VoicePage(modifier: Modifier = Modifier, scroll: Boolean = false, content: @
 @Composable
 fun VoiceBackgroundCanvas() {
     Canvas(Modifier.fillMaxSize()) {
-        drawRect(Brush.verticalGradient(listOf(Color(0xFFF9FBFF), Color(0xFFEFF6FF))))
-        drawCircle(Color(0x442D7DFF), radius = size.width * .55f, center = Offset(size.width * .85f, size.height * .14f))
-        drawCircle(Color(0x2220D6F7), radius = size.width * .45f, center = Offset(size.width * .10f, size.height * .58f))
+        drawRect(Brush.verticalGradient(listOf(Vd.surface, Vd.surface2)))
+        drawCircle(if (Vd.dark) Color(0x332D7DFF) else Color(0x442D7DFF), radius = size.width * .55f, center = Offset(size.width * .85f, size.height * .14f))
+        drawCircle(if (Vd.dark) Color(0x1820D6F7) else Color(0x2220D6F7), radius = size.width * .45f, center = Offset(size.width * .10f, size.height * .58f))
         for (i in 0..7) {
             drawCircle(Color(0x6620D6F7), radius = 3.dp.toPx(), center = Offset(size.width * (.10f + i * .11f), size.height * (.22f + (i % 3) * .19f)))
         }
@@ -82,12 +107,12 @@ fun VoiceBackgroundCanvas() {
 }
 
 @Composable
-fun Header(title: String, subtitle: String, action: @Composable (() -> Unit)? = null) {
+fun Header(title: String, subtitle: String, action: @Composable (() -> Unit)? = null, compact: Boolean = false) {
     Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.weight(1f)) {
-            Text(title, color = Vd.ink, fontSize = 38.sp, lineHeight = 42.sp, fontWeight = FontWeight.Black)
-            Spacer(Modifier.height(8.dp))
-            Text(subtitle, color = Vd.muted, fontSize = 16.sp, lineHeight = 22.sp)
+            Text(title, color = Vd.ink, fontSize = if (compact) 30.sp else 34.sp, lineHeight = if (compact) 34.sp else 38.sp, fontWeight = FontWeight.Black)
+            Spacer(Modifier.height(if (compact) 4.dp else 6.dp))
+            Text(subtitle, color = Vd.muted, fontSize = if (compact) 14.sp else 16.sp, lineHeight = if (compact) 19.sp else 22.sp)
         }
         if (action != null) action()
     }
@@ -99,20 +124,20 @@ fun RoundIcon(text: String, onClick: () -> Unit, size: Dp = 58.dp) {
         onClick = onClick,
         shape = CircleShape,
         contentPadding = PaddingValues(0.dp),
-        colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White.copy(alpha = .84f), contentColor = Vd.ink),
-        border = BorderStroke(1.dp, Color(0xFFE0E8F5)),
+        colors = ButtonDefaults.outlinedButtonColors(containerColor = Vd.control, contentColor = Vd.ink),
+        border = BorderStroke(1.dp, Vd.line),
         modifier = Modifier.size(size).shadow(10.dp, CircleShape, ambientColor = Color(0x2207152F), spotColor = Color(0x2207152F))
-    ) { Text(text, fontSize = 28.sp, fontWeight = FontWeight.Bold) }
+    ) { Text(text, fontSize = (size.value * .48f).sp, fontWeight = FontWeight.Bold) }
 }
 
 @Composable
-fun GlassCard(modifier: Modifier = Modifier, radius: Dp = 28.dp, content: @Composable ColumnScope.() -> Unit) {
+fun GlassCard(modifier: Modifier = Modifier, radius: Dp = 28.dp, padding: Dp = 20.dp, content: @Composable ColumnScope.() -> Unit) {
     Card(
         modifier = modifier.shadow(16.dp, RoundedCornerShape(radius), ambientColor = Color(0x1607152F), spotColor = Color(0x2007152F)),
         shape = RoundedCornerShape(radius),
         colors = CardDefaults.cardColors(containerColor = Vd.panel),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = .88f)),
-        content = { Column(Modifier.padding(20.dp), content = content) }
+        border = BorderStroke(1.dp, Vd.border),
+        content = { Column(Modifier.padding(padding), content = content) }
     )
 }
 
@@ -185,7 +210,7 @@ fun SoftButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit)
 @Composable
 fun PreviewRow(icon: String, label: String, value: String, badge: String? = null) {
     Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(46.dp).background(Color(0xFFEAF2FF), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(46.dp).background(if (Vd.dark) Color(0x223366FF) else Color(0xFFEAF2FF), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
             Text(icon, fontSize = 24.sp, color = Vd.blue, fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.width(14.dp))
@@ -194,7 +219,7 @@ fun PreviewRow(icon: String, label: String, value: String, badge: String? = null
             Text(value.ifBlank { "—" }, color = Vd.ink, fontSize = 19.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         if (!badge.isNullOrBlank()) {
-            Text(badge, color = Vd.blue, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.background(Color(0xFFEAF2FF), RoundedCornerShape(999.dp)).padding(horizontal = 10.dp, vertical = 7.dp))
+            Text(badge, color = Vd.blue, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.background(if (Vd.dark) Color(0x223366FF) else Color(0xFFEAF2FF), RoundedCornerShape(999.dp)).padding(horizontal = 10.dp, vertical = 7.dp))
         }
     }
 }

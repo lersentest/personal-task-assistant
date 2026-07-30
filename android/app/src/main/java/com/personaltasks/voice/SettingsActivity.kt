@@ -55,10 +55,10 @@ class SettingsActivity : ComponentActivity() {
     @Composable
     private fun SettingsScreen() {
         VoicePage(scroll = true) {
-            Header("Настройки", "Голосовые задачи, подключение и внешний вид.", action = { RoundIcon("×", onClick = { finish() }) })
-            Spacer(Modifier.height(24.dp))
+            Header("Настройки", "Голос, подключение и внешний вид.", action = { RoundIcon("×", onClick = { finish() }, size = 46.dp) }, compact = true)
+            Spacer(Modifier.height(12.dp))
 
-            GlassCard {
+            GlassCard(radius = 22.dp, padding = 14.dp) {
                 SectionLabel("Общие")
                 SettingSwitch("Звук", "Включить звуковые эффекты", sound) {
                     sound = it
@@ -69,61 +69,53 @@ class SettingsActivity : ComponentActivity() {
                     AppPrefs.saveGeneral(this@SettingsActivity, sound, vibration)
                 }
             }
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(10.dp))
 
-            GlassCard {
+            GlassCard(radius = 22.dp, padding = 14.dp) {
                 SectionLabel("Внешний вид")
-                Spacer(Modifier.height(14.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ThemeChip("Системная", "system", Modifier.weight(1f))
                     ThemeChip("Светлая", "light", Modifier.weight(1f))
                     ThemeChip("Тёмная", "dark", Modifier.weight(1f))
                 }
             }
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(10.dp))
 
-            GlassCard {
+            GlassCard(radius = 22.dp, padding = 14.dp) {
                 SectionLabel("Подключение")
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(10.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    OrbButton(level = .18f, size = 88.dp)
-                    Spacer(Modifier.width(16.dp))
+                    OrbButton(level = .18f, size = 62.dp)
+                    Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         StatusPill(if (token.isBlank()) "Не подключено" else "Подключено", token.isNotBlank())
-                        Spacer(Modifier.height(8.dp))
-                        Text(if (token.isBlank()) "Добавьте mobile device token" else "Устройство готово к записи", color = Vd.ink, fontWeight = FontWeight.Bold)
-                        Text("Последняя синхронизация: ${lastSyncText()}", color = Vd.muted, fontSize = 13.sp)
+                        Spacer(Modifier.height(5.dp))
+                        Text(if (token.isBlank()) "Добавьте mobile device token" else "Готово к записи", color = Vd.ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text("Синхронизация: ${lastSyncText()}", color = Vd.muted, fontSize = 12.sp)
                     }
                 }
             }
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(10.dp))
 
-            GlassCard {
-                SectionLabel("О приложении")
-                Spacer(Modifier.height(8.dp))
-                Text("Personal Voice Task", color = Vd.ink, fontSize = 21.sp, fontWeight = FontWeight.Black)
-                Text("Версия 0.1.0\nТокен: ${AppPrefs.maskedToken(this@SettingsActivity)}", color = Vd.muted, lineHeight = 21.sp)
-            }
-            Spacer(Modifier.height(18.dp))
-
-            GlassCard {
+            GlassCard(radius = 22.dp, padding = 14.dp) {
                 Text(
                     if (developerOpen) "Скрыть подключение" else "Для разработчиков",
                     color = Vd.ink,
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Black,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
                         .clickable { developerOpen = !developerOpen }
-                        .padding(vertical = 6.dp)
+                        .padding(vertical = 4.dp)
                 )
                 if (developerOpen) {
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(8.dp))
                     CompactField("Backend URL", baseUrl, { baseUrl = it })
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(8.dp))
                     CompactField("Mobile device token", token, { token = it })
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(10.dp))
                     GradientButton("Сохранить подключение", modifier = Modifier.fillMaxWidth()) {
                         AppPrefs.save(this@SettingsActivity, baseUrl, token)
                         AppPrefs.markSynced(this@SettingsActivity)
@@ -132,15 +124,23 @@ class SettingsActivity : ComponentActivity() {
                     }
                 }
             }
+            Spacer(Modifier.height(10.dp))
+
+            GlassCard(radius = 22.dp, padding = 14.dp) {
+                SectionLabel("О приложении")
+                Spacer(Modifier.height(6.dp))
+                Text("Personal Voice Task", color = Vd.ink, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                Text("Версия 0.1.0 · токен: ${AppPrefs.maskedToken(this@SettingsActivity)}", color = Vd.muted, fontSize = 12.sp, lineHeight = 17.sp)
+            }
         }
     }
 
     @Composable
     private fun SettingSwitch(title: String, description: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-        Row(Modifier.fillMaxWidth().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(title, color = Vd.ink, fontSize = 19.sp, fontWeight = FontWeight.Black)
-                Text(description, color = Vd.muted, fontSize = 14.sp)
+                Text(title, color = Vd.ink, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                Text(description, color = Vd.muted, fontSize = 12.sp)
             }
             Switch(checked = checked, onCheckedChange = onChange)
         }
@@ -152,9 +152,9 @@ class SettingsActivity : ComponentActivity() {
         GlassCard(modifier.clickable {
             theme = mode
             AppPrefs.saveThemeMode(this@SettingsActivity, mode)
-        }, radius = 18.dp) {
-            Text(if (selected) "✓" else "○", color = if (selected) Vd.blue else Vd.muted, fontSize = 22.sp, fontWeight = FontWeight.Black)
-            Text(label, color = if (selected) Vd.blue else Vd.ink, fontWeight = FontWeight.Bold)
+        }, radius = 16.dp, padding = 10.dp) {
+            Text(if (selected) "✓" else "○", color = if (selected) Vd.blue else Vd.muted, fontSize = 18.sp, fontWeight = FontWeight.Black)
+            Text(label, color = if (selected) Vd.blue else Vd.ink, fontWeight = FontWeight.Bold, fontSize = 12.sp)
         }
     }
 

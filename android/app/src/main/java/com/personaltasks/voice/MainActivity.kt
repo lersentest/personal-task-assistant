@@ -59,7 +59,7 @@ class MainActivity : ComponentActivity() {
             Header(
                 title = "Новая задача",
                 subtitle = if (connected) "● Подключено   |   Устройство готово к записи" else "● Не подключено   |   Откройте настройки",
-                action = { RoundIcon("⚙", onClick = { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) }) }
+                action = { RoundIcon("⚙", onClick = { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) }, size = 48.dp) }
             )
             if (pendingCount > 0) {
                 Spacer(Modifier.height(18.dp))
@@ -72,24 +72,24 @@ class MainActivity : ComponentActivity() {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                OrbButton(onClick = { openVoiceCapture("ANDROID_APP") })
-                Spacer(Modifier.height(18.dp))
-                Text("Запишите задачу", color = Vd.ink, fontSize = 34.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                OrbButton(onClick = { openVoiceCapture("ANDROID_APP") }, size = 230.dp)
+                Spacer(Modifier.height(14.dp))
+                Text("Запишите задачу", color = Vd.ink, fontSize = 30.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
                 Text(
                     "Нажмите и продиктуйте одну задачу.\nПеред созданием покажем, что распознали.",
                     color = Vd.muted,
-                    fontSize = 18.sp,
-                    lineHeight = 25.sp,
+                    fontSize = 16.sp,
+                    lineHeight = 22.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
-            GlassCard(radius = 26.dp) {
+            GlassCard(radius = 24.dp, padding = 16.dp) {
                 SectionLabel("Пример")
+                Spacer(Modifier.height(8.dp))
+                Text("«Позвонить Роме завтра в 10 утра, обычный приоритет»", color = Vd.ink, fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.height(10.dp))
-                Text("«Позвонить Роме завтра в 10 утра, обычный приоритет»", color = Vd.ink, fontSize = 21.sp, fontWeight = FontWeight.Black)
-                Spacer(Modifier.height(14.dp))
-                Text("Завтра в 10:00   •   Обычный приоритет", color = Vd.blue, fontWeight = FontWeight.Bold)
+                Text("Завтра в 10:00   •   Обычный приоритет", color = Vd.blue, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
         }
     }
