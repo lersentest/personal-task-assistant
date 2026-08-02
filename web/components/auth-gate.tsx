@@ -1,57 +1,72 @@
 'use client';
 
-import { Session } from '@supabase/supabase-js';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { api } from '@/lib/api';
+import { clearAuth, getAccessToken, getStoredUser, type AuthUser } from '@/lib/auth';
 
 type GateState =
-  | { status: 'loading' }
-  | { status: 'authenticated' }
-  | { status: 'anonymous' };
+  | { status: 'loading'; user: null }
+  | { status: 'authenticated'; user: AuthUser }
+  | { status: 'anonymous'; user: null };
+
+const CurrentUserContext = createContext<AuthUser | null>(null);
+
+export function useCurrentUser() {
+  return useContext(CurrentUserContext);
+}
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [session, setSession] = useState<Session | null | undefined>(undefined);
-  const [gate, setGate] = useState<GateState>({ status: 'loading' });
+  const [gate, setGate] = useState<GateState>(() => {
+    const stored = getStoredUser();
+    return stored ? { status: 'authenticated', user: stored } : { status: 'loading', user: null };
+  });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (session === undefined) return;
     let cancelled = false;
 
     async function resolveAuthState() {
-      if (session) {
-        setGate({ status: 'authenticated' });
-        if (pathname === '/login') router.replace('/dashboard');
+      if (!getAccessToken()) {
+        clearAuth();
+        if (!cancelled) setGate({ status: 'anonymous', user: null });
+        if (pathname !== '/login') router.replace('/login');
         return;
       }
 
-      if (cancelled) return;
-      setGate({ status: 'anonymous' });
-      if (pathname !== '/login') router.replace('/login');
+      try {
+        const user = await api.me();
+        if (cancelled) return;
+        setGate({ status: 'authenticated', user });
+        if (pathname === '/login') {
+          router.replace(user.mustChangePassword ? '/change-password' : '/dashboard');
+        } else if (user.mustChangePassword && pathname !== '/change-password') {
+          router.replace('/change-password');
+        } else if (
+          user.role !== 'PLATFORM_ADMIN' &&
+          (pathname.startsWith('/delegated') || pathname.startsWith('/executors') || pathname.startsWith('/admin'))
+        ) {
+          router.replace('/dashboard');
+        }
+      } catch {
+        clearAuth();
+        if (cancelled) return;
+        setGate({ status: 'anonymous', user: null });
+        if (pathname !== '/login') router.replace('/login');
+      }
     }
 
     resolveAuthState();
     return () => {
       cancelled = true;
     };
-  }, [pathname, router, session]);
+  }, [pathname, router]);
 
-  if (session === undefined || gate.status === 'loading') {
+  if (gate.status === 'loading') {
     return <div className="grid min-h-screen place-items-center text-sm text-[var(--muted)]">Загрузка...</div>;
   }
 
   if (gate.status === 'anonymous' && pathname !== '/login') return null;
-  return <>{children}</>;
+  return <CurrentUserContext.Provider value={gate.user}>{children}</CurrentUserContext.Provider>;
 }

@@ -20,6 +20,7 @@ import {
   Plus,
   Search,
   Settings,
+  Shield,
   Sparkles,
   Sun,
   Trash2,
@@ -39,7 +40,8 @@ import { ProjectDetailsModal } from '@/components/project-detail-modal';
 import { TaskDetailsModal } from '@/components/task-detail-modal';
 import { api } from '@/lib/api';
 import type { Attachment, DelegatedTask, Project, Task, TaskKind } from '@/lib/types';
-import { supabase } from '@/lib/supabase';
+import { logout as logoutSession } from '@/lib/auth';
+import { useCurrentUser } from '@/components/auth-gate';
 import { useUiMode } from '../ui-mode-provider';
 import { VoiceCommandButton } from '../voice-command-button';
 
@@ -56,14 +58,14 @@ const sections = [
     title: 'Работа',
     items: [
       { href: '/tasks', label: 'Задачи', icon: CheckSquare },
-      { href: '/delegated', label: 'Делегированные', icon: Users },
+      { href: '/delegated', label: 'Делегированные', icon: Users, adminOnly: true },
       { href: '/projects', label: 'Проекты', icon: FolderKanban },
     ],
   },
   {
     title: 'Библиотека',
     items: [
-      { href: '/executors', label: 'Исполнители', icon: Users },
+      { href: '/executors', label: 'Исполнители', icon: Users, adminOnly: true },
       { href: '/news', label: 'Новости', icon: Newspaper },
       { href: '/search', label: 'Поиск', icon: Search },
       { href: '/files', label: 'Файлы', icon: Archive },
@@ -72,6 +74,7 @@ const sections = [
   {
     title: 'Система',
     items: [
+      { href: '/admin/users', label: 'Пользователи', icon: Shield, adminOnly: true },
       { href: '/game', label: 'Игра', icon: Gamepad2 },
       { href: '/trash', label: 'Корзина', icon: Trash2 },
     ],
@@ -80,7 +83,7 @@ const sections = [
 
 const createItems = [
   { label: 'Задача', href: '/tasks?create=1&type=TASK', icon: CheckSquare, hint: 'Обычная рабочая задача', entity: 'task', kind: 'TASK' },
-  { label: 'Делегированная', href: '/delegated', icon: Users, hint: 'Задача для исполнителя', entity: 'delegated' },
+  { label: 'Делегированная', href: '/delegated', icon: Users, hint: 'Задача для исполнителя', entity: 'delegated', adminOnly: true },
   { label: 'Звонок', href: '/tasks?create=1&type=CALL', icon: Phone, hint: 'Запланировать звонок', entity: 'task', kind: 'CALL' },
   { label: 'Встреча', href: '/tasks?create=1&type=MEETING', icon: Users, hint: 'Встреча или созвон', entity: 'task', kind: 'MEETING' },
   { label: 'Идея', href: '/tasks?create=1&type=IDEA', icon: Lightbulb, hint: 'Быстро сохранить мысль', entity: 'task', kind: 'IDEA' },
@@ -93,7 +96,7 @@ const commands = [
   { label: 'Открыть обзор', href: '/dashboard', hint: 'Сегодня, риски, проекты, активность' },
   { label: 'Открыть календарь', href: '/calendar', hint: 'Месяц, неделя, день, список' },
   { label: 'Создать задачу', href: '/tasks?create=1&type=TASK', hint: 'Новая задача', create: { entity: 'task', kind: 'TASK' } },
-  { label: 'Создать делегированную задачу', href: '/delegated', hint: 'Задача для исполнителя', create: { entity: 'delegated' } },
+  { label: 'Создать делегированную задачу', href: '/delegated', hint: 'Задача для исполнителя', create: { entity: 'delegated' }, adminOnly: true },
   { label: 'Создать звонок', href: '/tasks?create=1&type=CALL', hint: 'Тип задачи: звонок', create: { entity: 'task', kind: 'CALL' } },
   { label: 'Создать встречу', href: '/tasks?create=1&type=MEETING', hint: 'Тип задачи: встреча', create: { entity: 'task', kind: 'MEETING' } },
   { label: 'Создать проект', href: '/projects?create=1', hint: 'Новый проект', create: { entity: 'project' } },
@@ -146,6 +149,8 @@ function fileSearchParts(file: Attachment) {
 export function FocusShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const currentUser = useCurrentUser();
+  const canUseDelegation = currentUser?.role === 'PLATFORM_ADMIN';
   const { appearance, setAppearance } = useUiMode();
   const [createOpen, setCreateOpen] = useState(false);
   const [createModal, setCreateModal] = useState<CreateEntityState | null>(null);
@@ -166,6 +171,23 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
     [debouncedSearchQuery],
   );
 
+  const visibleSections = useMemo(
+    () =>
+      sections.map((section) => ({
+        ...section,
+        items: section.items.filter((item) => !item.adminOnly || canUseDelegation),
+      })).filter((section) => section.items.length > 0),
+    [canUseDelegation],
+  );
+  const visibleCreateItems = useMemo(
+    () => createItems.filter((item) => !item.adminOnly || canUseDelegation),
+    [canUseDelegation],
+  );
+  const visibleCommands = useMemo(
+    () => commands.filter((command) => !command.adminOnly || canUseDelegation),
+    [canUseDelegation],
+  );
+
   const globalSearch = useQuery({
     queryKey: ['global-search', debouncedSearchQuery],
     queryFn: () => api.search(searchQueryParam),
@@ -175,11 +197,11 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
 
   const filteredCommands = useMemo(() => {
     const value = searchQuery;
-    if (!value) return commands;
-    return commands.filter((command) =>
+    if (!value) return visibleCommands;
+    return visibleCommands.filter((command) =>
       `${command.label} ${command.hint}`.toLowerCase().includes(value),
     );
-  }, [searchQuery]);
+  }, [searchQuery, visibleCommands]);
 
   const taskResults = useMemo(
     () =>
@@ -193,12 +215,12 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
 
   const delegatedTaskResults = useMemo(
     () =>
-      hasSearchQuery
+      canUseDelegation && hasSearchQuery
         ? (globalSearch.data?.delegatedTasks ?? [])
             .filter((task) => matchesQuery(delegatedTaskSearchParts(task), searchQuery))
             .slice(0, 5)
         : [],
-    [globalSearch.data?.delegatedTasks, hasSearchQuery, searchQuery],
+    [canUseDelegation, globalSearch.data?.delegatedTasks, hasSearchQuery, searchQuery],
   );
 
   const projectResults = useMemo(
@@ -276,6 +298,16 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   useEffect(() => {
+    if (
+      currentUser &&
+      !canUseDelegation &&
+      (pathname.startsWith('/delegated') || pathname.startsWith('/executors') || pathname.startsWith('/admin'))
+    ) {
+      router.replace('/dashboard');
+    }
+  }, [canUseDelegation, currentUser, pathname, router]);
+
+  useEffect(() => {
     if (!mobileMenuOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -292,7 +324,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   async function logout() {
-    await supabase.auth.signOut();
+    await logoutSession();
     router.replace('/login');
   }
 
@@ -359,6 +391,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
 
   function openCreateItem(item: (typeof createItems)[number]) {
     if (item.entity === 'delegated') {
+      if (!canUseDelegation) return;
       openCreate({ entity: 'delegated' });
       return;
     }
@@ -400,7 +433,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
           </button>
           {createOpen ? (
             <div className="absolute left-0 right-0 top-14 z-40 grid gap-1 rounded-2xl border border-[var(--focus-border)] bg-[var(--focus-surface)] p-2 text-sm shadow-[var(--focus-shadow)]">
-              {createItems.map((item) => {
+              {visibleCreateItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
@@ -423,7 +456,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="grid gap-6">
-          {sections.map((section) => (
+          {visibleSections.map((section) => (
             <div key={section.title}>
               <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--focus-text-muted)]">
                 {section.title}
@@ -647,7 +680,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
             </button>
 
             <div className="mb-5 grid grid-cols-2 gap-2">
-              {createItems.map((item) => {
+              {visibleCreateItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
@@ -664,7 +697,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
             </div>
 
             <nav className="grid gap-5">
-              {sections.map((section) => (
+              {visibleSections.map((section) => (
                 <div key={section.title}>
                   <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--focus-text-muted)]">
                     {section.title}
@@ -774,7 +807,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
                     </section>
                   ) : null}
 
-                  {delegatedTaskResults.length > 0 ? (
+                  {canUseDelegation && delegatedTaskResults.length > 0 ? (
                     <section>
                       <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--focus-text-muted)]">
                         Делегированные

@@ -25,6 +25,9 @@ export interface AppEnvironment {
   PUBLIC_WEB_URL: string;
   SUPABASE_URL: string;
   SUPABASE_JWT_SECRET: string;
+  AUTH_JWT_SECRET: string;
+  AUTH_ACCESS_TOKEN_TTL_MINUTES: string;
+  AUTH_REFRESH_TOKEN_TTL_DAYS: string;
 }
 
 const REQUIRED_KEYS = [
@@ -165,5 +168,19 @@ export function validateEnvironment(
       values.SUPABASE_JWT_SECRET.trim()
         ? values.SUPABASE_JWT_SECRET
         : '',
+    AUTH_JWT_SECRET:
+      typeof values.AUTH_JWT_SECRET === 'string' && values.AUTH_JWT_SECRET.trim()
+        ? values.AUTH_JWT_SECRET
+        : '',
+    AUTH_ACCESS_TOKEN_TTL_MINUTES:
+      typeof values.AUTH_ACCESS_TOKEN_TTL_MINUTES === 'string' &&
+      values.AUTH_ACCESS_TOKEN_TTL_MINUTES.trim()
+        ? values.AUTH_ACCESS_TOKEN_TTL_MINUTES
+        : '15',
+    AUTH_REFRESH_TOKEN_TTL_DAYS:
+      typeof values.AUTH_REFRESH_TOKEN_TTL_DAYS === 'string' &&
+      values.AUTH_REFRESH_TOKEN_TTL_DAYS.trim()
+        ? values.AUTH_REFRESH_TOKEN_TTL_DAYS
+        : '45',
   } as Record<string, unknown> & AppEnvironment;
 }

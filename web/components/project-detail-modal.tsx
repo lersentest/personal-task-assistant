@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ExternalLink, FolderKanban, Pencil, X } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useCurrentUser } from '@/components/auth-gate';
 import { api } from '@/lib/api';
 import { projectStatusLabel } from '@/lib/labels';
 import { Project } from '@/lib/types';
@@ -61,6 +62,8 @@ export function ProjectDetailsModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const currentUser = useCurrentUser();
+  const canUseDelegation = currentUser?.role === 'PLATFORM_ADMIN';
   const [editing, setEditing] = useState(false);
   const project = useQuery({
     queryKey: ['project', projectId],
@@ -76,7 +79,7 @@ export function ProjectDetailsModal({
   const delegatedTasks = useQuery({
     queryKey: ['delegated-tasks', 'project', projectId],
     queryFn: () => api.delegatedTasks(`?projectId=${projectId}`),
-    enabled: open,
+    enabled: open && canUseDelegation,
   });
 
   useEffect(() => {
@@ -181,28 +184,30 @@ export function ProjectDetailsModal({
               </div>
 
               <aside className="grid content-start gap-5">
-                <section className="rounded-2xl border border-[var(--line)] bg-[var(--background)] p-5">
-                  <div className="mb-3 flex items-center gap-2">
-                    <FolderKanban size={18} />
-                    <h3 className="font-semibold">Делегированные</h3>
-                  </div>
-                  <div className="grid gap-2">
-                    {delegatedTasks.data?.length ? (
-                      delegatedTasks.data.map((task) => (
-                        <div key={task.id} className="rounded-xl bg-[var(--panel)] p-3 text-sm">
-                          <p className="font-medium">{task.title}</p>
-                          <p className="mt-1 text-xs text-[var(--muted)]">
-                            {task.executor.fullName} · {task.status}
-                          </p>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-[var(--muted)]">
-                        Делегированных задач пока нет.
-                      </p>
-                    )}
-                  </div>
-                </section>
+                {canUseDelegation ? (
+                  <section className="rounded-2xl border border-[var(--line)] bg-[var(--background)] p-5">
+                    <div className="mb-3 flex items-center gap-2">
+                      <FolderKanban size={18} />
+                      <h3 className="font-semibold">Делегированные</h3>
+                    </div>
+                    <div className="grid gap-2">
+                      {delegatedTasks.data?.length ? (
+                        delegatedTasks.data.map((task) => (
+                          <div key={task.id} className="rounded-xl bg-[var(--panel)] p-3 text-sm">
+                            <p className="font-medium">{task.title}</p>
+                            <p className="mt-1 text-xs text-[var(--muted)]">
+                              {task.executor.fullName} · {task.status}
+                            </p>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-[var(--muted)]">
+                          Делегированных задач пока нет.
+                        </p>
+                      )}
+                    </div>
+                  </section>
+                ) : null}
                 <AttachmentPanel projectId={projectId} title="Файлы проекта" />
               </aside>
             </div>

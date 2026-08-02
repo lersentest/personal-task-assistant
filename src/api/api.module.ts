@@ -16,6 +16,8 @@ import { TagsController } from './tags.controller';
 import { TasksController } from './tasks.controller';
 import { VoiceController } from './voice.controller';
 import { VoiceCommandController } from './voice-command.controller';
+import { AuthController } from './auth.controller';
+import { AuthModule } from '../auth/auth.module';
 import { ProjectsModule } from '../projects/projects.module';
 import { DelegatedTasksModule } from '../delegated-tasks/delegated-tasks.module';
 import { ExecutorsModule } from '../executors/executors.module';
@@ -44,8 +46,10 @@ import { VoiceModule } from '../voice/voice.module';
     NewsModule,
     MobileAuthModule,
     VoiceModule,
+    AuthModule,
   ],
   controllers: [
+    AuthController,
     DashboardController,
     AiAnalyticsController,
     MyDayController,

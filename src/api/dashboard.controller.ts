@@ -6,6 +6,7 @@ import { DelegatedTasksService } from '../delegated-tasks/delegated-tasks.servic
 import { ProjectsService } from '../projects/projects.service';
 import { TasksService } from '../tasks/tasks.service';
 import { jsonSafe } from './json-safe';
+import { canUseDelegation } from './auth/capabilities';
 
 @Controller('api')
 @UseGuards(SupabaseAuthGuard)
@@ -70,6 +71,7 @@ export class DashboardController {
   @Get('search')
   async search(@Req() request: AuthenticatedRequest, @Query('q') q?: string) {
     const search = q?.trim();
+    const delegationAllowed = canUseDelegation(request.user);
     const [tasks, delegatedTasks, projects, files] = await Promise.all([
       this.tasks.list(request.user.id, {
         view: 'ALL',
@@ -78,9 +80,11 @@ export class DashboardController {
         sort: 'updatedAt',
         ...(search ? { search } : {}),
       }),
-      this.delegatedTasks.list(request.user.id, {
-        ...(search ? { search } : {}),
-      }),
+      delegationAllowed
+        ? this.delegatedTasks.list(request.user.id, {
+            ...(search ? { search } : {}),
+          })
+        : Promise.resolve([]),
       this.projects.list(request.user.id),
       this.prisma.attachment.findMany({
         where: {
@@ -106,7 +110,7 @@ export class DashboardController {
           createdAt: true,
           task: { select: { id: true, title: true } },
           project: { select: { id: true, name: true } },
-          delegatedTask: { select: { id: true, title: true } },
+          delegatedTask: delegationAllowed ? { select: { id: true, title: true } } : false,
         },
         orderBy: { createdAt: 'desc' },
         take: 20,

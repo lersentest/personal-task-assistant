@@ -23,6 +23,7 @@ import {
   updateDelegatedTaskSchema,
 } from './dto';
 import { jsonSafe } from './json-safe';
+import { assertCanUseDelegation } from './auth/capabilities';
 
 @Controller('api/delegated-tasks')
 @UseGuards(SupabaseAuthGuard)
@@ -31,17 +32,20 @@ export class DelegatedTasksController {
 
   @Get()
   async list(@Req() request: AuthenticatedRequest, @Query() query: unknown) {
+    assertCanUseDelegation(request.user);
     const filters = parseDto(listDelegatedTasksSchema, query);
     return jsonSafe(await this.delegatedTasks.list(request.user.id, filters));
   }
 
   @Get(':id')
   async get(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    assertCanUseDelegation(request.user);
     return jsonSafe(await this.delegatedTasks.getOwned(request.user.id, id));
   }
 
   @Post()
   async create(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
+    assertCanUseDelegation(request.user);
     const input = parseDto(createDelegatedTaskSchema, body);
     return jsonSafe(await this.delegatedTasks.create(request.user.id, {
       ...input,
@@ -55,6 +59,7 @@ export class DelegatedTasksController {
     @Param('id') id: string,
     @Body() body: unknown,
   ) {
+    assertCanUseDelegation(request.user);
     const input = parseDto(updateDelegatedTaskSchema, body);
     return jsonSafe(await this.delegatedTasks.update(request.user.id, id, {
       ...input,
@@ -64,22 +69,26 @@ export class DelegatedTasksController {
 
   @Delete(':id')
   async remove(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    assertCanUseDelegation(request.user);
     await this.delegatedTasks.softDelete(request.user.id, id);
     return { ok: true };
   }
 
   @Post(':id/send')
   async send(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    assertCanUseDelegation(request.user);
     return jsonSafe(await this.delegatedTasks.send(request.user.id, id));
   }
 
   @Post(':id/remind')
   async remind(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    assertCanUseDelegation(request.user);
     return jsonSafe(await this.delegatedTasks.remind(request.user.id, id));
   }
 
   @Get(':id/public-link')
   async publicLink(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    assertCanUseDelegation(request.user);
     return this.delegatedTasks.publicLink(request.user.id, id);
   }
 
@@ -88,6 +97,7 @@ export class DelegatedTasksController {
     @Req() request: AuthenticatedRequest,
     @Param('id') id: string,
   ) {
+    assertCanUseDelegation(request.user);
     return this.delegatedTasks.regeneratePublicLink(request.user.id, id);
   }
 
@@ -96,12 +106,14 @@ export class DelegatedTasksController {
     @Req() request: AuthenticatedRequest,
     @Param('id') id: string,
   ) {
+    assertCanUseDelegation(request.user);
     await this.delegatedTasks.revokePublicLink(request.user.id, id);
     return { ok: true };
   }
 
   @Post(':id/cancel')
   async cancel(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    assertCanUseDelegation(request.user);
     return jsonSafe(await this.delegatedTasks.update(request.user.id, id, {
       status: 'CANCELLED',
     }));
@@ -113,6 +125,7 @@ export class DelegatedTasksController {
     @Param('id') id: string,
     @Body() body: unknown,
   ) {
+    assertCanUseDelegation(request.user);
     const input = parseDto(reviewDelegatedTaskSchema, body);
     return jsonSafe(await this.delegatedTasks.ownerReview(
       request.user.id,
@@ -128,6 +141,7 @@ export class DelegatedTasksController {
     @Param('id') id: string,
     @Body() body: unknown,
   ) {
+    assertCanUseDelegation(request.user);
     const input = parseDto(reviewDelegatedTaskSchema, body);
     return jsonSafe(await this.delegatedTasks.ownerReview(
       request.user.id,
@@ -139,6 +153,7 @@ export class DelegatedTasksController {
 
   @Get(':id/comments')
   async comments(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    assertCanUseDelegation(request.user);
     const task = await this.delegatedTasks.getOwned(request.user.id, id);
     return task.comments;
   }
@@ -149,6 +164,7 @@ export class DelegatedTasksController {
     @Param('id') id: string,
     @Body() body: unknown,
   ) {
+    assertCanUseDelegation(request.user);
     const input = parseDto(delegatedCommentSchema, body);
     return jsonSafe(
       await this.delegatedTasks.ownerComment(request.user.id, id, input.message),

@@ -18,6 +18,7 @@ import {
   updateExecutorSchema,
 } from './dto';
 import { jsonSafe } from './json-safe';
+import { assertCanUseDelegation } from './auth/capabilities';
 
 @Controller('api/executors')
 @UseGuards(SupabaseAuthGuard)
@@ -26,16 +27,19 @@ export class ExecutorsController {
 
   @Get()
   async list(@Req() request: AuthenticatedRequest) {
+    assertCanUseDelegation(request.user);
     return jsonSafe(await this.executors.list(request.user.id));
   }
 
   @Get(':id')
   async get(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    assertCanUseDelegation(request.user);
     return jsonSafe(await this.executors.getOwned(request.user.id, id));
   }
 
   @Post()
   async create(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
+    assertCanUseDelegation(request.user);
     const input = parseDto(createExecutorSchema, body);
     return jsonSafe(await this.executors.create(request.user.id, input));
   }
@@ -46,18 +50,21 @@ export class ExecutorsController {
     @Param('id') id: string,
     @Body() body: unknown,
   ) {
+    assertCanUseDelegation(request.user);
     const input = parseDto(updateExecutorSchema, body);
     return jsonSafe(await this.executors.update(request.user.id, id, input));
   }
 
   @Delete(':id')
   async remove(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    assertCanUseDelegation(request.user);
     await this.executors.softDelete(request.user.id, id);
     return { ok: true };
   }
 
   @Post(':id/invite')
   invite(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    assertCanUseDelegation(request.user);
     return this.executors.createInvite(request.user.id, id);
   }
 
@@ -66,6 +73,7 @@ export class ExecutorsController {
     @Req() request: AuthenticatedRequest,
     @Param('id') id: string,
   ) {
+    assertCanUseDelegation(request.user);
     return this.executors.createInvite(request.user.id, id);
   }
 
@@ -74,6 +82,7 @@ export class ExecutorsController {
     @Req() request: AuthenticatedRequest,
     @Param('id') id: string,
   ) {
+    assertCanUseDelegation(request.user);
     await this.executors.revokeInvite(request.user.id, id);
     return { ok: true };
   }

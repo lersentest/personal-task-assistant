@@ -14,17 +14,18 @@ import {
   Plus,
   Search,
   Settings,
+  Shield,
   Sun,
   Trash2,
-  User,
   Users,
   X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CreateEntityModal, CreateEntityState } from '@/components/create-entity-modal';
-import { supabase } from '@/lib/supabase';
+import { useCurrentUser } from '@/components/auth-gate';
+import { logout as logoutSession } from '@/lib/auth';
 import { FocusShell } from './focus/focus-shell';
 import { useUiMode } from './ui-mode-provider';
 import { VoiceCommandButton } from './voice-command-button';
@@ -35,23 +36,31 @@ const nav = [
   { href: '/today', label: 'Сегодня', icon: CheckSquare },
   { href: '/calendar', label: 'Календарь', icon: CalendarDays },
   { href: '/tasks', label: 'Задачи', icon: CheckSquare },
-  { href: '/delegated', label: 'Делегированные', icon: Users },
+  { href: '/delegated', label: 'Делегированные', icon: Users, adminOnly: true },
   { href: '/projects', label: 'Проекты', icon: FolderKanban },
-  { href: '/executors', label: 'Исполнители', icon: Users },
+  { href: '/executors', label: 'Исполнители', icon: Users, adminOnly: true },
   { href: '/news', label: 'Новости', icon: Newspaper },
   { href: '/search', label: 'Поиск', icon: Search },
   { href: '/files', label: 'Файлы', icon: FolderKanban },
   { href: '/game', label: 'Игра', icon: Gamepad2 },
+  { href: '/admin/users', label: 'Пользователи', icon: Shield, adminOnly: true },
   { href: '/trash', label: 'Корзина', icon: Trash2 },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const currentUser = useCurrentUser();
+  const canUseAdmin = currentUser?.role === 'PLATFORM_ADMIN';
   const { interfaceMode, resolvedAppearance, setAppearance, setInterfaceMode } = useUiMode();
   const [createOpen, setCreateOpen] = useState(false);
   const [createModal, setCreateModal] = useState<CreateEntityState | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const visibleNav = useMemo(
+    () => nav.filter((item) => !item.adminOnly || canUseAdmin),
+    [canUseAdmin],
+  );
 
   if (interfaceMode === 'focus') {
     return <FocusShell>{children}</FocusShell>;
@@ -62,11 +71,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   async function logout() {
-    await supabase.auth.signOut();
+    await logoutSession();
     router.replace('/login');
   }
 
   function openCreate(state: CreateEntityState) {
+    if (state.entity === 'delegated' && !canUseAdmin) return;
     setCreateOpen(false);
     setMobileMenuOpen(false);
     setCreateModal(state);
@@ -75,6 +85,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (
+      currentUser &&
+      !canUseAdmin &&
+      (pathname.startsWith('/delegated') || pathname.startsWith('/executors') || pathname.startsWith('/admin'))
+    ) {
+      router.replace('/dashboard');
+    }
+  }, [canUseAdmin, currentUser, pathname, router]);
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
@@ -100,12 +120,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {createOpen ? (
           <div className="mb-4 grid gap-2 rounded-lg border border-[var(--line)] bg-[var(--background)] p-2 text-sm">
             <button type="button" onClick={() => openCreate({ entity: 'task', kind: 'TASK' })} className="btn-base btn-ghost justify-start rounded-md px-3 py-2">Новая задача</button>
-            <button type="button" onClick={() => openCreate({ entity: 'delegated' })} className="btn-base btn-ghost justify-start rounded-md px-3 py-2">Делегированная задача</button>
+            {canUseAdmin ? (
+              <button type="button" onClick={() => openCreate({ entity: 'delegated' })} className="btn-base btn-ghost justify-start rounded-md px-3 py-2">Делегированная задача</button>
+            ) : null}
             <button type="button" onClick={() => openCreate({ entity: 'project' })} className="btn-base btn-ghost justify-start rounded-md px-3 py-2">Новый проект</button>
           </div>
         ) : null}
         <nav className="grid gap-1">
-          {nav.map((item) => {
+          {visibleNav.map((item) => {
             const Icon = item.icon;
             const active = pathname === item.href;
             return (
@@ -200,11 +222,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="mb-4 grid gap-2 rounded-2xl border border-[var(--line)] bg-[var(--background)] p-2 text-sm">
             <button type="button" onClick={() => openCreate({ entity: 'task', kind: 'TASK' })} className="btn-base btn-ghost justify-start rounded-xl px-3 py-2">Новая задача</button>
-            <button type="button" onClick={() => openCreate({ entity: 'delegated' })} className="btn-base btn-ghost justify-start rounded-xl px-3 py-2">Делегированная задача</button>
+            {canUseAdmin ? (
+              <button type="button" onClick={() => openCreate({ entity: 'delegated' })} className="btn-base btn-ghost justify-start rounded-xl px-3 py-2">Делегированная задача</button>
+            ) : null}
             <button type="button" onClick={() => openCreate({ entity: 'project' })} className="btn-base btn-ghost justify-start rounded-xl px-3 py-2">Новый проект</button>
           </div>
           <nav className="grid gap-1">
-            {nav.map((item) => {
+            {visibleNav.map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href;
               return (

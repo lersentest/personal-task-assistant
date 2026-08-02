@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Archive, CheckSquare, FolderKanban, Search, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useCurrentUser } from '@/components/auth-gate';
 import { DelegatedTaskModalLink } from '@/components/delegated-task-detail-modal';
 import { FileModalLink } from '@/components/file-detail-modal';
 import { Page } from '@/components/page';
@@ -17,6 +18,8 @@ function matches(parts: Array<string | null | undefined>, query: string) {
 }
 
 export default function SearchPage() {
+  const currentUser = useCurrentUser();
+  const canUseDelegation = currentUser?.role === 'PLATFORM_ADMIN';
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const normalized = query.trim().toLowerCase();
@@ -43,10 +46,12 @@ export default function SearchPage() {
   );
   const filteredDelegatedTasks = useMemo(
     () =>
-      (search.data?.delegatedTasks ?? []).filter((task) =>
-        matches([task.title, task.description, task.executor.fullName, task.project?.name, task.status], normalized),
-      ),
-    [normalized, search.data],
+      canUseDelegation
+        ? (search.data?.delegatedTasks ?? []).filter((task) =>
+            matches([task.title, task.description, task.executor.fullName, task.project?.name, task.status], normalized),
+          )
+        : [],
+    [canUseDelegation, normalized, search.data],
   );
   const filteredProjects = useMemo(
     () =>
@@ -58,16 +63,32 @@ export default function SearchPage() {
   const filteredFiles = useMemo(
     () =>
       (search.data?.files ?? []).filter((file) =>
-        matches([file.fileName, file.mimeType, file.task?.title, file.delegatedTask?.title, file.project?.name], normalized),
+        matches(
+          [
+            file.fileName,
+            file.mimeType,
+            file.task?.title,
+            canUseDelegation ? file.delegatedTask?.title : undefined,
+            file.project?.name,
+          ],
+          normalized,
+        ),
       ),
-    [normalized, search.data],
+    [canUseDelegation, normalized, search.data],
   );
 
   const total =
     filteredTasks.length + filteredDelegatedTasks.length + filteredProjects.length + filteredFiles.length;
 
   return (
-    <Page title="Поиск" description="Единый поиск по задачам, делегированным задачам, проектам и файлам.">
+    <Page
+      title="Поиск"
+      description={
+        canUseDelegation
+          ? 'Единый поиск по задачам, делегированным задачам, проектам и файлам.'
+          : 'Единый поиск по вашим задачам, проектам и файлам.'
+      }
+    >
       <UiCard className="mb-5 p-3">
         <label className="flex h-12 items-center gap-3 rounded-2xl border border-[var(--focus-border,var(--line))] bg-[var(--focus-surface-secondary,var(--background))] px-4">
           <Search size={18} className="text-[var(--muted)]" />
@@ -92,7 +113,7 @@ export default function SearchPage() {
 
       {total ? (
         <div className="grid gap-5 xl:grid-cols-2">
-          <SearchSection icon={<CheckSquare size={18} />} title="Личные задачи" count={filteredTasks.length}>
+          <SearchSection icon={<CheckSquare size={18} />} title="Задачи" count={filteredTasks.length}>
             {filteredTasks.map((task) => (
               <TaskModalLink key={task.id} task={task} className="result-row">
                 <span className="font-semibold">{task.title}</span>
@@ -101,14 +122,16 @@ export default function SearchPage() {
             ))}
           </SearchSection>
 
-          <SearchSection icon={<Users size={18} />} title="Делегированные" count={filteredDelegatedTasks.length}>
-            {filteredDelegatedTasks.map((task) => (
-              <DelegatedTaskModalLink key={task.id} task={task} className="result-row">
-                <span className="font-semibold">{task.title}</span>
-                <span className="text-sm text-[var(--muted)]">{task.executor.fullName} · {task.status}</span>
-              </DelegatedTaskModalLink>
-            ))}
-          </SearchSection>
+          {canUseDelegation ? (
+            <SearchSection icon={<Users size={18} />} title="Делегированные" count={filteredDelegatedTasks.length}>
+              {filteredDelegatedTasks.map((task) => (
+                <DelegatedTaskModalLink key={task.id} task={task} className="result-row">
+                  <span className="font-semibold">{task.title}</span>
+                  <span className="text-sm text-[var(--muted)]">{task.executor.fullName} · {task.status}</span>
+                </DelegatedTaskModalLink>
+              ))}
+            </SearchSection>
+          ) : null}
 
           <SearchSection icon={<FolderKanban size={18} />} title="Проекты" count={filteredProjects.length}>
             {filteredProjects.map((project) => (
@@ -124,7 +147,7 @@ export default function SearchPage() {
               <FileModalLink key={file.id} attachment={file} className="result-row">
                 <span className="font-semibold">{file.fileName}</span>
                 <span className="text-sm text-[var(--muted)]">
-                  {file.task?.title ?? file.delegatedTask?.title ?? file.project?.name ?? file.mimeType}
+                  {file.task?.title ?? (canUseDelegation ? file.delegatedTask?.title : undefined) ?? file.project?.name ?? file.mimeType}
                 </span>
               </FileModalLink>
             ))}

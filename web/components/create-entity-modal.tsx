@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { DelegatedTaskForm } from '@/components/delegated-task-form';
 import { ProjectForm } from '@/components/project-form';
 import { TaskForm, TaskKindCards } from '@/components/task-form';
+import { useCurrentUser } from '@/components/auth-gate';
 import { taskKindLabel } from '@/lib/labels';
 import { TaskKind } from '@/lib/types';
 
@@ -37,7 +38,10 @@ export function CreateModalButton({
   className?: string;
   title?: string;
 }) {
+  const currentUser = useCurrentUser();
+  const canCreateDelegated = currentUser?.role === 'PLATFORM_ADMIN';
   const [open, setOpen] = useState(false);
+  if (entity === 'delegated' && !canCreateDelegated) return null;
   return (
     <>
       <button
@@ -66,6 +70,8 @@ export function CreateEntityModal({
   state: CreateEntityState;
   onClose: () => void;
 }) {
+  const currentUser = useCurrentUser();
+  const canCreateDelegated = currentUser?.role === 'PLATFORM_ADMIN';
   const [selectedKind, setSelectedKind] = useState<TaskKind>(
     state.entity === 'task' ? (state.kind ?? 'TASK') : 'TASK',
   );
@@ -104,6 +110,8 @@ export function CreateEntityModal({
 
   const isProject = state.entity === 'project';
   const isDelegated = state.entity === 'delegated';
+
+  if (isDelegated && !canCreateDelegated) return null;
 
   return (
     <div

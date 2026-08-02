@@ -1,4 +1,3 @@
-import { supabase } from './supabase';
 import {
   AiChatConversation,
   Attachment,
@@ -24,6 +23,7 @@ import {
   markPerformance,
   measurePerformance,
 } from './performance';
+import { clearAuth, getAccessToken, refreshAuthSession, type AuthUser } from './auth';
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
@@ -31,60 +31,18 @@ if (!apiUrl) {
   throw new Error('NEXT_PUBLIC_API_URL is required');
 }
 
-let cachedAccessToken: { token: string; expiresAtMs: number } | null = null;
-let authCacheSubscriptionStarted = false;
-
-function ensureAuthCacheSubscription() {
-  if (authCacheSubscriptionStarted || typeof window === 'undefined') return;
-  authCacheSubscriptionStarted = true;
-  supabase.auth.onAuthStateChange((_event, session) => {
-    if (!session?.access_token) {
-      cachedAccessToken = null;
-      return;
-    }
-    cachedAccessToken = {
-      token: session.access_token,
-      expiresAtMs: session.expires_at
-        ? session.expires_at * 1000
-        : Date.now() + 60_000,
-    };
-  });
-}
-
-async function getAccessToken() {
-  ensureAuthCacheSubscription();
-  const now = Date.now();
-  if (cachedAccessToken && cachedAccessToken.expiresAtMs > now + 30_000) {
-    markPerformance('auth-ready', true);
-    return cachedAccessToken.token;
-  }
-
-  const { data } = await supabase.auth.getSession();
-  const session = data.session;
-  const token = session?.access_token;
-  if (!token) return null;
-
-  cachedAccessToken = {
-    token,
-    expiresAtMs: session.expires_at
-      ? session.expires_at * 1000
-      : now + 60_000,
-  };
-  markPerformance('auth-ready', true);
-  return token;
-}
-
 async function authHeaders(): Promise<Record<string, string>> {
-  const token = await getAccessToken();
+  const token = getAccessToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
   if (token) headers.Authorization = `Bearer ${token}`;
+  markPerformance('auth-ready', true);
   return headers;
 }
 
 async function bearerHeader(): Promise<Record<string, string>> {
-  const token = await getAccessToken();
+  const token = getAccessToken();
   const headers: Record<string, string> = { 'X-Request-Id': createRequestId() };
   if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
@@ -112,13 +70,23 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   markPerformance(`${markPrefix}:start`);
   const headers = await authHeaders();
   try {
-    const response = await fetch(`${apiUrl}${path}`, {
+    let response = await fetch(`${apiUrl}${path}`, {
       ...init,
       credentials: 'include',
       headers: buildHeaders(headers, init.headers, requestId),
     });
 
+    if (response.status === 401 && await refreshAuthSession()) {
+      const refreshedHeaders = await authHeaders();
+      response = await fetch(`${apiUrl}${path}`, {
+        ...init,
+        credentials: 'include',
+        headers: buildHeaders(refreshedHeaders, init.headers, requestId),
+      });
+    }
+
     if (!response.ok) {
+      if (response.status === 401) clearAuth();
       const text = await response.text();
       throw new Error(extractErrorMessage(text));
     }
@@ -149,10 +117,16 @@ async function publicRequest<T>(path: string, init: RequestInit = {}): Promise<T
 
 async function download(path: string): Promise<Blob> {
   const headers = await authHeaders();
-  const response = await fetch(`${apiUrl}${path}`, {
+  let response = await fetch(`${apiUrl}${path}`, {
     credentials: 'include',
     headers: buildHeaders(headers, undefined, createRequestId()),
   });
+  if (response.status === 401 && await refreshAuthSession()) {
+    response = await fetch(`${apiUrl}${path}`, {
+      credentials: 'include',
+      headers: buildHeaders(await authHeaders(), undefined, createRequestId()),
+    });
+  }
   if (!response.ok) {
     const text = await response.text();
     throw new Error(extractErrorMessage(text, 'Не удалось скачать файл'));
@@ -173,12 +147,20 @@ async function publicDownload(path: string): Promise<Blob> {
 
 async function formRequest<T>(path: string, formData: FormData): Promise<T> {
   const headers = await bearerHeader();
-  const response = await fetch(`${apiUrl}${path}`, {
+  let response = await fetch(`${apiUrl}${path}`, {
     method: 'POST',
     credentials: 'include',
     headers: buildHeaders(headers, undefined, createRequestId()),
     body: formData,
   });
+  if (response.status === 401 && await refreshAuthSession()) {
+    response = await fetch(`${apiUrl}${path}`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: buildHeaders(await bearerHeader(), undefined, createRequestId()),
+      body: formData,
+    });
+  }
   if (!response.ok) {
     const text = await response.text();
     throw new Error(extractErrorMessage(text));
@@ -200,7 +182,21 @@ function extractErrorMessage(text: string, fallback = 'Не удалось вы�
 }
 
 export const api = {
-  me: () => request<{ id: string; email: string | null; timezone: string }>('/api/me'),
+  me: () => request<AuthUser>('/api/me'),
+  changePassword: (input: { currentPassword?: string; newPassword: string }) =>
+    request<AuthUser>('/api/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  authUsers: () => request<Array<AuthUser & { _count?: { authSessions: number; mobileDeviceSessions: number } }>>('/api/auth/users'),
+  createAuthUser: (input: { email: string; displayName: string; password: string; role?: 'PLATFORM_ADMIN' | 'USER' }) =>
+    request<AuthUser>('/api/auth/users', { method: 'POST', body: JSON.stringify(input) }),
+  resetAuthUserPassword: (id: string, password: string) =>
+    request<AuthUser>(`/api/auth/users/${id}/reset-password`, { method: 'POST', body: JSON.stringify({ password }) }),
+  setAuthUserStatus: (id: string, status: 'ACTIVE' | 'BLOCKED') =>
+    request<AuthUser>(`/api/auth/users/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  revokeAuthUserSessions: (id: string) =>
+    request<{ ok: true }>(`/api/auth/users/${id}/revoke-sessions`, { method: 'POST' }),
   dashboard: () => request<DashboardData>('/api/dashboard'),
   tasks: (query = '') => request<Task[]>(`/api/tasks${query}`),
   task: (id: string) => request<Task>(`/api/tasks/${id}`),

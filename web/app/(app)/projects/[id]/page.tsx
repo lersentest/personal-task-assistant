@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { AttachmentPanel } from '@/components/attachment-panel';
+import { useCurrentUser } from '@/components/auth-gate';
 import { DelegatedTaskModalLink } from '@/components/delegated-task-detail-modal';
 import { Page } from '@/components/page';
 import { ProjectForm } from '@/components/project-form';
@@ -14,10 +15,16 @@ import { projectStatusLabel } from '@/lib/labels';
 
 export default function ProjectDetailsPage() {
   const { id } = useParams<{ id: string }>();
+  const currentUser = useCurrentUser();
+  const canUseDelegation = currentUser?.role === 'PLATFORM_ADMIN';
   const [editing, setEditing] = useState(false);
   const project = useQuery({ queryKey: ['project', id], queryFn: () => api.project(id) });
   const tasks = useQuery({ queryKey: ['tasks', 'project', id], queryFn: () => api.tasks(`?projectId=${id}`) });
-  const delegatedTasks = useQuery({ queryKey: ['delegated-tasks', 'project', id], queryFn: () => api.delegatedTasks(`?projectId=${id}`) });
+  const delegatedTasks = useQuery({
+    queryKey: ['delegated-tasks', 'project', id],
+    queryFn: () => api.delegatedTasks(`?projectId=${id}`),
+    enabled: canUseDelegation,
+  });
 
   return (
     <Page title={project.data?.name ?? 'Проект'} description={project.data ? projectStatusLabel[project.data.status] : undefined}>
@@ -53,20 +60,22 @@ export default function ProjectDetailsPage() {
       <div className="grid gap-3 xl:grid-cols-2">
         {tasks.data?.map((task) => <TaskCard key={task.id} task={task} />)}
       </div>
-      <section className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
-        <h2 className="text-lg font-semibold">Делегированные</h2>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Отдельный список делегированных задач проекта. Они не смешиваются с личными задачами.
-        </p>
-        <div className="mt-4 grid gap-3">
-          {delegatedTasks.data?.length ? delegatedTasks.data.map((task) => (
-            <DelegatedTaskModalLink key={task.id} task={task} className="rounded-xl border border-[var(--line)] bg-[var(--background)] p-4 text-left">
-              <p className="font-medium">{task.title}</p>
-              <p className="mt-1 text-sm text-[var(--muted)]">{task.executor.fullName} · {task.status}</p>
-            </DelegatedTaskModalLink>
-          )) : <p className="text-sm text-[var(--muted)]">Делегированных задач по проекту пока нет.</p>}
-        </div>
-      </section>
+      {canUseDelegation ? (
+        <section className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
+          <h2 className="text-lg font-semibold">Делегированные</h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Отдельный список делегированных задач проекта. Они не смешиваются с личными задачами.
+          </p>
+          <div className="mt-4 grid gap-3">
+            {delegatedTasks.data?.length ? delegatedTasks.data.map((task) => (
+              <DelegatedTaskModalLink key={task.id} task={task} className="rounded-xl border border-[var(--line)] bg-[var(--background)] p-4 text-left">
+                <p className="font-medium">{task.title}</p>
+                <p className="mt-1 text-sm text-[var(--muted)]">{task.executor.fullName} · {task.status}</p>
+              </DelegatedTaskModalLink>
+            )) : <p className="text-sm text-[var(--muted)]">Делегированных задач по проекту пока нет.</p>}
+          </div>
+        </section>
+      ) : null}
     </Page>
   );
 }
