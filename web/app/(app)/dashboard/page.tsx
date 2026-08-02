@@ -26,14 +26,14 @@ interface DashboardGreeting {
 }
 
 const defaultGreeting: DashboardGreeting = {
-  title: 'Доброе утро, Вадим 👋',
+  title: 'Доброе утро 👋',
   description: 'Фокус на сегодня: задачи, риски, проекты и последние изменения.',
 };
 
 const greetings: Record<GreetingPeriod, DashboardGreeting[]> = {
   morning: [
     {
-      title: 'Доброе утро, Вадим ☕',
+      title: 'Доброе утро, {name} ☕',
       description: 'Пора делать вид, что мы всё контролируем. Спойлер: почти получается.',
     },
     {
@@ -45,13 +45,13 @@ const greetings: Record<GreetingPeriod, DashboardGreeting[]> = {
       description: 'Начнём с пары важных задач, а дальше будем импровизировать с достоинством.',
     },
     {
-      title: 'Утро началось, Вадим',
+      title: 'Утро началось, {name}',
       description: 'Главное — не открывать список задач без кофе и моральной подготовки.',
     },
   ],
   day: [
     {
-      title: 'Добрый день, Вадим',
+      title: 'Добрый день, {name}',
       description: 'Рабочий режим включён, отступать уже поздно. И это даже немного бодрит.',
     },
     {
@@ -69,7 +69,7 @@ const greetings: Record<GreetingPeriod, DashboardGreeting[]> = {
   ],
   evening: [
     {
-      title: 'Добрый вечер, Вадим',
+      title: 'Добрый вечер, {name}',
       description: 'Сейчас бы закрыть хвосты, а не торжественно открыть новые. Но кто мы такие, чтобы судить.',
     },
     {
@@ -91,7 +91,7 @@ const greetings: Record<GreetingPeriod, DashboardGreeting[]> = {
       description: 'Ладно, раз уж мы здесь — делаем быстро и без сомнительных продуктовых решений.',
     },
     {
-      title: 'Ночь на дворе, Вадим',
+      title: 'Ночь на дворе, {name}',
       description: 'Задачи подождут. Хотя мы оба знаем, что ты сейчас проверишь ещё одну.',
     },
     {
@@ -108,7 +108,8 @@ const greetings: Record<GreetingPeriod, DashboardGreeting[]> = {
 export default function DashboardPage() {
   const { interfaceMode } = useUiMode();
   const isFocus = interfaceMode === 'focus';
-  const greeting = useDashboardGreeting();
+  const me = useQuery({ queryKey: ['me'], queryFn: api.me });
+  const greeting = useDashboardGreeting(getDashboardUserName(me.data));
   const dashboard = useQuery({ queryKey: ['dashboard'], queryFn: api.dashboard });
 
   if (!isFocus) {
@@ -185,34 +186,44 @@ export default function DashboardPage() {
   );
 }
 
-function useDashboardGreeting() {
+function useDashboardGreeting(userName: string) {
   const [greeting, setGreeting] = useState<DashboardGreeting>(defaultGreeting);
 
   useEffect(() => {
-    setGreeting(selectDashboardGreeting(new Date()));
-  }, []);
+    setGreeting(selectDashboardGreeting(new Date(), userName));
+  }, [userName]);
 
   return greeting;
 }
 
-function selectDashboardGreeting(now: Date): DashboardGreeting {
+function selectDashboardGreeting(now: Date, userName: string): DashboardGreeting {
   const period = getGreetingPeriod(now.getHours());
   const storageKey = `dashboard-greeting:${now.toISOString().slice(0, 10)}:${period}`;
   const variants = greetings[period];
+
+  const personalize = (item: DashboardGreeting) => ({
+    ...item,
+    title: item.title.replace('{name}', userName),
+  });
 
   try {
     const savedIndex = window.sessionStorage.getItem(storageKey);
     if (savedIndex !== null) {
       const index = Number(savedIndex);
-      if (Number.isInteger(index) && variants[index]) return variants[index];
+      if (Number.isInteger(index) && variants[index]) return personalize(variants[index]);
     }
 
     const index = Math.floor(Math.random() * variants.length);
     window.sessionStorage.setItem(storageKey, String(index));
-    return variants[index];
+    return personalize(variants[index]);
   } catch {
-    return variants[0] ?? defaultGreeting;
+    return personalize(variants[0] ?? defaultGreeting);
   }
+}
+
+function getDashboardUserName(user?: Awaited<ReturnType<typeof api.me>>) {
+  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
+  return user?.displayName?.trim() || fullName || 'друг';
 }
 
 function getGreetingPeriod(hour: number): GreetingPeriod {
