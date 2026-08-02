@@ -1,4 +1,4 @@
-﻿-- Custom auth and first-class workspace ownership foundation.
+-- Custom auth and first-class workspace ownership foundation.
 
 DO $$ BEGIN
   CREATE TYPE "UserRole" AS ENUM ('PLATFORM_ADMIN', 'USER');
