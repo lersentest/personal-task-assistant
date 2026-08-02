@@ -51,7 +51,18 @@ export class WebAuthService {
     return email.trim().toLowerCase();
   }
 
-  async login(input: { email: string; password: string }, meta: RequestMeta = {}) {
+  private normalizeTimezone(timezone?: string | null) {
+    const value = timezone?.trim();
+    if (!value || value.length > 64) return null;
+    try {
+      Intl.DateTimeFormat('en-US', { timeZone: value }).format(new Date());
+      return value;
+    } catch {
+      return null;
+    }
+  }
+
+  async login(input: { email: string; password: string; timezone?: string }, meta: RequestMeta = {}) {
     const emailNormalized = this.normalizeEmail(input.email);
     const user = await this.prisma.user.findUnique({ where: { emailNormalized } });
     if (!user || user.deletedAt || user.status === 'DELETED') {
@@ -62,15 +73,19 @@ export class WebAuthService {
     }
 
     await this.passwords.verifyPassword(input.password, user.passwordHash);
+    const timezone = this.normalizeTimezone(input.timezone);
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { lastLoginAt: new Date() },
+      data: {
+        lastLoginAt: new Date(),
+        ...(timezone && timezone !== user.timezone ? { timezone } : {}),
+      },
     });
 
     return this.createWebSession(user.id, meta);
   }
 
-  async refresh(refreshToken: string | undefined, meta: RequestMeta = {}) {
+  async refresh(refreshToken: string | undefined, meta: RequestMeta = {}, timezoneInput?: string) {
     const token = refreshToken?.trim();
     if (!token) throw new UnauthorizedException('Refresh token is missing.');
     const sessionId = this.parseRefreshSessionId(token);
@@ -86,9 +101,17 @@ export class WebAuthService {
       !timingSafeEqual(Buffer.from(session.refreshTokenHash), Buffer.from(tokenHash))) {
       throw new UnauthorizedException('Session expired.');
     }
-    const user = session.user;
+    let user = session.user;
     if (user.deletedAt || user.status !== 'ACTIVE' || user.authVersion !== session.authVersion) {
       throw new UnauthorizedException('Session expired.');
+    }
+
+    const timezone = this.normalizeTimezone(timezoneInput);
+    if (timezone && timezone !== user.timezone) {
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: { timezone },
+      });
     }
 
     const nextRefreshToken = this.makeRefreshToken(session.id);

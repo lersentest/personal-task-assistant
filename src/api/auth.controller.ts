@@ -40,21 +40,21 @@ export class AuthController {
 
   @Post('login')
   login(
-    @Body() body: { email?: string; password?: string },
+    @Body() body: { email?: string; password?: string; timezone?: string },
     @Req() request: { headers?: Record<string, string | string[] | undefined>; ip?: string },
   ) {
     if (!body.email || !body.password) {
       throw new BadRequestException('Email and password are required.');
     }
-    return this.auth.login({ email: body.email, password: body.password }, requestMeta(request));
+    return this.auth.login({ email: body.email, password: body.password, timezone: body.timezone }, requestMeta(request));
   }
 
   @Post('refresh')
   refresh(
-    @Body() body: { refreshToken?: string },
+    @Body() body: { refreshToken?: string; timezone?: string },
     @Req() request: { headers?: Record<string, string | string[] | undefined>; ip?: string },
   ) {
-    return this.auth.refresh(body.refreshToken, requestMeta(request));
+    return this.auth.refresh(body.refreshToken, requestMeta(request), body.timezone);
   }
 
   @Post('logout')

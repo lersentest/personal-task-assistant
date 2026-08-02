@@ -150,6 +150,12 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const currentUser = useCurrentUser();
+  const userDisplayName =
+    currentUser?.displayName?.trim() ||
+    [currentUser?.firstName, currentUser?.lastName].filter(Boolean).join(' ').trim() ||
+    currentUser?.email?.split('@')[0] ||
+    'Профиль';
+  const userInitial = userDisplayName.trim().slice(0, 1).toUpperCase() || 'П';
   const canUseDelegation = currentUser?.role === 'PLATFORM_ADMIN';
   const { appearance, setAppearance } = useUiMode();
   const [createOpen, setCreateOpen] = useState(false);
@@ -549,11 +555,11 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
                 className="flex h-11 items-center gap-3 rounded-2xl px-2 text-sm hover:bg-[var(--focus-surface-secondary)]"
               >
                 <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-[var(--focus-primary-soft)] text-sm font-semibold text-[var(--focus-primary)]">
-                  В
+                  {userInitial}
                   <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[var(--focus-surface)] bg-[var(--focus-success)]" />
                 </span>
                 <span className="hidden text-left md:block">
-                  <span className="block font-semibold leading-4">Вадим</span>
+                  <span className="block max-w-32 truncate font-semibold leading-4">{userDisplayName}</span>
                   <span className="text-xs text-[var(--focus-text-muted)]">Фокус</span>
                 </span>
                 <ChevronDown size={16} className="hidden text-[var(--focus-text-muted)] md:block" />

@@ -84,11 +84,19 @@ async function parseResponse<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+function browserTimezone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function loginWithPassword(email: string, password: string) {
   const response = await fetch(`${apiUrl}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, timezone: browserTimezone() }),
   });
   return storeAuth(await parseResponse<AuthResponse>(response));
 }
@@ -99,7 +107,7 @@ export async function refreshAuthSession() {
   const response = await fetch(`${apiUrl}/api/auth/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken }),
+    body: JSON.stringify({ refreshToken, timezone: browserTimezone() }),
   });
   if (!response.ok) {
     clearAuth();

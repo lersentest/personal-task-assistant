@@ -154,8 +154,8 @@ export default function DashboardPage() {
 
         <FocusPanel title="Активные проекты" badge={projects.length}>
           <div className="grid gap-3">
-            {projects.slice(0, 6).map((project, index) => (
-              <ProjectProgressCard key={project.id} project={project} index={index} />
+            {projects.slice(0, 6).map((project) => (
+              <ProjectProgressCard key={project.id} project={project} />
             ))}
             {projects.length === 0 ? <EmptyLine text="Активных проектов пока нет." /> : null}
           </div>
@@ -277,9 +277,9 @@ function FocusPanel({
   );
 }
 
-function ProjectProgressCard({ project, index }: { project: Project; index: number }) {
-  const total = project._count?.tasks ?? 0;
-  const progress = Math.min(92, Math.max(22, 38 + index * 9 + total * 3));
+function ProjectProgressCard({ project }: { project: Project }) {
+  const activeCount = project.taskStats?.active ?? project._count?.tasks ?? 0;
+  const completedCount = project.taskStats?.completed ?? 0;
   return (
     <Link
       href={`/projects/${project.id}`}
@@ -294,12 +294,16 @@ function ProjectProgressCard({ project, index }: { project: Project; index: numb
           <p className="mt-1 line-clamp-2 text-sm text-[var(--focus-text-secondary)]">
             {project.description ?? 'Без описания'}
           </p>
-          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--focus-border)]">
-            <div className="h-full rounded-full bg-[var(--focus-primary)]" style={{ width: `${progress}%` }} />
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+            <span className="rounded-xl bg-[var(--focus-surface)] px-3 py-2 text-[var(--focus-text-secondary)]">
+              <span className="block font-semibold text-[var(--focus-text)]">{activeCount}</span>
+              текущие
+            </span>
+            <span className="rounded-xl bg-[color-mix(in_srgb,var(--focus-success)_14%,transparent)] px-3 py-2 text-[var(--focus-text-secondary)]">
+              <span className="block font-semibold text-[var(--focus-success)]">{completedCount}</span>
+              выполнено
+            </span>
           </div>
-          <p className="mt-2 text-xs text-[var(--focus-text-muted)]">
-            {total} активных задач · {progress}%
-          </p>
         </div>
         <FolderKanban size={17} className="text-[var(--focus-text-muted)]" />
       </div>

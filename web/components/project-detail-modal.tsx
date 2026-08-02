@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { ExternalLink, FolderKanban, Pencil, X } from 'lucide-react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useCurrentUser } from '@/components/auth-gate';
 import { api } from '@/lib/api';
@@ -62,6 +62,7 @@ export function ProjectDetailsModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const router = useRouter();
   const currentUser = useCurrentUser();
   const canUseDelegation = currentUser?.role === 'PLATFORM_ADMIN';
   const [editing, setEditing] = useState(false);
@@ -120,14 +121,17 @@ export function ProjectDetailsModal({
       title={data?.name ?? 'Загружаю проект...'}
       subtitle="Просмотр проекта, задач, файлов и быстрых действий."
       actions={
-            <Link
-              href={`/projects/${projectId}`}
+            <button
+              type="button"
               className="btn-base btn-secondary"
-              onClick={onClose}
+              onClick={() => {
+                onClose();
+                router.push(`/projects/${projectId}`);
+              }}
             >
               <ExternalLink size={16} />
               Страница
-            </Link>
+            </button>
       }
     >
           {project.error ? (

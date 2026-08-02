@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ExternalLink, FolderKanban, X } from 'lucide-react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '@/lib/api';
@@ -60,6 +60,7 @@ export function TaskDetailsModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [selectedKind, setSelectedKind] = useState<TaskKind>(initialTask?.kind ?? 'TASK');
@@ -70,15 +71,26 @@ export function TaskDetailsModal({
     initialData: initialTask,
   });
 
-  const requestClose = useCallback(() => {
+  const canLeave = useCallback(() => {
     if (
       hasUnsavedChanges &&
       !window.confirm('Есть несохранённые изменения. Закрыть без сохранения?')
     ) {
-      return;
+      return false;
     }
+    return true;
+  }, [hasUnsavedChanges]);
+
+  const requestClose = useCallback(() => {
+    if (!canLeave()) return;
     onClose();
-  }, [hasUnsavedChanges, onClose]);
+  }, [canLeave, onClose]);
+
+  const openFullPage = useCallback(() => {
+    if (!canLeave()) return;
+    onClose();
+    router.push(`/tasks/${taskId}`);
+  }, [canLeave, onClose, router, taskId]);
 
   useEffect(() => {
     if (!open) setHasUnsavedChanges(false);
@@ -143,13 +155,14 @@ export function TaskDetailsModal({
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <Link
-              href={`/tasks/${taskId}`}
+            <button
+              type="button"
+              onClick={openFullPage}
               className="btn-base btn-secondary hidden sm:inline-flex"
             >
               <ExternalLink size={16} />
               Страница
-            </Link>
+            </button>
             <button
               type="button"
               onClick={requestClose}

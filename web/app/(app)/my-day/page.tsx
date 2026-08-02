@@ -1290,10 +1290,12 @@ export default function MyDayPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <button
+              type="button"
               onClick={() => setDate(shiftDate(date, -1))}
-              className="btn-base btn-secondary h-10 w-10 p-0"
+              className="btn-base btn-secondary h-11 w-11 rounded-2xl p-0 shadow-sm transition hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+              aria-label="Предыдущий день"
             >
-              <ChevronLeft size={18} />
+              <ChevronLeft size={22} strokeWidth={2.5} />
             </button>
             <button
               onClick={() => setDate(todayLocalDate())}
@@ -1308,10 +1310,12 @@ export default function MyDayPage() {
               className="h-10 rounded-lg border border-[var(--line)] bg-transparent px-3 text-sm"
             />
             <button
+              type="button"
               onClick={() => setDate(shiftDate(date, 1))}
-              className="btn-base btn-secondary h-10 w-10 p-0"
+              className="btn-base btn-secondary h-11 w-11 rounded-2xl p-0 shadow-sm transition hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+              aria-label="Следующий день"
             >
-              <ChevronRight size={18} />
+              <ChevronRight size={22} strokeWidth={2.5} />
             </button>
           </div>
         </div>

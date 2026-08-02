@@ -160,7 +160,7 @@ export function EntityDrawer({
           <div className="flex shrink-0 items-center gap-2">
             {actions}
             <button type="button" onClick={onClose} className="btn-base btn-ghost h-10 w-10 p-0" aria-label="Закрыть">
-              <X size={20} />
+              <X size={24} strokeWidth={2.4} />
             </button>
           </div>
         </header>
