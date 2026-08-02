@@ -47,24 +47,24 @@ export function SectionHeader({
 export function StatusBadge({ status }: { status: TaskStatus }) {
   const tone =
     status === 'COMPLETED'
-      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/35 dark:text-emerald-200'
+      ? 'semantic-badge state-success'
       : status === 'IN_PROGRESS'
-        ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/35 dark:text-blue-200'
+        ? 'semantic-badge state-info'
         : status === 'CANCELLED'
-          ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
-          : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200';
+          ? 'semantic-badge state-neutral'
+          : 'semantic-badge state-accent';
   return <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${tone}`}>{statusLabel[status]}</span>;
 }
 
 export function PriorityBadge({ priority }: { priority: TaskPriority }) {
   const tone =
     priority === 'URGENT'
-      ? 'bg-red-50 text-red-700 dark:bg-red-950/35 dark:text-red-200'
+      ? 'semantic-badge state-danger'
       : priority === 'HIGH'
-        ? 'bg-orange-50 text-orange-700 dark:bg-orange-950/35 dark:text-orange-200'
+        ? 'semantic-badge state-warning'
         : priority === 'LOW'
-          ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
-          : 'bg-blue-50 text-blue-700 dark:bg-blue-950/35 dark:text-blue-200';
+          ? 'semantic-badge state-neutral'
+          : 'semantic-badge state-info';
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${tone}`}>
       <span className="h-1.5 w-1.5 rounded-full bg-current" />
@@ -86,7 +86,7 @@ export function LoadingState({ text = 'Загружаю…' }: { text?: string }
 
 export function ErrorState({ text }: { text: string }) {
   return (
-    <div className="rounded-3xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
+    <div className="semantic-alert state-danger rounded-3xl p-5 text-sm">
       <span className="inline-flex items-center gap-2">
         <AlertCircle size={17} />
         {text}
@@ -144,7 +144,7 @@ export function EntityDrawer({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[10000] flex items-stretch justify-center bg-slate-950/45 p-0 backdrop-blur-sm sm:items-center sm:p-6"
+      className="fixed inset-0 z-[10000] flex items-stretch justify-center bg-[var(--color-overlay)] p-0 backdrop-blur-sm sm:items-center sm:p-6"
       onMouseDown={onClose}
     >
       <aside
@@ -173,7 +173,7 @@ export function EntityDrawer({
 
 export function InlineSuccess({ text }: { text: string }) {
   return (
-    <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+    <p className="semantic-alert state-success rounded-xl px-3 py-2 text-sm">
       <span className="inline-flex items-center gap-2">
         <CheckCircle2 size={16} />
         {text}
@@ -188,11 +188,11 @@ export function MetricStrip({
   items: Array<{ label: string; value: React.ReactNode; icon?: React.ReactNode; tone?: 'blue' | 'green' | 'red' | 'orange' | 'gray' }>;
 }) {
   const toneClass = {
-    blue: 'bg-blue-50 text-blue-700 dark:bg-blue-950/35 dark:text-blue-200',
-    green: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/35 dark:text-emerald-200',
-    red: 'bg-red-50 text-red-700 dark:bg-red-950/35 dark:text-red-200',
-    orange: 'bg-orange-50 text-orange-700 dark:bg-orange-950/35 dark:text-orange-200',
-    gray: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
+    blue: 'semantic-badge state-info',
+    green: 'semantic-badge state-success',
+    red: 'semantic-badge state-danger',
+    orange: 'semantic-badge state-warning',
+    gray: 'semantic-badge state-neutral',
   };
 
   return (

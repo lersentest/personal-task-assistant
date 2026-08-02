@@ -117,7 +117,7 @@ export function CreateEntityModal({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[10000] flex items-stretch justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-6"
+      className="fixed inset-0 z-[10000] flex items-stretch justify-center bg-[var(--color-overlay)] p-0 backdrop-blur-sm sm:items-center sm:p-6"
       onMouseDown={requestClose}
     >
       <div

@@ -36,17 +36,17 @@ const statusActions: Array<{ value: TaskStatus; label: string; description: stri
 ];
 
 const statusTone: Record<TaskStatus, string> = {
-  NEW: 'border-blue-300 bg-blue-100 text-blue-800 shadow-sm ring-1 ring-blue-200 dark:border-blue-700 dark:bg-blue-950/55 dark:text-blue-100 dark:ring-blue-900',
-  IN_PROGRESS: 'border-amber-300 bg-amber-100 text-amber-800 shadow-sm ring-1 ring-amber-200 dark:border-amber-700 dark:bg-amber-950/55 dark:text-amber-100 dark:ring-amber-900',
-  COMPLETED: 'border-emerald-300 bg-emerald-100 text-emerald-800 shadow-sm ring-1 ring-emerald-200 dark:border-emerald-700 dark:bg-emerald-950/55 dark:text-emerald-100 dark:ring-emerald-900',
-  CANCELLED: 'border-slate-300 bg-slate-200 text-slate-700 shadow-sm ring-1 ring-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700',
+  NEW: 'semantic-badge state-accent shadow-sm ring-1 ring-[var(--color-accent-border)]',
+  IN_PROGRESS: 'semantic-badge state-warning shadow-sm ring-1 ring-[var(--color-warning-border)]',
+  COMPLETED: 'semantic-badge state-success shadow-sm ring-1 ring-[var(--color-success-border)]',
+  CANCELLED: 'semantic-badge state-neutral shadow-sm ring-1 ring-[var(--color-border-default)]',
 };
 
 const statusIdleTone: Record<TaskStatus, string> = {
-  NEW: 'border-blue-100 bg-blue-50/45 text-blue-700 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-900/50 dark:bg-blue-950/20 dark:text-blue-200',
-  IN_PROGRESS: 'border-amber-100 bg-amber-50/45 text-amber-700 hover:border-amber-300 hover:bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200',
-  COMPLETED: 'border-emerald-100 bg-emerald-50/45 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-200',
-  CANCELLED: 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-300',
+  NEW: 'border-[var(--color-accent-border)]/55 bg-[var(--color-accent-surface)]/45 text-[var(--color-accent)] hover:border-[var(--color-accent-border)] hover:bg-[var(--color-accent-surface)]',
+  IN_PROGRESS: 'border-[var(--color-warning-border)]/55 bg-[var(--color-warning-surface)]/45 text-[var(--color-warning)] hover:border-[var(--color-warning-border)] hover:bg-[var(--color-warning-surface)]',
+  COMPLETED: 'border-[var(--color-success-border)]/55 bg-[var(--color-success-surface)]/45 text-[var(--color-success)] hover:border-[var(--color-success-border)] hover:bg-[var(--color-success-surface)]',
+  CANCELLED: 'border-[var(--color-border-subtle)] bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-default)] hover:bg-[var(--color-surface-hover)]',
 };
 
 export function TaskKindCards({
@@ -366,7 +366,7 @@ export function TaskForm({
       <label className="grid gap-1.5">
         <span className="text-xs font-semibold text-[var(--muted)]">Название *</span>
         <input
-          className={`h-12 rounded-xl border bg-transparent px-3 outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)] ${titleError ? 'border-red-300' : 'border-[var(--line)]'}`}
+          className={`h-12 rounded-xl border bg-transparent px-3 outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)] ${titleError ? 'border-[var(--color-danger-border)]' : 'border-[var(--line)]'}`}
           placeholder="Название задачи"
           value={title}
           onChange={(event) => {
@@ -375,7 +375,7 @@ export function TaskForm({
           }}
           aria-invalid={titleError}
         />
-        {titleError ? <span className="text-xs text-red-600">Укажи название задачи.</span> : null}
+        {titleError ? <span className="text-xs text-[var(--color-danger)]">Укажи название задачи.</span> : null}
       </label>
 
       {!compact ? (
@@ -535,7 +535,7 @@ export function TaskForm({
         </div>
       </section>
 
-      {mutation.error ? <p className="text-sm text-red-500">{mutation.error.message}</p> : null}
+      {mutation.error ? <p className="text-sm text-[var(--color-danger)]">{mutation.error.message}</p> : null}
       <div className="flex flex-wrap justify-end gap-2 border-t border-[var(--line)] pt-4">
         {onDone ? (
           <button

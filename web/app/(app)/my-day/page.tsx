@@ -114,11 +114,11 @@ function parseDragPayload(value: string) {
 }
 
 function taskKindTone(kind: Task['kind']) {
-  if (kind === 'CALL') return 'bg-sky-50 text-sky-700 dark:bg-sky-950/35 dark:text-sky-200';
-  if (kind === 'MEETING') return 'bg-purple-50 text-purple-700 dark:bg-purple-950/35 dark:text-purple-200';
-  if (kind === 'IDEA') return 'bg-amber-50 text-amber-700 dark:bg-amber-950/35 dark:text-amber-200';
-  if (kind === 'NOTE') return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200';
-  return 'bg-blue-50 text-blue-700 dark:bg-blue-950/35 dark:text-blue-200';
+  if (kind === 'CALL') return 'semantic-badge event-kind-call';
+  if (kind === 'MEETING') return 'semantic-badge event-kind-meeting';
+  if (kind === 'IDEA') return 'semantic-badge event-kind-idea';
+  if (kind === 'NOTE') return 'semantic-badge event-kind-note';
+  return 'semantic-badge event-kind-task';
 }
 
 function TaskKindBadge({ kind }: { kind: Task['kind'] }) {
@@ -310,12 +310,12 @@ function QueuePlanItemRow({
       onDragStart={(event) => event.dataTransfer.setData('text/plain', itemDragPayload(item))}
       className={`group rounded-2xl border px-2.5 py-2 transition ${
         done
-          ? 'border-emerald-200 bg-emerald-50/80 dark:bg-emerald-950/20'
+          ? 'border-[var(--color-success-border)] bg-[var(--color-success-surface)]/75'
           : 'border-[var(--focus-border-soft,var(--line))] bg-[var(--focus-surface,var(--panel))] hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]/45'
       }`}
     >
       <div className="flex items-start gap-2.5">
-        <span className="mt-1.5 inline-flex h-2.5 w-2.5 shrink-0 rounded-full border-2 border-emerald-500 bg-[var(--panel)]" />
+        <span className="mt-1.5 inline-flex h-2.5 w-2.5 shrink-0 rounded-full border-2 border-[var(--color-success)] bg-[var(--panel)]" />
         <div className="min-w-0 flex-1">
           <TaskModalLink task={item.task} className="line-clamp-2 text-left text-[13px] font-semibold leading-snug hover:text-[var(--accent)]">
             {item.task.title}
@@ -344,7 +344,7 @@ function QueuePlanItemRow({
             type="button"
             onClick={onComplete}
             disabled={Boolean(done)}
-            className="h-8 rounded-xl border border-emerald-200 bg-emerald-50 px-2 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50"
+            className="h-8 rounded-xl border border-[var(--color-success-border)] bg-[var(--color-success-surface)] px-2 text-xs font-medium text-[var(--color-success)] transition hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
           >
             Выполнить
           </button>
@@ -358,7 +358,7 @@ function QueuePlanItemRow({
           <button
             type="button"
             onClick={onRemove}
-            className="h-8 w-9 rounded-xl border border-[var(--line)] text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+            className="h-8 w-9 rounded-xl border border-[var(--line)] text-[var(--muted)] transition hover:border-[var(--color-danger-border)] hover:bg-[var(--color-danger-surface)] hover:text-[var(--color-danger)]"
             aria-label="Убрать из дня"
           >
             <Trash2 className="mx-auto" size={15} />
@@ -371,7 +371,7 @@ function QueuePlanItemRow({
             <button
               type="button"
               onClick={onComplete}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-200 bg-[var(--panel)]/95 text-emerald-600 shadow-sm transition hover:bg-emerald-50 active:scale-95"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--color-success-border)] bg-[var(--panel)]/95 text-[var(--color-success)] shadow-sm transition hover:bg-[var(--color-success-surface)] active:scale-95"
               title="Выполнить"
               aria-label="Выполнить"
             >
@@ -381,7 +381,7 @@ function QueuePlanItemRow({
           <button
             type="button"
             onClick={onUnschedule}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-blue-200 bg-[var(--panel)]/95 text-blue-600 shadow-sm transition hover:bg-blue-50 active:scale-95"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--color-info-border)] bg-[var(--panel)]/95 text-[var(--color-info)] shadow-sm transition hover:bg-[var(--color-info-surface)] active:scale-95"
             title="Убрать время"
             aria-label="Убрать время"
           >
@@ -390,7 +390,7 @@ function QueuePlanItemRow({
           <button
             type="button"
             onClick={onRemove}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-red-200 bg-[var(--panel)]/95 text-red-600 shadow-sm transition hover:bg-red-50 active:scale-95"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--color-danger-border)] bg-[var(--panel)]/95 text-[var(--color-danger)] shadow-sm transition hover:bg-[var(--color-danger-surface)] active:scale-95"
             title="Убрать из дня"
             aria-label="Убрать из дня"
           >
@@ -500,9 +500,9 @@ function PlanItemCard({
   }
 
   const cardTone = done
-    ? 'border-emerald-200 bg-emerald-50 text-emerald-950 dark:bg-emerald-950/25 dark:text-emerald-100'
+    ? 'border-[var(--color-success-border)] bg-[var(--color-success-surface)] text-[var(--color-text-primary)]'
     : item.scheduledStartAt
-      ? 'border-blue-200 bg-blue-50 dark:bg-blue-950/25'
+      ? 'border-[var(--event-task-border)] bg-[var(--event-task-bg)] text-[var(--event-task-text)]'
       : 'border-[var(--focus-border-soft,var(--line))] bg-[var(--focus-surface,var(--panel))]';
   const cardPadding = timeline
     ? isTinyTimeline
@@ -546,18 +546,18 @@ function PlanItemCard({
         {!timeline ? (
         <div className="flex shrink-0 gap-1">
           {!done ? (
-            <button onClick={onComplete} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-transparent text-emerald-600 transition hover:border-emerald-200 hover:bg-emerald-50 active:scale-95" title="Выполнить" aria-label="Выполнить">
+            <button onClick={onComplete} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-transparent text-[var(--color-success)] transition hover:border-[var(--color-success-border)] hover:bg-[var(--color-success-surface)] active:scale-95" title="Выполнить" aria-label="Выполнить">
               <CheckCircle2 size={18} />
             </button>
           ) : null}
           <button
             type="button"
             onClick={() => setEditingTime((value) => !value)}
-            className="inline-flex h-9 items-center justify-center rounded-xl border border-transparent px-2 text-xs font-medium text-blue-600 transition hover:border-blue-200 hover:bg-blue-50 active:scale-95"
+            className="inline-flex h-9 items-center justify-center rounded-xl border border-transparent px-2 text-xs font-medium text-[var(--color-info)] transition hover:border-[var(--color-info-border)] hover:bg-[var(--color-info-surface)] active:scale-95"
           >
             Время
           </button>
-          <button onClick={onRemove} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-transparent text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 active:scale-95" title="Убрать из дня" aria-label="Убрать из дня">
+          <button onClick={onRemove} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-transparent text-[var(--muted)] transition hover:border-[var(--color-danger-border)] hover:bg-[var(--color-danger-surface)] hover:text-[var(--color-danger)] active:scale-95" title="Убрать из дня" aria-label="Убрать из дня">
             <Trash2 size={18} />
           </button>
         </div>
@@ -606,7 +606,7 @@ function PlanItemCard({
             <button
               type="button"
               onClick={onComplete}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-200 bg-[var(--panel)]/95 text-emerald-600 shadow-sm transition hover:bg-emerald-50 active:scale-95"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--color-success-border)] bg-[var(--panel)]/95 text-[var(--color-success)] shadow-sm transition hover:bg-[var(--color-success-surface)] active:scale-95"
               title="Выполнить"
               aria-label="Выполнить"
             >
@@ -616,7 +616,7 @@ function PlanItemCard({
           <button
             type="button"
             onClick={onUnschedule}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-blue-200 bg-[var(--panel)]/95 text-blue-600 shadow-sm transition hover:bg-blue-50 active:scale-95"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--color-info-border)] bg-[var(--panel)]/95 text-[var(--color-info)] shadow-sm transition hover:bg-[var(--color-info-surface)] active:scale-95"
             title="Убрать время"
             aria-label="Убрать время"
           >
@@ -625,7 +625,7 @@ function PlanItemCard({
           <button
             type="button"
             onClick={onRemove}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-red-200 bg-[var(--panel)]/95 text-red-600 shadow-sm transition hover:bg-red-50 active:scale-95"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--color-danger-border)] bg-[var(--panel)]/95 text-[var(--color-danger)] shadow-sm transition hover:bg-[var(--color-danger-surface)] active:scale-95"
             title="Убрать из дня"
             aria-label="Убрать из дня"
           >
@@ -640,7 +640,7 @@ function PlanItemCard({
           onPointerDown={startResize}
           className="absolute inset-x-3 bottom-1 h-2 cursor-ns-resize rounded-full opacity-0 transition group-hover:opacity-70 group-focus-within:opacity-70"
         >
-          <div className="mx-auto mt-0.5 h-1 w-10 rounded-full bg-blue-400" />
+          <div className="mx-auto mt-0.5 h-1 w-10 rounded-full bg-[var(--color-accent)]" />
         </div>
       ) : null}
     </article>
@@ -659,19 +659,19 @@ type QueueTone = 'red' | 'orange' | 'blue';
 
 const queueToneClasses: Record<QueueTone, { section: string; title: string; count: string }> = {
   red: {
-    section: 'border-l-4 border-l-red-400 bg-red-50/45 px-2.5 py-2 dark:bg-red-950/10',
-    title: 'text-red-700 dark:text-red-200',
-    count: 'bg-red-100 text-red-700 dark:bg-red-950/45 dark:text-red-200',
+    section: 'my-day-group-overdue px-2.5 py-2',
+    title: 'text-[var(--color-danger)]',
+    count: 'semantic-badge state-danger px-2 py-0.5',
   },
   orange: {
-    section: 'border-l-4 border-l-amber-400 bg-amber-50/55 px-2.5 py-2 dark:bg-amber-950/10',
-    title: 'text-amber-700 dark:text-amber-200',
-    count: 'bg-amber-100 text-amber-700 dark:bg-amber-950/45 dark:text-amber-200',
+    section: 'my-day-group-today px-2.5 py-2',
+    title: 'text-[var(--color-warning)]',
+    count: 'semantic-badge state-warning px-2 py-0.5',
   },
   blue: {
-    section: 'border-l-4 border-l-blue-400 bg-blue-50/45 px-2.5 py-2 dark:bg-blue-950/10',
-    title: 'text-blue-700 dark:text-blue-200',
-    count: 'bg-blue-100 text-blue-700 dark:bg-blue-950/45 dark:text-blue-200',
+    section: 'my-day-group-planned px-2.5 py-2',
+    title: 'text-[var(--color-info)]',
+    count: 'semantic-badge state-info px-2 py-0.5',
   },
 };
 
@@ -850,19 +850,19 @@ function TimelineBoard({
               className="pointer-events-none absolute left-0 right-0 z-20"
               style={{ top: nowTop }}
             >
-              <span className="absolute -left-[58px] -translate-y-1/2 rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm">
+              <span className="absolute -left-[58px] -translate-y-1/2 rounded-full bg-[var(--color-danger)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-bg-app)] shadow-sm">
                 {timeFromMinutes(nowMinutes)}
               </span>
-              <div className="h-0.5 bg-red-500 shadow-[0_0_0_1px_rgba(239,68,68,0.15)]" />
-              <span className="absolute -left-1 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-red-500" />
+              <div className="h-0.5 bg-[var(--color-danger)]" />
+              <span className="absolute -left-1 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-[var(--color-danger)]" />
             </div>
           ) : null}
           {dragPreview ? (
             <div
               className={`pointer-events-none absolute left-0 right-0 z-10 rounded-2xl border-2 border-dashed px-3 py-2 text-xs font-semibold shadow-sm ${
                 dragPreview.hasConflict
-                  ? 'border-amber-400 bg-amber-100/70 text-amber-800'
-                  : 'border-blue-400 bg-blue-100/75 text-blue-800'
+                  ? 'border-[var(--color-warning-border)] bg-[var(--color-warning-surface)]/80 text-[var(--color-warning)]'
+                  : 'border-[var(--color-info-border)] bg-[var(--color-info-surface)]/80 text-[var(--color-info)]'
               }`}
               style={{ top: dragPreview.top, height: dragPreview.height }}
             >
@@ -1330,12 +1330,12 @@ export default function MyDayPage() {
         {day.data?.summary.overloaded || day.data?.summary.conflicts ? (
           <div className="mt-3 flex flex-wrap gap-2 text-sm">
             {day.data.summary.overloaded ? (
-              <span className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-amber-800">
+              <span className="semantic-badge state-warning inline-flex items-center gap-2 rounded-full px-3 py-1">
                 <AlertTriangle size={14} /> Перегрузка: больше 8 часов
               </span>
             ) : null}
             {day.data.summary.conflicts ? (
-              <span className="inline-flex items-center gap-2 rounded-full bg-red-100 px-3 py-1 text-red-800">
+              <span className="semantic-badge state-danger inline-flex items-center gap-2 rounded-full px-3 py-1">
                 <AlertTriangle size={14} /> Есть пересечения: {day.data.summary.conflicts}
               </span>
             ) : null}
@@ -1367,7 +1367,7 @@ export default function MyDayPage() {
         <section className={`my-day-section ${mobileTab === 'plan' ? 'is-active' : ''}`}>
           <Panel title="Обязательно сегодня">
             {day.data?.unresolvedPreviousDays.length ? (
-              <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              <div className="semantic-alert state-warning mb-3 rounded-lg p-3 text-sm">
                 Остались незавершённые задачи прошлых дней: {day.data.unresolvedPreviousDays.length}.
               </div>
             ) : null}
@@ -1527,7 +1527,7 @@ export default function MyDayPage() {
       </div>
 
       {day.error || suggestions.error ? (
-        <p className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <p className="semantic-alert state-danger mt-4 rounded-lg p-3 text-sm">
           {(day.error || suggestions.error)?.message}
         </p>
       ) : null}

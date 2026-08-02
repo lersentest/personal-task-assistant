@@ -111,7 +111,7 @@ export function TaskDetailsModal({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[10100] flex max-w-full items-stretch justify-center overflow-x-hidden bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-6"
+      className="fixed inset-0 z-[10100] flex max-w-full items-stretch justify-center overflow-x-hidden bg-[var(--color-overlay)] p-0 backdrop-blur-sm sm:items-center sm:p-6"
       onMouseDown={requestClose}
     >
       <div

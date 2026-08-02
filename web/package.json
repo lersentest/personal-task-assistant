@@ -6,7 +6,8 @@
     "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start -p 3001",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:contrast": "node scripts/check-dark-theme-contrast.mjs"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.18",
@@ -34,4 +35,3 @@
     "typescript": "^5.9.3"
   }
 }
-

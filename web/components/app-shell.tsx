@@ -196,7 +196,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         role="dialog"
         aria-modal={mobileMenuOpen ? 'true' : undefined}
         aria-hidden={!mobileMenuOpen}
-        className={`fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-sm transition-opacity lg:hidden ${
+        className={`fixed inset-0 z-50 bg-[var(--color-overlay)] backdrop-blur-sm transition-opacity lg:hidden ${
           mobileMenuOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
         }`}
         onClick={() => setMobileMenuOpen(false)}

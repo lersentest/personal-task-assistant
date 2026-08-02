@@ -19,12 +19,12 @@ export function TaskCard({
   const checklistDone = task.checklistItems?.filter((item) => item.isCompleted).length ?? 0;
   const priorityTone =
     task.priority === 'URGENT'
-      ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-200'
+      ? 'semantic-badge state-danger'
       : task.priority === 'HIGH'
-        ? 'bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-200'
+        ? 'semantic-badge state-warning'
         : task.priority === 'LOW'
-          ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
-          : 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-200';
+          ? 'semantic-badge state-neutral'
+          : 'semantic-badge state-info';
 
   if (isFocus) {
     return (

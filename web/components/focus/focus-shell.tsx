@@ -622,7 +622,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
         role="dialog"
         aria-modal={mobileMenuOpen ? 'true' : undefined}
         aria-hidden={!mobileMenuOpen}
-        className={`focus-mobile-drawer-overlay fixed inset-0 z-[10020] bg-slate-950/45 backdrop-blur-sm transition-opacity duration-200 ${
+        className={`focus-mobile-drawer-overlay fixed inset-0 z-[10020] bg-[var(--color-overlay)] backdrop-blur-sm transition-opacity duration-200 ${
           mobileMenuOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
         }`}
         onClick={() => setMobileMenuOpen(false)}
@@ -749,7 +749,7 @@ export function FocusShell({ children }: { children: React.ReactNode }) {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-[10030] flex items-start justify-center bg-slate-950/45 p-4 pt-[8vh] backdrop-blur-sm sm:pt-[10vh]"
+          className="fixed inset-0 z-[10030] flex items-start justify-center bg-[var(--color-overlay)] p-4 pt-[8vh] backdrop-blur-sm sm:pt-[10vh]"
           onClick={() => setPaletteOpen(false)}
         >
           <div
